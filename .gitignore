@@ -452,11 +452,3 @@ bower_components
 
 ### WebSharper ###
 Scripts/
-/src/worker/obj/project.assets.json
-/src/worker/obj/worker.fsproj.nuget.dgspec.json
-/src/worker/obj/worker.fsproj.nuget.g.props
-/src/worker/obj/worker.fsproj.nuget.g.targets
-/src/web-api/obj/project.assets.json
-/src/web-api/obj/web-api.fsproj.nuget.dgspec.json
-/src/web-api/obj/web-api.fsproj.nuget.g.props
-/src/web-api/obj/web-api.fsproj.nuget.g.targets
