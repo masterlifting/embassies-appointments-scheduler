@@ -7,3 +7,6 @@
 [submodule "submodules/fsharp-persistence"]
 	path = submodules/fsharp-persistence
 	url = https://github.com/masterlifting/fsharp-persistence.git
+[submodule "submodules/fsharp-infrastructure"]
+	path = submodules/fsharp-infrastructure
+	url = https://github.com/masterlifting/fsharp-infrastructure.git

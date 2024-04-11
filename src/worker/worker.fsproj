@@ -6,7 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="./TaskStepHandlers.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\submodules\fsharp-persistence\src\fsharp-persistence.fsproj" />
+    <ProjectReference Include="..\..\submodules\fsharp-worker\src\fsharp-worker.fsproj" />
   </ItemGroup>
 
 </Project>
