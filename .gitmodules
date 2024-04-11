@@ -1,0 +1,9 @@
+[submodule "submodules/fsharp-worker"]
+	path = submodules/fsharp-worker
+	url = https://github.com/masterlifting/fsharp-worker.git
+[submodule "submodules/fsharp-web"]
+	path = submodules/fsharp-web
+	url = https://github.com/masterlifting/fsharp-web.git
+[submodule "submodules/fsharp-persistence"]
+	path = submodules/fsharp-persistence
+	url = https://github.com/masterlifting/fsharp-persistence.git
