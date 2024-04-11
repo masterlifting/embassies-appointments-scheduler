@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "E1nphEUU1V5+AicEIIGBKrOoiSVa5lChTuMM4CLyKVd2tDa/Q1WFGgqRGngG1Y9XxGg9XeMJWd2mrjZjXDLawQ==",
+  "success": true,
+  "projectFilePath": "C:\\Users\\v-apestunov\\source\\repos\\kdmid-scheduler-2\\src\\web-api\\web-api.fsproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\v-apestunov\\.nuget\\packages\\fsharp.core\\8.0.200\\fsharp.core.8.0.200.nupkg.sha512"
+  ],
+  "logs": []
+}
