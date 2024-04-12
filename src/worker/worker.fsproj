@@ -6,8 +6,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="./TaskStepHandlers.fs" />
+    <Compile Include="Repository.fs" />
+    <Compile Include="TaskStepHandlers.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
