@@ -1,11 +1,11 @@
 module Core
 
-open Domain.Core
+open Worker.Domain.Core
 
 let getWorkerConfig args =
   async {
 
-    match Repository.getTasks () with
+    match Repository.getTaskSettings () with
     | Error error -> $"Error: {error}" |> Logger.error
     | Ok tasks ->
     
