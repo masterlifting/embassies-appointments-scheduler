@@ -1,5 +1,9 @@
 ﻿[<EntryPoint>]
 let main args =
-    let config = args |> Core.getWorkerConfig |> Async.RunSynchronously
-    config |> Core.startWorker |> Async.RunSynchronously
-    0
+    match args |> Core.getWorkerConfig |> Async.RunSynchronously with
+    | Error error ->
+        error |> Logger.error
+        1
+    | Ok config ->
+        config |> Worker.Core.startWorker |> Async.RunSynchronously
+        0

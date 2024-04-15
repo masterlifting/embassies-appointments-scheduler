@@ -1,30 +1,7 @@
 module Core
 
-open Domain.Core
-
-let getWorkerConfig args =
-  async {
-
-    match Repository.getTasks () with
-    | Error error -> $"Error: {error}" |> Logger.error
-    | Ok tasks ->
-    
-    let duration =
-      match args.Length with
-      | 1 ->
-      match args.[0] with
-      | DSL.AP.IsFloat seconds -> seconds
-      | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
-      | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
-      
-      let config: Domain.Core.WorkerConfiguration =
-        { Duration = duration
-        Tasks = tasks
-        Handlers = Core.taskHandlers
-        getTask = Repository.getTask }
-  }
-        
-module ExternalTask =
+module private KdmidWorkerTask =
+    open Worker.Domain.Core
     let step_1 () = async { return Ok "Data received" }
 
     module Step1 =
@@ -33,27 +10,52 @@ module ExternalTask =
 
     let step_2 () = async { return Ok "Data sent" }
 
-let taskHandlers =
-    [ { Name = "ExternalTask"
-        Steps =
-          [ { Name = "Step_1"
-              Handle = ExternalTask.step_1
-              Steps =
-                [ { Name = "Step_1_1"
-                    Handle = ExternalTask.Step1.step_1_1
-                    Steps = [] }
-                  { Name = "Step_1_2"
-                    Handle = ExternalTask.Step1.step_1_2
-                    Steps = [] } ] }
-            { Name = "Step_2"
-              Handle = ExternalTask.step_2
-              Steps = [] }
-            { Name = "Step_3"
-              Handle = ExternalTask.step_2
-              Steps =
-                [ { Name = "Step_3_1"
-                    Handle = ExternalTask.step_1
-                    Steps = [] }
-                  { Name = "Step_3_2"
-                    Handle = ExternalTask.step_2
-                    Steps = [] } ] } ] } ]
+    let Handlers =
+        [ { Name = "ExternalTask"
+            Steps =
+              [ { Name = "Step_1"
+                  Handle = step_1
+                  Steps =
+                    [ { Name = "Step_1_1"
+                        Handle = Step1.step_1_1
+                        Steps = [] }
+                      { Name = "Step_1_2"
+                        Handle = Step1.step_1_2
+                        Steps = [] } ] }
+                { Name = "Step_2"
+                  Handle = step_2
+                  Steps = [] }
+                { Name = "Step_3"
+                  Handle = step_2
+                  Steps =
+                    [ { Name = "Step_3_1"
+                        Handle = step_1
+                        Steps = [] }
+                      { Name = "Step_3_2"
+                        Handle = step_2
+                        Steps = [] } ] } ] } ]
+
+let getWorkerConfig (args: string array) =
+    async {
+        match! Repository.getTasks () with
+        | Error error -> return Error error
+        | Ok tasks ->
+
+            let duration =
+                match args.Length with
+                | 1 ->
+                    match args.[0] with
+                    | Infrastructure.DSL.AP.IsFloat seconds -> seconds
+                    | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
+                | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
+
+            Logger.addWorkerLogger()
+
+            let config: Worker.Domain.Configuration =
+                { Duration = duration
+                  Tasks = tasks
+                  Handlers = KdmidWorkerTask.Handlers
+                  getTask = Repository.getTask }
+
+            return Ok config
+    }

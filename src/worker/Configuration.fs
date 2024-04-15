@@ -2,6 +2,6 @@ module Configuration
 
 open Infrastructure
 
-let private configuration = Configuration.setJsonConfiguration "appsettings.json"
+let private appSettings = Configuration.getJsonConfiguration "appsettings.json"
 
-let getSection<'a> = configuration |> Configuration.getSection<'a>
+let getSection<'a> = appSettings |> Configuration.getSection<'a>
