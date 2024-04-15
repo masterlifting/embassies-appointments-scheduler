@@ -49,7 +49,7 @@ let getWorkerConfig (args: string array) =
                     | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
                 | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
 
-            Logger.addWorkerLogger()
+            Logger.addWorkerLogging()
 
             let config: Worker.Domain.Configuration =
                 { Duration = duration
