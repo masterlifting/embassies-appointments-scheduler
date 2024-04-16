@@ -1,7 +1,9 @@
 module Core
 
-module private KdmidWorkerTask =
-    open Worker.Domain.Core
+open Worker.Domain.Core
+
+module private KdmidTasks =
+    open Infrastructure.Logging
     let step_1 () = async { return Ok "Data received" }
 
     module Step1 =
@@ -10,30 +12,30 @@ module private KdmidWorkerTask =
 
     let step_2 () = async { return Ok "Data sent" }
 
-    let Handlers =
-        [ { Name = "ExternalTask"
-            Steps =
-              [ { Name = "Step_1"
-                  Handle = step_1
-                  Steps =
-                    [ { Name = "Step_1_1"
-                        Handle = Step1.step_1_1
-                        Steps = [] }
-                      { Name = "Step_1_2"
-                        Handle = Step1.step_1_2
-                        Steps = [] } ] }
-                { Name = "Step_2"
-                  Handle = step_2
-                  Steps = [] }
-                { Name = "Step_3"
-                  Handle = step_2
-                  Steps =
-                    [ { Name = "Step_3_1"
-                        Handle = step_1
-                        Steps = [] }
-                      { Name = "Step_3_2"
-                        Handle = step_2
-                        Steps = [] } ] } ] } ]
+let private handlers =
+    [ { Name = "ExternalTask"
+        Steps =
+          [ { Name = "Step_1"
+              Handle = KdmidTasks.step_1
+              Steps =
+                [ { Name = "Step_1_1"
+                    Handle = KdmidTasks.Step1.step_1_1
+                    Steps = [] }
+                  { Name = "Step_1_2"
+                    Handle = KdmidTasks.Step1.step_1_2
+                    Steps = [] } ] }
+            { Name = "Step_2"
+              Handle = KdmidTasks.step_2
+              Steps = [] }
+            { Name = "Step_3"
+              Handle = KdmidTasks.step_2
+              Steps =
+                [ { Name = "Step_3_1"
+                    Handle = KdmidTasks.step_1
+                    Steps = [] }
+                  { Name = "Step_3_2"
+                    Handle = KdmidTasks.step_2
+                    Steps = [] } ] } ] } ]
 
 let configWorker (args: string array) =
     async {
@@ -52,8 +54,8 @@ let configWorker (args: string array) =
             let config: Worker.Domain.Configuration =
                 { Duration = duration
                   Tasks = tasks
-                  Handlers = KdmidWorkerTask.Handlers
-                  getTask = Repository.getTask }
+                  getTask = Repository.getTask
+                  Handlers = handlers }
 
             Infrastructure.Logging.useConsoleLogger <| Configuration.appSettings
 
