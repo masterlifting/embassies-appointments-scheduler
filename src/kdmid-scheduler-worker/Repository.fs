@@ -2,7 +2,7 @@ module Repository
 
 let getTasks () =
     async {
-        match Configuration.getSection<Worker.Domain.Settings.Section> "Worker" with
+        match Configuration.getSection<Worker.Domain.Settings.Section> "KdmidQueueChecker" with
         | None -> return Error "Worker section not found"
         | Some section -> return Ok <| (section.Tasks |> Seq.map (fun x -> Worker.Mapper.toTask x.Key x.Value))
     }

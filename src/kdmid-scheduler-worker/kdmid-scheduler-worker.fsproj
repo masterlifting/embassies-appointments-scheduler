@@ -15,7 +15,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\submodules\fsharp-persistence\src\fsharp-persistence.fsproj" />
     <ProjectReference Include="..\..\submodules\fsharp-worker\src\fsharp-worker.fsproj" />
+    <ProjectReference Include="..\kdmid-scheduler-core\kdmid-scheduler-core.fsproj" />
   </ItemGroup>
 </Project>

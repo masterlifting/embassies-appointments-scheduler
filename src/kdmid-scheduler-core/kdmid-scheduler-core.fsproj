@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>web_api</RootNamespace>
+    <RootNamespace>kdmid_scheduler_core</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Program.fs" />
+    <Compile Include="Domain.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj" />
     <ProjectReference Include="..\..\submodules\fsharp-persistence\src\fsharp-persistence.fsproj" />
-    <ProjectReference Include="..\..\submodules\fsharp-web\src\fsharp-web.fsproj" />
   </ItemGroup>
 
 </Project>

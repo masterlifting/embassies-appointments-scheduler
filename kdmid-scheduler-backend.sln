@@ -11,11 +11,13 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-web", "submodules\fs
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-persistence", "submodules\fsharp-persistence\src\fsharp-persistence.fsproj", "{2E157B25-AB55-4E0B-9D91-3134109DA1B7}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "web-api", "src\web-api\web-api.fsproj", "{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}"
-EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "worker", "src\worker\worker.fsproj", "{CB4DF5E6-43FE-418B-B8BB-ED9614726309}"
-EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-infrastructure", "submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj", "{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-webapi", "src\kdmid-scheduler-webapi\kdmid-scheduler-webapi.fsproj", "{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-worker", "src\kdmid-scheduler-worker\kdmid-scheduler-worker.fsproj", "{CB4DF5E6-43FE-418B-B8BB-ED9614726309}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-core", "src\kdmid-scheduler-core\kdmid-scheduler-core.fsproj", "{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,6 +37,10 @@ Global
 		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -43,10 +49,10 @@ Global
 		{CB4DF5E6-43FE-418B-B8BB-ED9614726309}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CB4DF5E6-43FE-418B-B8BB-ED9614726309}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CB4DF5E6-43FE-418B-B8BB-ED9614726309}.Release|Any CPU.Build.0 = Release|Any CPU
-		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
