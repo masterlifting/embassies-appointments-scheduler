@@ -5,19 +5,19 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Submodules", "Submodules", "{1F2E46CB-3305-404D-8B70-D0EF6763D44F}"
 EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-infrastructure", "submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj", "{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-persistence", "submodules\fsharp-persistence\src\fsharp-persistence.fsproj", "{2E157B25-AB55-4E0B-9D91-3134109DA1B7}"
+EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-worker", "submodules\fsharp-worker\src\fsharp-worker.fsproj", "{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-web", "submodules\fsharp-web\src\fsharp-web.fsproj", "{B6222822-F5B1-45A9-BAB3-B3C07C65C237}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-persistence", "submodules\fsharp-persistence\src\fsharp-persistence.fsproj", "{2E157B25-AB55-4E0B-9D91-3134109DA1B7}"
-EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-infrastructure", "submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj", "{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-core", "src\kdmid-scheduler-core\kdmid-scheduler-core.fsproj", "{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-webapi", "src\kdmid-scheduler-webapi\kdmid-scheduler-webapi.fsproj", "{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}"
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-worker", "src\kdmid-scheduler-worker\kdmid-scheduler-worker.fsproj", "{CB4DF5E6-43FE-418B-B8BB-ED9614726309}"
-EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-core", "src\kdmid-scheduler-core\kdmid-scheduler-core.fsproj", "{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
