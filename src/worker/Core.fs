@@ -55,7 +55,7 @@ let configWorker (args: string array) =
                   Handlers = KdmidWorkerTask.Handlers
                   getTask = Repository.getTask }
 
-            Configuration.appSettings |> Infrastructure.Logging.useConsoleLogger
+            Infrastructure.Logging.useConsoleLogger <| Configuration.appSettings
 
             return Ok config
     }
