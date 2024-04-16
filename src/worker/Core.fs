@@ -49,13 +49,13 @@ let configWorker (args: string array) =
                     | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
                 | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
 
-            Configuration.appSettings |> Infrastructure.Logging.useConsoleLogger
-
             let config: Worker.Domain.Configuration =
                 { Duration = duration
                   Tasks = tasks
                   Handlers = KdmidWorkerTask.Handlers
                   getTask = Repository.getTask }
+
+            Configuration.appSettings |> Infrastructure.Logging.useConsoleLogger
 
             return Ok config
     }
