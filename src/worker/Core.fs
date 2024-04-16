@@ -35,7 +35,7 @@ module private KdmidWorkerTask =
                         Handle = step_2
                         Steps = [] } ] } ] } ]
 
-let getWorkerConfig (args: string array) =
+let configWorker (args: string array) =
     async {
         match! Repository.getTasks () with
         | Error error -> return Error error
@@ -49,7 +49,7 @@ let getWorkerConfig (args: string array) =
                     | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
                 | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
 
-            Logger.addWorkerLogging()
+            Configuration.appSettings |> Infrastructure.Logging.useConsoleLogger
 
             let config: Worker.Domain.Configuration =
                 { Duration = duration

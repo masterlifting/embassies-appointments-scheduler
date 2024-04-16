@@ -1,7 +1,6 @@
 module Configuration
 
-open Infrastructure
+let internal appSettings =
+    Infrastructure.Configuration.getJsonConfiguration "appsettings.json"
 
-let private appSettings = Configuration.getJsonConfiguration "appsettings.json"
-
-let getSection<'a> = appSettings |> Configuration.getSection<'a>
+let getSection<'a> = appSettings |> Infrastructure.Configuration.getSection<'a>

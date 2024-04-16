@@ -5,7 +5,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Configuration.fs" />
-    <Compile Include="Logger.fs" />
     <Compile Include="Repository.fs" />
     <Compile Include="Core.fs" />
     <Compile Include="Program.fs" />
