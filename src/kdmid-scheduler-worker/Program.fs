@@ -1,4 +1,8 @@
 ﻿[<EntryPoint>]
 let main args =
-    args |> Core.configWorker |> Worker.Core.startWorker |> Async.RunSynchronously
+    args
+    |> KdmidScheduler.Worker.Core.configWorker
+    |> Worker.Core.startWorker
+    |> Async.RunSynchronously
+
     0

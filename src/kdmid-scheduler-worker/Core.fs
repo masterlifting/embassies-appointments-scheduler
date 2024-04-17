@@ -1,6 +1,4 @@
-module Core
-
-open Worker.Domain.Core
+module KdmidScheduler.Worker.Core
 
 module private KdmidQueueChecker =
     open Infrastructure.Logging
@@ -11,7 +9,7 @@ module private KdmidQueueChecker =
             return Ok "Data received"
         }
 
-let private handlers =
+let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
           [ { Name = "GetAvailableDates"

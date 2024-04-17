@@ -1,6 +1,10 @@
-﻿module Domain
+﻿module KdmidScheduler.Domain
+
+type KdmidCredentialId = Id of string
+type KdmidCredentialCd = Cd of string
+type KdmidCredentialEms = Ems of string option
 
 type KdmidCredentials =
-    { Id: string
-      Cd: string
-      Ems: string option }
+    { Id: KdmidCredentialId
+      Cd: KdmidCredentialCd
+      Ems: KdmidCredentialEms }

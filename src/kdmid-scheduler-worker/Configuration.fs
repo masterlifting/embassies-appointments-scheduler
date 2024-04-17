@@ -1,4 +1,4 @@
-module Configuration
+module KdmidScheduler.Worker.Configuration
 
 open Infrastructure
 

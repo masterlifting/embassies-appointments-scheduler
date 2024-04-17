@@ -1,4 +1,4 @@
-module Repository
+module KdmidScheduler.Worker.Repository
 
 let getTasks () =
     async {
