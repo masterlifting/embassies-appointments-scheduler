@@ -1,11 +1,10 @@
 module KdmidScheduler.Worker.Core
 
 module private KdmidQueueChecker =
-    open Infrastructure.Logging
-
-    let getAvailableDates () =
+    let getAvailableDates city =
         async {
-            let startPage = 1
+            let! kdmidCredentials = KdmidScheduler.Core.getKdmidCredentials city
+
             return Ok "Data received"
         }
 
