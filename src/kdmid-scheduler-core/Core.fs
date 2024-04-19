@@ -1,6 +1,6 @@
 module KdmidScheduler.Core
 
-open KdmidScheduler.Domain
+open KdmidScheduler.Domain.Core
 
 let getKdmidCredentials' city persistenceType =
     async {
@@ -10,7 +10,16 @@ let getKdmidCredentials' city persistenceType =
 
             Persistence.Scope.remove scope
 
-            return Ok ""
+            let kdmidCredentials =
+                set
+                    [ { Id = Id "1"
+                        Cd = Cd "1"
+                        Ems = Ems(Some "1") }
+                      { Id = Id "1"
+                        Cd = Cd "1"
+                        Ems = Ems(Some "1") } ]
+
+            return Ok kdmidCredentials
     }
 
 let getKdmidCredentials city =

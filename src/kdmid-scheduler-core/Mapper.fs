@@ -14,25 +14,25 @@ module Kdmid =
                     match System.String.IsNullOrWhiteSpace entity.Ems with
                     | true ->
                         Ok
-                            { Id = entity.Id |> Core.Id
-                              Cd = entity.Cd |> Core.Cd
-                              Ems = None |> Core.Ems }
+                            { Id = entity.Id |> Core.KdmidCredentialId.Id
+                              Cd = entity.Cd |> Core.KdmidCredentialCd.Cd
+                              Ems = None |> Core.KdmidCredentialEms.Ems }
                     | false ->
                         Ok
-                            { Id = entity.Id |> Core.Id
-                              Cd = entity.Cd |> Core.Cd
-                              Ems = Some entity.Ems |> Core.Ems }
+                            { Id = entity.Id |> Core.KdmidCredentialId.Id
+                              Cd = entity.Cd |> Core.KdmidCredentialCd.Cd
+                              Ems = Some entity.Ems |> Core.KdmidCredentialEms.Ems }
 
         let toPersistence (model: Core.KdmidCredentials) : Persistence.KdmidCredentials =
             { Id =
                 match model.Id with
-                | Core.Id id -> id
+                | Core.KdmidCredentialId.Id id -> id
               Cd =
                 match model.Cd with
-                | Core.Cd cd -> cd
+                | Core.KdmidCredentialCd.Cd cd -> cd
               Ems =
                 match model.Ems with
-                | Core.Ems ems ->
+                | Core.KdmidCredentialEms.Ems ems ->
                     match ems with
                     | None -> System.String.Empty
                     | Some ems -> ems }

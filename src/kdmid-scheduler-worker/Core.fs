@@ -1,9 +1,11 @@
 module KdmidScheduler.Worker.Core
 
-module private KdmidQueueChecker =
+open KdmidScheduler
+
+module private WorkerHandlers =
     let getAvailableDates city =
         async {
-            let! kdmidCredentials = KdmidScheduler.Core.getKdmidCredentials city
+            let! credentials = Core.getKdmidCredentials city
 
             return Ok "Data received"
         }
@@ -12,7 +14,12 @@ let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
           [ { Name = "GetAvailableDates"
-              Handle = KdmidQueueChecker.getAvailableDates
+              Handle = fun _ -> Domain.Core.Belgrade |> WorkerHandlers.getAvailableDates
+              Steps = [] } ] }
+      { Name = "Sarajevo"
+        Steps =
+          [ { Name = "GetAvailableDates"
+              Handle = fun _ -> Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
               Steps = [] } ] } ]
 
 let configWorker (args: string array) =

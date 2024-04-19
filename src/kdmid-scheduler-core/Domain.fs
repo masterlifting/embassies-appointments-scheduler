@@ -1,29 +1,33 @@
 ﻿module KdmidScheduler.Domain
 
 module Core =
-
-    type City =
-        | Belgrade of string
-        | Budapest of string
-        | Sarajevo of string
-
+    type UserId = Id of string
     type KdmidCredentialId = Id of string
     type KdmidCredentialCd = Cd of string
     type KdmidCredentialEms = Ems of string option
+
+    type User = { Id: UserId; Name: string }
 
     type KdmidCredentials =
         { Id: KdmidCredentialId
           Cd: KdmidCredentialCd
           Ems: KdmidCredentialEms }
 
-    type KdmidQueueItem =
-        { City: City
-          KdmidCredentials: KdmidCredentials }
+    type City =
+        | Belgrade
+        | Budapest
+        | Sarajevo
+
+    type UserKdmidOrders =
+        { User: User
+          Orders: Map<City, Set<KdmidCredentials>> }
 
 module Persistence =
 
+    type User = { Id: string; Name: string }
+
     type KdmidCredentials = { Id: string; Cd: string; Ems: string }
 
-    type KdmidQueueItem =
-        { City: string
-          KdmidCredentials: KdmidCredentials }
+    type UserKdmidOrders =
+        { User: User
+          Orders: Map<string, Set<KdmidCredentials>> }
