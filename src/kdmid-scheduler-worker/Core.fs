@@ -3,11 +3,21 @@ module KdmidScheduler.Worker.Core
 open KdmidScheduler
 
 module private WorkerHandlers =
+    open Domain.Core
+
     let getAvailableDates city =
         async {
-            let! credentials = Core.getKdmidCredentials city
+            match! Core.getUserCredentials city with
+            | Error error -> return Error error
+            | Ok userCredentials ->
 
-            return Ok "Data received"
+                let cityOrder =
+                    { City = city
+                      UserCredentials = userCredentials }
+
+                match! Core.getAvailableDates cityOrder with
+                | Error error -> return Error error
+                | Ok availableDates -> return Ok availableDates
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
