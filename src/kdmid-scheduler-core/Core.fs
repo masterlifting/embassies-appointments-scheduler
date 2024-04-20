@@ -2,6 +2,24 @@ module KdmidScheduler.Core
 
 open KdmidScheduler.Domain.Core
 
+module Kdmid =
+    open Kdmid
+
+    let createUrlParams credentials =
+        match credentials.Ems with
+        | None -> $"id={credentials.Id}&cd={credentials.Cd}"
+        | Some ems -> $"id={credentials.Id}&cd={credentials.Cd}&ems={ems}"
+
+    let private getCityCode city =
+        match city with
+        | Belgrade -> "belgrad"
+        | Budapest -> "budapest"
+        | Sarajevo -> "sarajevo"
+
+    let createBaseUrl city =
+        let cityCode = getCityCode city
+        $"https://{cityCode}.kdmid.ru/queue/"
+
 let getUserCredentials' city persistenceType =
     async {
         match Persistence.Scope.create persistenceType with
@@ -13,6 +31,8 @@ let getUserCredentials' city persistenceType =
             match Kdmid.createCredentials (Kdmid.Id "1") (Kdmid.Cd "1") (Kdmid.Ems(Some "1")) with
             | Error error -> return Error error
             | Ok kdmidCredentials ->
+
+                let id = kdmidCredentials.Id
 
                 let userCredentials =
                     Map

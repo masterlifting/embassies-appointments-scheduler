@@ -1,24 +1,16 @@
 ﻿module KdmidScheduler.Domain
 
 module Core =
-    type City =
-        | Belgrade
-        | Budapest
-        | Sarajevo
-
-    type UserId = UserId of string
-    type User = { Id: UserId; Name: string }
 
     module Kdmid =
         type Id = Id of string
         type Cd = Cd of string
         type Ems = Ems of string option
 
-        type Id' = private Id' of int
-        type Cd' = private Cd' of string
-        type Ems' = private Ems' of string option
-
-        type Credentials = { Id: Id'; Cd: Cd'; Ems: Ems' }
+        type Credentials =
+            { Id: int
+              Cd: string
+              Ems: string option }
 
         let createCredentials id cd ems =
             match id, cd, ems with
@@ -28,40 +20,21 @@ module Core =
                     match cd with
                     | Infrastructure.DSL.AP.IsLettersOrNumbers cd ->
                         match ems with
-                        | None ->
-                            Ok
-                                { Id = Id' id
-                                  Cd = Cd' cd
-                                  Ems = Ems' None }
+                        | None -> Ok { Id = id; Cd = cd; Ems = None }
                         | Some ems ->
                             match ems with
-                            | Infrastructure.DSL.AP.IsLettersOrNumbers ems ->
-                                Ok
-                                    { Id = Id' id
-                                      Cd = Cd' cd
-                                      Ems = Ems'(Some ems) }
+                            | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> Ok { Id = id; Cd = cd; Ems = Some ems }
                             | _ -> Error "Invalid EMS"
                     | _ -> Error "Invalid CD"
                 | _ -> Error "Invalid ID"
 
-        let createUrlParams credentials =
-            match credentials with
-            | { Id = Id' id
-                Cd = Cd' cd
-                Ems = Ems' ems } ->
-                match ems with
-                | Some ems -> $"id={id}&cd={cd}&ems={ems}"
-                | None -> $"id={id}&cd={cd}"
+    type City =
+        | Belgrade
+        | Budapest
+        | Sarajevo
 
-        let private getCityCode city =
-            match city with
-            | Belgrade -> "belgrad"
-            | Budapest -> "budapest"
-            | Sarajevo -> "sarajevo"
-
-        let createBaseUrl city =
-            let cityCode = getCityCode city
-            $"https://{cityCode}.kdmid.ru/queue/"
+    type UserId = UserId of string
+    type User = { Id: UserId; Name: string }
 
 
     type UserCredentials = Map<User, Set<Kdmid.Credentials>>
