@@ -15,9 +15,9 @@ module private WorkerHandlers =
                     { City = city
                       UserCredentials = userCredentials }
 
-                match! Core.getAvailableDates cityOrder with
+                match! Core.processCityOrder cityOrder with
                 | Error error -> return Error error
-                | Ok availableDates -> return Ok availableDates
+                | Ok _ -> return Ok "Available dates were processed"
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =

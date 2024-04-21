@@ -1,54 +1,71 @@
 module KdmidScheduler.Core
 
 open KdmidScheduler.Domain.Core
+open KdmidScheduler.Domain.Core.Kdmid
 
-module Kdmid =
-    open Kdmid
+let createUrlParams credentials =
+    match credentials with
+    | Deconstruct(id, cd, None) -> $"id={id}&cd={cd}"
+    | Deconstruct(id, cd, Some ems) -> $"id={id}&cd={cd}&ems={ems}"
+    | _ -> ""
 
-    let createUrlParams credentials =
-        match credentials.Ems with
-        | None -> $"id={credentials.Id}&cd={credentials.Cd}"
-        | Some ems -> $"id={credentials.Id}&cd={credentials.Cd}&ems={ems}"
+let private getCityCode city =
+    match city with
+    | Belgrade -> "belgrad"
+    | Budapest -> "budapest"
+    | Sarajevo -> "sarajevo"
 
-    let private getCityCode city =
-        match city with
-        | Belgrade -> "belgrad"
-        | Budapest -> "budapest"
-        | Sarajevo -> "sarajevo"
+let createBaseUrl city =
+    let cityCode = getCityCode city
+    $"https://{cityCode}.kdmid.ru/queue/"
 
-    let createBaseUrl city =
-        let cityCode = getCityCode city
-        $"https://{cityCode}.kdmid.ru/queue/"
-
-let getUserCredentials' city persistenceType =
+let getUserCredentials (city: City) : Async<Result<UserCredentials, string>> =
     async {
-        match Persistence.Scope.create persistenceType with
-        | Error error -> return Error error
-        | Ok scope ->
-
-            Persistence.Scope.remove scope
-
-            match Kdmid.createCredentials (Kdmid.Id "1") (Kdmid.Cd "1") (Kdmid.Ems(Some "1")) with
-            | Error error -> return Error error
-            | Ok kdmidCredentials ->
-
-                let id = kdmidCredentials.Id
-
-                let userCredentials =
-                    Map
-                        [ { Id = UserId "1"; Name = "John" }, Set [ kdmidCredentials ]
-                          { Id = UserId "2"; Name = "Jane" }, Set [ kdmidCredentials ] ]
-
-
-                return Ok userCredentials
+        let! credentials = Repository.getUserCredentials city
+        return credentials
     }
 
-let getUserCredentials city =
-    getUserCredentials' city Persistence.InMemoryStorage
+let getCityCredentials (user: User) : Async<Result<CityCredentials, string>> =
+    async {
+        let! credentials = Repository.getCityCredentials user
+        return credentials
+    }
 
+let getKdmidCredentials (user: User) (city: City) : Async<Result<Set<Kdmid.Credentials>, string>> =
+    async {
+        let! credentials = Repository.getKdmidCredentials user city
+        return credentials
+    }
 
-let getAvailableDates cityOrder : Async<Result<CityOrderResult, string>> =
-    async
-        {
+let processCityOrder (order: CityOrder) : Async<Result<CityOrderResult, string>> =
+    async {
+        // let cityCode = Kdmid.createUrlParams order.UserCredentials.[order.City].Head
+        // let baseUrl = Kdmid.createBaseUrl order.City
+        // let url = $"{baseUrl}?{cityCode}"
+        // let! availableDates = Infrastructure.Http.getAvailableDates url
+        // return availableDates
 
-        }
+        return Error "Not implemented"
+    }
+
+let processUserOrder (order: UserOrder) : Async<Result<UserOrderResult, string>> =
+    async {
+        // let cityCode = Kdmid.createUrlParams order.CityCredentials.[order.User].Head
+        // let baseUrl = Kdmid.createBaseUrl order.City
+        // let url = $"{baseUrl}?{cityCode}"
+        // let! availableDates = Infrastructure.Http.getAvailableDates url
+        // return availableDates
+
+        return Error "Not implemented"
+    }
+
+let processOrder (order: UserCityOrder) : Async<Result<Set<OrderResult>, string>> =
+    async {
+        // let cityCode = Kdmid.createUrlParams order.UserCredentials.[city].Head
+        // let baseUrl = Kdmid.createBaseUrl city
+        // let url = $"{baseUrl}?{cityCode}"
+        // let! availableDates = Infrastructure.Http.getAvailableDates url
+        // return availableDates
+
+        return Error "Not implemented"
+    }
