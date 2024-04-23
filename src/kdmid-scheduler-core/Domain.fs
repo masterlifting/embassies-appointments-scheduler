@@ -3,39 +3,34 @@
 module Core =
 
     module Kdmid =
-        type Id = private Id of int
-        type Cd = private Cd of string
-        type Ems = private Ems of string option
+        type KdmidId = Id of string
+        type KdmidCd = Cd of string
+        type KdmidEms = Ems of string option
 
-        type Credentials = { Id: Id; Cd: Cd; Ems: Ems }
+        type Credentials =
+            { Id: int
+              Cd: string
+              Ems: string option }
 
-        let createCredentials (id: string) (cd: string) (ems: string option) =
-            match id with
-            | Infrastructure.DSL.AP.IsInt id ->
-                match cd with
-                | Infrastructure.DSL.AP.IsLettersOrNumbers cd ->
-                    match ems with
-                    | None ->
-                        Ok
-                            { Id = Id id
-                              Cd = Cd cd
-                              Ems = Ems None }
-                    | Some ems ->
+        let createCredentials id cd ems =
+            match id, cd, ems with
+            | Id id, Cd cd, Ems ems ->
+                match id with
+                | Infrastructure.DSL.AP.IsInt id ->
+                    match cd with
+                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd ->
                         match ems with
-                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems ->
-                            Ok
-                                { Id = Id id
-                                  Cd = Cd cd
-                                  Ems = Ems(Some ems) }
-                        | _ -> Error "Invalid EMS"
-                | _ -> Error "Invalid CD"
-            | _ -> Error "Invalid ID"
+                        | None -> { Id = id; Cd = cd; Ems = None } |> Ok
+                        | Some ems ->
+                            match ems with
+                            | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> { Id = id; Cd = cd; Ems = Some ems } |> Ok
+                            | _ -> Error "Invalid EMS"
+                    | _ -> Error "Invalid CD"
+                | _ -> Error "Invalid ID"
 
         let (|Deconstruct|_|) credentials =
             match credentials with
-            | { Id = Id id
-                Cd = Cd cd
-                Ems = Ems ems } -> Some(id, cd, ems)
+            | { Id = id; Cd = cd; Ems = ems } -> Some(id, cd, ems)
 
     type City =
         | Belgrade
@@ -72,10 +67,11 @@ module Core =
 
 module Persistence =
 
+    module Kdmid =
+        type Credentials = { Id: int; Cd: string; Ems: string }
+
     type User = { Id: string; Name: string }
 
-    type KdmidCredentials = { Id: string; Cd: string; Ems: string }
-
-    type UserKdmidOrders =
+    type UserCredential =
         { User: User
-          Orders: Map<string, Set<KdmidCredentials>> }
+          Credentials: Kdmid.Credentials list }

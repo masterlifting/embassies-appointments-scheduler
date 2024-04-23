@@ -19,12 +19,6 @@ let createBaseUrl city =
     let cityCode = getCityCode city
     $"https://{cityCode}.kdmid.ru/queue/"
 
-let getUserCredentials (city: City) : Async<Result<UserCredentials, string>> =
-    async {
-        let! credentials = Repository.getUserCredentials city
-        return credentials
-    }
-
 let getCityCredentials (user: User) : Async<Result<CityCredentials, string>> =
     async {
         let! credentials = Repository.getCityCredentials user
@@ -37,7 +31,7 @@ let getKdmidCredentials (user: User) (city: City) : Async<Result<Set<Kdmid.Crede
         return credentials
     }
 
-let processCityOrder (order: CityOrder) : Async<Result<CityOrderResult, string>> =
+let processCityOrder pScope (order: CityOrder) : Async<Result<CityOrderResult, string>> =
     async {
         // let cityCode = Kdmid.createUrlParams order.UserCredentials.[order.City].Head
         // let baseUrl = Kdmid.createBaseUrl order.City

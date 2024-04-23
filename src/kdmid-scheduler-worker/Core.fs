@@ -3,21 +3,42 @@ module KdmidScheduler.Worker.Core
 open KdmidScheduler
 
 module private WorkerHandlers =
-    open Domain.Core
-
     let getAvailableDates city =
         async {
-            match! Core.getUserCredentials city with
+            match Persistence.Core.Scope.create Persistence.Core.InMemoryStorage with
             | Error error -> return Error error
-            | Ok userCredentials ->
-
-                let cityOrder =
-                    { City = city
-                      UserCredentials = userCredentials }
-
-                match! Core.processCityOrder cityOrder with
+            | Ok persistenceScope ->
+                match
+                    Domain.Core.Kdmid.createCredentials
+                        (Domain.Core.Kdmid.Id "1")
+                        (Domain.Core.Kdmid.Cd "2")
+                        (Domain.Core.Kdmid.Ems(Some "3"))
+                with
                 | Error error -> return Error error
-                | Ok _ -> return Ok "Available dates were processed"
+                | Ok credential ->
+                    let user: Domain.Core.User =
+                        { Id = Domain.Core.UserId "1"
+                          Name = "John Doe" }
+
+                    let userCredentials: Domain.Core.UserCredentials = Map [ user, Set [ credential ] ]
+
+                    match! Repository.addUserCredentials persistenceScope city userCredentials with
+                    | Error error -> return Error error
+                    | Ok _ ->
+
+                        match! Repository.getUserCredentials persistenceScope city with
+                        | Error error -> return Error error
+                        | Ok userCredentials ->
+
+                            let cityOrder: Domain.Core.CityOrder =
+                                { City = city
+                                  UserCredentials = userCredentials }
+
+                            Infrastructure.Logging.Log.info $"City order: {cityOrder}"
+
+                            match! Core.processCityOrder persistenceScope cityOrder with
+                            | Error error -> return Error error
+                            | Ok _ -> return Ok "Available dates were processed"
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
