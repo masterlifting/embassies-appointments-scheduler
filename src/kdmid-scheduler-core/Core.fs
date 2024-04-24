@@ -45,7 +45,7 @@ let getKdmidCredentials (user: User) (city: City) : Async<Result<Set<Kdmid.Crede
         return credentials
     }
 
-let processCityOrder pScope (order: CityOrder) : Async<Result<CityOrderResult, string>> =
+let processCityOrder pScope (order: CityOrder) : Async<Result<CityOrderResult seq, string>> =
     async {
         // let cityCode = Kdmid.createUrlParams order.UserCredentials.[order.City].Head
         // let baseUrl = Kdmid.createBaseUrl order.City

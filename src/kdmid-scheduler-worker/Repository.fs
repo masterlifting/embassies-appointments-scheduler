@@ -1,18 +1,28 @@
 module KdmidScheduler.Worker.Repository
 
-let getTasks () =
+[<Literal>]
+let workerSection = "KdmidQueueChecker"
+
+let getWorkerTasks () =
     async {
-        match Configuration.getSection<Worker.Domain.Settings.Section> "KdmidQueueChecker" with
-        | None -> return Error "Worker section not found"
-        | Some section -> return Ok <| (section.Tasks |> Seq.map (fun x -> Worker.Mapper.toTask x.Key x.Value))
+        let sectionResult =
+            Configuration.getSection<Worker.Domain.Settings.Section> workerSection
+
+        return
+            match sectionResult with
+            | None -> Error $"Worker section '%s{workerSection}' was not found for the worker."
+            | Some section -> Ok <| (section.Tasks |> Seq.map (fun x -> Worker.Mapper.toTask x.Key x.Value))
     }
 
-let getTask name =
+let getWorkerTask name =
     async {
-        match! getTasks () with
-        | Error error -> return Error error
-        | Ok tasks ->
-            match tasks |> Seq.tryFind (fun x -> x.Name = name) with
-            | None -> return Error "Task not found"
-            | Some task -> return Ok task
+        let! tasksResult = getWorkerTasks ()
+
+        return
+            match tasksResult with
+            | Error error -> Error error
+            | Ok tasks ->
+                match tasks |> Seq.tryFind (fun x -> x.Name = name) with
+                | None -> Error $"Task '%s{name}' was not found in the section '%s{workerSection}' of the worker."
+                | Some task -> Ok task
     }
