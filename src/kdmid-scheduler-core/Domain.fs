@@ -24,9 +24,9 @@ module Core =
                         | Some ems ->
                             match ems with
                             | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> { Id = id; Cd = cd; Ems = Some ems } |> Ok
-                            | _ -> Error "Invalid EMS"
-                    | _ -> Error "Invalid CD"
-                | _ -> Error "Invalid ID"
+                            | _ -> Error "Invalid EMS credential."
+                    | _ -> Error "Invalid CD credential."
+                | _ -> Error "Invalid ID credential."
 
         let (|Deconstruct|_|) credentials =
             match credentials with

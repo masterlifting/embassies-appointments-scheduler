@@ -1,59 +1,54 @@
 module KdmidScheduler.Worker.Core
 
-open KdmidScheduler
-
 module private WorkerHandlers =
-    let getAvailableDates city storage =
+    let getAvailableDates city =
         async {
-            match Persistence.Core.Scope.create storage with
+            match Persistence.Core.Scope.create Persistence.Core.InMemoryStorage with
             | Error error -> return Error error
             | Ok pScope ->
-                match! Repository.getUserCredentials pScope city with
-                | Error error -> return Error error
+                match! KdmidScheduler.Repository.getUserCredentials pScope city with
+                | Error error -> 
+                    Persistence.Core.Scope.clear pScope
+                    return Error error
                 | Ok credentials ->
 
-                    let cityOrder: Domain.Core.CityOrder =
+                    let cityOrder: KdmidScheduler.Domain.Core.CityOrder =
                         { City = city
                           UserCredentials = credentials }
 
-                    match! Core.processCityOrder pScope cityOrder with
-                    | Error error -> return Error error
-                    | Ok _ -> return Ok "Available dates were processed"
+                    match! KdmidScheduler.Core.processCityOrder pScope cityOrder with
+                    | Error error -> 
+                        Persistence.Core.Scope.clear pScope
+                        return Error error
+                    | Ok _ ->
+                        Persistence.Core.Scope.clear pScope
+                        return Ok "Available dates were processed."
+
+                    
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
           [ { Name = "GetAvailableDates"
-              Handle = fun _ -> WorkerHandlers.getAvailableDates Domain.Core.Belgrade Persistence.Core.InMemoryStorage
+              Handle = fun _ -> KdmidScheduler.Domain.Core.Belgrade |> WorkerHandlers.getAvailableDates
               Steps = [] } ] }
       { Name = "Sarajevo"
         Steps =
           [ { Name = "GetAvailableDates"
-              Handle = fun _ -> WorkerHandlers.getAvailableDates Domain.Core.Sarajevo Persistence.Core.InMemoryStorage
+              Handle = fun _ -> KdmidScheduler.Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
               Steps = [] } ] } ]
 
-let configWorker (args: string array) =
+let configureWorker cToken =
     async {
-        match! Repository.getTasks () with
+        match! KdmidScheduler.Worker.Repository.getTasks () with
         | Error error -> return Error error
         | Ok tasks ->
-
-            let duration =
-                match args.Length with
-                | 1 ->
-                    match args.[0] with
-                    | Infrastructure.DSL.AP.IsFloat seconds -> seconds
-                    | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
-                | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
-
             let config: Worker.Domain.Configuration =
-                { Duration = duration
+                { CancellationToken = cToken
                   Tasks = tasks
-                  getTask = Repository.getTask
+                  getTask = KdmidScheduler.Worker.Repository.getTask
                   Handlers = handlers }
-
-            Infrastructure.Logging.useConsoleLogger <| Configuration.appSettings
 
             return Ok config
     }
