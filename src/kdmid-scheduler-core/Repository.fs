@@ -27,12 +27,13 @@ let getUserCredentials pScope city =
             | Core.Scope.InMemoryStorageScope storage ->
                 let cityCode = Mapper.getCityCode city
 
-                match InMemoryStorage.tryFind cityCode storage with
-                | Some unserializedCredentials ->
+                match InMemoryStorage.find cityCode storage with
+                | Error error -> Error error
+                | Ok None -> Error $"User credentials for '{city}' are not found"
+                | Ok(Some unserializedCredentials) ->
                     match DSL.SerDe.Json.deserialize<Domain.Persistence.UserCredential seq> unserializedCredentials with
                     | Ok credentials -> Ok(credentials |> Mapper.toCoreUserCredentials)
                     | Error error -> Error error
-                | None -> Error $"User credentials for '{city}' are not found"
             | _ -> Error $"Not implemented for '{pScope}'"
     }
 

@@ -3,54 +3,34 @@ module KdmidScheduler.Worker.Core
 open KdmidScheduler
 
 module private WorkerHandlers =
-    let getAvailableDates city =
+    let getAvailableDates city storage =
         async {
-            match Persistence.Core.Scope.create Persistence.Core.InMemoryStorage with
+            match Persistence.Core.Scope.create storage with
             | Error error -> return Error error
-            | Ok persistenceScope ->
-                match
-                    Domain.Core.Kdmid.createCredentials
-                        (Domain.Core.Kdmid.Id "1")
-                        (Domain.Core.Kdmid.Cd "2")
-                        (Domain.Core.Kdmid.Ems(Some "3"))
-                with
+            | Ok pScope ->
+                match! Repository.getUserCredentials pScope city with
                 | Error error -> return Error error
-                | Ok credential ->
-                    let user: Domain.Core.User =
-                        { Id = Domain.Core.UserId "1"
-                          Name = "John Doe" }
+                | Ok credentials ->
 
-                    let userCredentials: Domain.Core.UserCredentials = Map [ user, Set [ credential ] ]
+                    let cityOrder: Domain.Core.CityOrder =
+                        { City = city
+                          UserCredentials = credentials }
 
-                    match! Repository.addUserCredentials persistenceScope city userCredentials with
+                    match! Core.processCityOrder pScope cityOrder with
                     | Error error -> return Error error
-                    | Ok _ ->
-
-                        match! Repository.getUserCredentials persistenceScope city with
-                        | Error error -> return Error error
-                        | Ok userCredentials ->
-
-                            let cityOrder: Domain.Core.CityOrder =
-                                { City = city
-                                  UserCredentials = userCredentials }
-
-                            Infrastructure.Logging.Log.info $"City order: {cityOrder}"
-
-                            match! Core.processCityOrder persistenceScope cityOrder with
-                            | Error error -> return Error error
-                            | Ok _ -> return Ok "Available dates were processed"
+                    | Ok _ -> return Ok "Available dates were processed"
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
           [ { Name = "GetAvailableDates"
-              Handle = fun _ -> Domain.Core.Belgrade |> WorkerHandlers.getAvailableDates
+              Handle = fun _ -> WorkerHandlers.getAvailableDates Domain.Core.Belgrade Persistence.Core.InMemoryStorage
               Steps = [] } ] }
       { Name = "Sarajevo"
         Steps =
           [ { Name = "GetAvailableDates"
-              Handle = fun _ -> Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
+              Handle = fun _ -> WorkerHandlers.getAvailableDates Domain.Core.Sarajevo Persistence.Core.InMemoryStorage
               Steps = [] } ] } ]
 
 let configWorker (args: string array) =

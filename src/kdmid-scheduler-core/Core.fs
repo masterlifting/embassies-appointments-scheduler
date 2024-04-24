@@ -19,6 +19,20 @@ let createBaseUrl city =
     let cityCode = getCityCode city
     $"https://{cityCode}.kdmid.ru/queue/"
 
+let addUserCredentials pScope city =
+    async {
+        match createCredentials (Id "1") (Cd "2") (Ems(Some "3")) with
+        | Error error -> return Error error
+        | Ok credential ->
+            let user: Domain.Core.User = { Id = UserId "1"; Name = "John Doe" }
+
+            let userCredentials: Domain.Core.UserCredentials = Map [ user, Set [ credential ] ]
+
+            match! Repository.addUserCredentials pScope city userCredentials with
+            | Error error -> return Error error
+            | Ok _ -> return Ok "User credentials were added"
+    }
+
 let getCityCredentials (user: User) : Async<Result<CityCredentials, string>> =
     async {
         let! credentials = Repository.getCityCredentials user
