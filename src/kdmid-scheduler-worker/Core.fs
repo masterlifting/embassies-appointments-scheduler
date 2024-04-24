@@ -40,15 +40,15 @@ let private handlers: Worker.Domain.Core.TaskHandler list =
               Handle = fun _ -> KdmidScheduler.Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
               Steps = [] } ] } ]
 
-let configureWorker cToken =
+let configure cToken =
     async {
         match! KdmidScheduler.Worker.Repository.getWorkerTasks () with
         | Error error -> return Error error
         | Ok tasks ->
             let config: Worker.Domain.Configuration =
                 { CancellationToken = cToken
-                  Tasks = tasks
                   getTask = KdmidScheduler.Worker.Repository.getWorkerTask
+                  Tasks = tasks
                   Handlers = handlers }
 
             return Ok config
