@@ -13,7 +13,7 @@ let addUserCredentials pScope city credentials =
                 | Ok serializedCredentials ->
                     let cityCode = Mapper.getCityCode city
 
-                    match InMemoryStorage.add cityCode serializedCredentials storage with
+                    match storage.add cityCode serializedCredentials with
                     | Ok _ -> Ok()
                     | Error error -> Error error
                 | Error error -> Error error
@@ -27,7 +27,7 @@ let getUserCredentials pScope city =
             | Core.Scope.InMemoryStorageScope storage ->
                 let cityCode = Mapper.getCityCode city
 
-                match InMemoryStorage.find cityCode storage with
+                match storage.find cityCode with
                 | Error error -> Error error
                 | Ok None -> Error $"User credentials for '{city}' are not found."
                 | Ok(Some unserializedCredentials) ->
