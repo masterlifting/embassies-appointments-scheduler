@@ -1,7 +1,7 @@
-module KdmidScheduler.Worker.Repository
+module internal KdmidScheduler.Worker.Repository
 
 [<Literal>]
-let workerSection = "KdmidQueueChecker"
+let private workerSection = "KdmidQueueChecker"
 
 let getWorkerTasks () =
     async {

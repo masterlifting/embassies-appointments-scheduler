@@ -1,4 +1,4 @@
-module KdmidScheduler.Worker.Core
+module internal KdmidScheduler.Worker.Core
 
 module private WorkerHandlers =
     [<Literal>]
@@ -40,14 +40,32 @@ let private handlers: Worker.Domain.Core.TaskHandler list =
               Handle = fun _ -> KdmidScheduler.Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
               Steps = [] } ] } ]
 
-let configure cToken =
+let configure (args: string array) =
     async {
-        match! KdmidScheduler.Worker.Repository.getWorkerTasks () with
+
+        Infrastructure.Logging.useConsoleLogger <| Configuration.AppSettings
+
+        match! Repository.getWorkerTasks () with
         | Error error -> return Error error
         | Ok tasks ->
+            let seconds =
+                match args.Length with
+                | 1 ->
+                    match args.[0] with
+                    | Infrastructure.DSL.AP.IsFloat value -> value
+                    | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
+                | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
+
+
+            let duration = System.TimeSpan.FromSeconds seconds
+            use cts = new System.Threading.CancellationTokenSource(duration)
+
+            $"The worker will be running for %d{duration.Days}d %02d{duration.Hours}h %02d{duration.Minutes}m %02d{duration.Seconds}s"
+            |> Infrastructure.Logging.Log.warning
+
             let config: Worker.Domain.Configuration =
-                { CancellationToken = cToken
-                  getTask = KdmidScheduler.Worker.Repository.getWorkerTask
+                { CancellationToken = cts.Token
+                  getTask = Repository.getWorkerTask
                   Tasks = tasks
                   Handlers = handlers }
 
