@@ -6,7 +6,7 @@ module private WorkerHandlers =
 
     let getAvailableDates city =
         async {
-            match Persistence.Core.Scope.create Persistence.Core.InMemoryStorage with
+            match Persistence.Core.Scope.create Persistence.Core.MemoryStorage with
             | Error error -> return Error error
             | Ok pScope ->
                 match! KdmidScheduler.Repository.getUserCredentials pScope city with
