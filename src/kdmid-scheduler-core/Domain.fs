@@ -3,34 +3,47 @@
 module Core =
 
     module Kdmid =
-        type KdmidId = Id of string
-        type KdmidCd = Cd of string
-        type KdmidEms = Ems of string option
+        type KdmidId = private KdmidId of int
+        type KdmidCd = private KdmidCd of string
+        type KdmidEms = private KdmidEms of string option
 
         type Credentials =
-            { Id: int
-              Cd: string
-              Ems: string option }
+            { Id: KdmidId
+              Cd: KdmidCd
+              Ems: KdmidEms }
 
         let createCredentials id cd ems =
-            match id, cd, ems with
-            | Id id, Cd cd, Ems ems ->
-                match id with
-                | Infrastructure.DSL.AP.IsInt id ->
-                    match cd with
-                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd ->
+            match id with
+            | id when id > 0 ->
+                match cd with
+                | Infrastructure.DSL.AP.IsLettersOrNumbers cd ->
+                    match ems with
+                    | None ->
+                        { Id = KdmidId id
+                          Cd = KdmidCd cd
+                          Ems = KdmidEms None }
+                        |> Ok
+                    | Some ems ->
                         match ems with
-                        | None -> { Id = id; Cd = cd; Ems = None } |> Ok
-                        | Some ems ->
-                            match ems with
-                            | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> { Id = id; Cd = cd; Ems = Some ems } |> Ok
-                            | _ -> Error "Invalid EMS credential."
-                    | _ -> Error "Invalid CD credential."
-                | _ -> Error "Invalid ID credential."
+                        | Infrastructure.DSL.AP.IsString ems ->
+                            { Id = KdmidId id
+                              Cd = KdmidCd cd
+                              Ems = KdmidEms(Some ems) }
+                            |> Ok
+                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems ->
+                            { Id = KdmidId id
+                              Cd = KdmidCd cd
+                              Ems = KdmidEms(Some ems) }
+                            |> Ok
+                        | _ -> Error "Invalid EMS credential."
+                | _ -> Error "Invalid CD credential."
+            | _ -> Error "Invalid ID credential."
 
         let (|Deconstruct|_|) credentials =
             match credentials with
-            | { Id = id; Cd = cd; Ems = ems } -> Some(id, cd, ems)
+            | { Id = KdmidId id
+                Cd = KdmidCd cd
+                Ems = KdmidEms ems } -> Some(id, cd, ems)
 
     type City =
         | Belgrade

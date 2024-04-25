@@ -19,16 +19,16 @@ let createBaseUrl city =
     let cityCode = getCityCode city
     $"https://{cityCode}.kdmid.ru/queue/"
 
-let addUserCredentials pScope city =
+let addUserCredentials storage city =
     async {
-        match createCredentials (Id "1") (Cd "2") (Ems(Some "3")) with
+        match createCredentials 1 "2" (Some "3") with
         | Error error -> return Error error
         | Ok credential ->
             let user: Domain.Core.User = { Id = UserId "1"; Name = "John Doe" }
 
             let userCredentials: Domain.Core.UserCredentials = Map [ user, Set [ credential ] ]
 
-            match! Repository.addUserCredentials pScope city userCredentials with
+            match! Repository.addUserCredentials storage city userCredentials with
             | Error error -> return Error error
             | Ok _ -> return Ok "User credentials were added"
     }
@@ -45,7 +45,7 @@ let getKdmidCredentials (user: User) (city: City) : Async<Result<Set<Kdmid.Crede
         return credentials
     }
 
-let processCityOrder pScope (order: CityOrder) : Async<Result<CityOrderResult seq, string>> =
+let processCityOrder (order: CityOrder) storage : Async<Result<CityOrderResult seq, string>> =
     async {
         // let cityCode = Kdmid.createUrlParams order.UserCredentials.[order.City].Head
         // let baseUrl = Kdmid.createBaseUrl order.City

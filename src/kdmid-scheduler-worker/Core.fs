@@ -6,26 +6,20 @@ module private WorkerHandlers =
 
     let getAvailableDates city =
         async {
-            match Persistence.Core.Scope.create Persistence.Core.MemoryStorage with
+            match Persistence.Core.Storage.create Persistence.Core.InMemory with
             | Error error -> return Error error
-            | Ok pScope ->
-                match! KdmidScheduler.Repository.getUserCredentials pScope city with
-                | Error error ->
-                    Persistence.Core.Scope.clear pScope
-                    return Error error
+            | Ok storage ->
+                match! KdmidScheduler.Repository.getUserCredentials city storage with
+                | Error error -> return Error error
                 | Ok credentials ->
 
                     let order: KdmidScheduler.Domain.Core.CityOrder =
                         { City = city
                           UserCredentials = credentials }
 
-                    match! KdmidScheduler.Core.processCityOrder pScope order with
-                    | Error error ->
-                        Persistence.Core.Scope.clear pScope
-                        return Error error
-                    | Ok result ->
-                        Persistence.Core.Scope.clear pScope
-                        return Ok $"Worker processed results for '{city}' are: \n{result}"
+                    match! KdmidScheduler.Core.processCityOrder order storage with
+                    | Error error -> return Error error
+                    | Ok result -> return Ok $"Worker processed results for '{city}' are: \n{result}"
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
