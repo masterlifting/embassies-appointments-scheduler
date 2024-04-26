@@ -45,7 +45,7 @@ let configure (args: string array) =
             let seconds =
                 match args.Length with
                 | 1 ->
-                    match args.[0] with
+                    match args[0] with
                     | Infrastructure.DSL.AP.IsFloat value -> value
                     | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
                 | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
