@@ -1,60 +1,87 @@
 module KdmidScheduler.Mapper
 
+open System
 open Domain
 
-module AP =
-    let (|Map|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials option =
-        match input with
-        | Core.Kdmid.Deconstruct(id, cd, None) ->
-            Some
-                { Id = id
-                  Cd = cd
-                  Ems = System.String.Empty }
-        | Core.Kdmid.Deconstruct(id, cd, Some ems) -> Some { Id = id; Cd = cd; Ems = ems }
-        | _ -> None
-
-    let (|Map|_|) (input: Persistence.Kdmid.Credentials) : Core.Kdmid.Credentials option =
-        match input with
-        | { Id = id; Cd = cd; Ems = ems } ->
-            match Domain.Core.Kdmid.createCredentials id cd (Some ems) with
-            | Ok credentials -> Some credentials
-            | Error _ -> None
-
-    let (|ToPersistenceUser|) (input: Core.User) : Persistence.User=
+module User =
+    let (|ToPersistence|) (input: Core.User) : Persistence.User =
         match input with
         | { Id = Core.UserId id; Name = name } -> { Id = id; Name = name }
 
-    let (|ToCoreUser|) (input: Persistence.User) : Core.User =
+    let toPersistence =
+        function
+        | ToPersistence user -> user
+
+    let (|ToCore|) (input: Persistence.User) : Core.User =
         match input with
         | { Id = id; Name = name } -> { Id = Core.UserId id; Name = name }
 
-let getCityCode city =
-    match city with
-    | Core.Belgrade -> "belgrad"
-    | Core.Budapest -> "budapest"
-    | Core.Sarajevo -> "sarajevo"
+    let toCore =
+        function
+        | ToCore user -> user
 
-let toPersistenceUserCredentials (userCredentials: Core.UserCredentials) : Persistence.UserCredential seq =
-    seq {
-        for (user, credentials) in Map.toSeq userCredentials do
-            let persistenceUserCredentials: Persistence.UserCredential =
-                { User = match user with
-                         | AP.ToPersistenceUser(user) -> user
-                  Credentials = Set.map toPersistenceKdmidCredentials credentials |> Set.toList }
+module KdmidCredentials =
 
-            yield persistenceUserCredentials
-    }
+    let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
+        match input with
+        | Domain.Core.Kdmid.Deconstruct(id, cd, Some ems) -> { Id = id; Cd = cd; Ems = ems }
+        | Domain.Core.Kdmid.Deconstruct(id, cd, None) -> { Id = id; Cd = cd; Ems = String.Empty }
 
-let toCoreUserCredentials (userCredentials: Persistence.UserCredential seq) : Core.UserCredentials =
-    let userCredentialsMap =
-        userCredentials
-        |> Seq.map (fun userCredential ->
-            let user = toCoreUser userCredential.User
+    let toPersistence =
+        function
+        | ToPersistence credentials -> credentials
 
-            let credentials =
-                userCredential.Credentials |> List.map toCoreKdmidCredentials |> Set.ofList
+    let (|ToCore|) (input: Persistence.Kdmid.Credentials) : Result<Core.Kdmid.Credentials, string> =
+        match input with
+        | { Id = id; Cd = cd; Ems = ems } -> Domain.Core.Kdmid.createCredentials id cd (Some ems)
 
-            user, credentials)
-        |> Map.ofSeq
+    let toCore =
+        function
+        | ToCore credentials -> credentials
 
-    userCredentialsMap
+    let (|ToCityCode|) city =
+        match city with
+        | Core.Belgrade -> "belgrad"
+        | Core.Budapest -> "budapest"
+        | Core.Sarajevo -> "sarajevo"
+
+    let toCityCode =
+        function
+        | ToCityCode city -> city
+
+module UserCredentials =
+    let (|ToPersistence|) (input: Core.UserCredentials) : Persistence.UserCredential seq =
+        input
+        |> Map.toSeq
+        |> Seq.map (fun (user, credentials) ->
+            { User = User.toPersistence user
+              Credentials = credentials |> Set.map KdmidCredentials.toPersistence |> Set.toList })
+
+    let toPersistence =
+        function
+        | ToPersistence userCredentials -> userCredentials
+
+    let (|ToCore|) (input: Persistence.UserCredential seq) : Result<Core.UserCredentials, string> =
+        let result =
+            input
+            |> Seq.map (fun userCredentials ->
+                let user = userCredentials.User |> User.toCore
+
+                let credentials =
+                    userCredentials.Credentials
+                    |> List.map KdmidCredentials.toCore
+                    |> List.toSeq
+                    |> Infrastructure.DSL.Seq.resultOrError
+
+                match credentials with
+                | Error msg -> Error msg
+                | Ok credentials -> Ok <| (user, credentials |> set))
+            |> Infrastructure.DSL.Seq.resultOrError
+
+        match result with
+        | Error msg -> Error msg
+        | Ok userCredentials -> Ok <| (userCredentials |> Map.ofList)
+
+    let toCore =
+        function
+        | ToCore userCredentials -> userCredentials

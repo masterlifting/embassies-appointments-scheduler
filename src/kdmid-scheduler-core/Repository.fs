@@ -1,43 +1,37 @@
-module KdmidScheduler.Repository
+module internal KdmidScheduler.Repository
 
-open KdmidScheduler.Domain.Core
-open Infrastructure
+open Persistence.Core.Storage
 
-let addUserCredentials city credentials storage =
-    async {
-        return
-            match storage with
-            | Persistence.Core.Storage.MemoryStorage storage ->
-                match DSL.SerDe.Json.serialize (Mapper.toPersistenceUserCredentials credentials) with
-                | Ok serializedCredentials ->
-                    let cityCode = Mapper.getCityCode city
+module User =
+    let add user storage =
+        async {
+            return
+                match storage with
+                | MemoryStorage storage -> MemoryRepository.User.add user storage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }
 
-                    match Persistence.InMemory.add cityCode serializedCredentials storage with
-                    | Ok _ -> Ok()
-                    | Error error -> Error error
-                | Error error -> Error error
-            | _ -> Error $"Not implemented for '{storage}'."
-    }
+    let get id storage =
+        async {
+            return
+                match storage with
+                | MemoryStorage storage -> MemoryRepository.User.get id storage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }
 
-let getUserCredentials city storage =
-    async {
-        return
-            match storage with
-            | Persistence.Core.Storage.MemoryStorage storage ->
-                let cityCode = Mapper.getCityCode city
+module UserCredentials =
+    let add city credentials storage =
+        async {
+            return
+                match storage with
+                | MemoryStorage storage -> MemoryRepository.UserCredentials.add city credentials storage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }
 
-                match Persistence.InMemory.find cityCode storage with
-                | Error error -> Error error
-                | Ok None -> Error $"User credentials for '{city}' are not found."
-                | Ok(Some unserializedCredentials) ->
-                    match DSL.SerDe.Json.deserialize<Domain.Persistence.UserCredential seq> unserializedCredentials with
-                    | Ok credentials -> Ok(credentials |> Mapper.toCoreUserCredentials)
-                    | Error error -> Error error
-            | _ -> Error $"Not implemented for '{storage}'."
-    }
-
-let getCityCredentials (user: User) : Async<Result<CityCredentials, string>> =
-    async { return Error "Not implemented." }
-
-let getKdmidCredentials (user: User) (city: City) : Async<Result<Set<Kdmid.Credentials>, string>> =
-    async { return Error "Not implemented." }
+    let get city storage =
+        async {
+            return
+                match storage with
+                | MemoryStorage storage -> MemoryRepository.UserCredentials.get city storage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }

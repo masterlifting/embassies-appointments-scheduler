@@ -1,7 +1,6 @@
 ﻿module KdmidScheduler.Domain
 
 module Core =
-
     module Kdmid =
         type KdmidId = private KdmidId of int
         type KdmidCd = private KdmidCd of string
@@ -39,11 +38,11 @@ module Core =
                 | _ -> Error "Invalid CD credential."
             | _ -> Error "Invalid ID credential."
 
-        let (|Deconstruct|_|) credentials =
+        let (|Deconstruct|) credentials =
             match credentials with
             | { Id = KdmidId id
                 Cd = KdmidCd cd
-                Ems = KdmidEms ems } -> Some(id, cd, ems)
+                Ems = KdmidEms ems } -> (id, cd, ems)
 
     type City =
         | Belgrade
@@ -79,7 +78,6 @@ module Core =
     type UserOrderResult = Map<City, Set<OrderResult>>
 
 module Persistence =
-
     module Kdmid =
         type Credentials = { Id: int; Cd: string; Ems: string }
 

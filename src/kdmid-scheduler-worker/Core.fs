@@ -1,43 +1,54 @@
 module internal KdmidScheduler.Worker.Core
 
-module private WorkerHandlers =
-    [<Literal>]
-    let getAvailableDatesStep = "GetAvailableDates"
+open System
+open Infrastructure
+open KdmidScheduler.Domain.Core
 
-    let getAvailableDates city =
+module private WorkerHandlers =
+    open Persistence.Core
+    open KdmidScheduler.Core
+
+    [<Literal>]
+    let FindAvailableDatesStepName = "FindAvailableDates"
+
+    let findAvailableDatesFor city =
         async {
-            match Persistence.Core.Storage.create Persistence.Core.InMemory with
+            match Storage.create Type.InMemory with
             | Error error -> return Error error
             | Ok storage ->
-                match! KdmidScheduler.Repository.getUserCredentials city storage with
+                match! getUserCredentials city storage with
                 | Error error -> return Error error
-                | Ok credentials ->
+                | Ok credentialsOpt ->
 
-                    let order: KdmidScheduler.Domain.Core.CityOrder =
-                        { City = city
-                          UserCredentials = credentials }
+                    match credentialsOpt with
+                    | None -> return Ok "Result: Data was not found."
+                    | Some userCredentials ->
 
-                    match! KdmidScheduler.Core.processCityOrder order storage with
-                    | Error error -> return Error error
-                    | Ok result -> return Ok $"Worker processed results for '{city}' are: \n{result}"
+                        let order =
+                            { City = city
+                              UserCredentials = userCredentials }
+
+                        match! processCityOrder order storage with
+                        | Error error -> return Error error
+                        | Ok result -> return Ok $"Result:\n{result}"
         }
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
-          [ { Name = WorkerHandlers.getAvailableDatesStep
-              Handle = fun _ -> KdmidScheduler.Domain.Core.Belgrade |> WorkerHandlers.getAvailableDates
+          [ { Name = WorkerHandlers.FindAvailableDatesStepName
+              Handle = fun _ -> WorkerHandlers.findAvailableDatesFor Belgrade
               Steps = [] } ] }
       { Name = "Sarajevo"
         Steps =
-          [ { Name = WorkerHandlers.getAvailableDatesStep
-              Handle = fun _ -> KdmidScheduler.Domain.Core.Sarajevo |> WorkerHandlers.getAvailableDates
+          [ { Name = WorkerHandlers.FindAvailableDatesStepName
+              Handle = fun _ -> WorkerHandlers.findAvailableDatesFor Sarajevo
               Steps = [] } ] } ]
 
 let configure (args: string array) =
     async {
 
-        Infrastructure.Logging.useConsoleLogger <| Configuration.AppSettings
+        Logging.useConsoleLogger <| Configuration.AppSettings
 
         match! Repository.getWorkerTasks () with
         | Error error -> return Error error
@@ -46,16 +57,16 @@ let configure (args: string array) =
                 match args.Length with
                 | 1 ->
                     match args[0] with
-                    | Infrastructure.DSL.AP.IsFloat value -> value
-                    | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
-                | _ -> (System.TimeSpan.FromDays 1).TotalSeconds
+                    | DSL.AP.IsFloat value -> value
+                    | _ -> (TimeSpan.FromDays 1).TotalSeconds
+                | _ -> (TimeSpan.FromDays 1).TotalSeconds
 
 
-            let duration = System.TimeSpan.FromSeconds seconds
-            use cts = new System.Threading.CancellationTokenSource(duration)
+            let duration = TimeSpan.FromSeconds seconds
+            use cts = new Threading.CancellationTokenSource(duration)
 
             $"The worker will be running for %d{duration.Days}d %02d{duration.Hours}h %02d{duration.Minutes}m %02d{duration.Seconds}s"
-            |> Infrastructure.Logging.Log.warning
+            |> Logging.Log.warning
 
             let config: Worker.Domain.Configuration =
                 { CancellationToken = cts.Token
