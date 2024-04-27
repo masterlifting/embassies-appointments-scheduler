@@ -12,6 +12,7 @@ let private createBaseUrl city =
     let cityCode = city |> Mapper.KdmidCredentials.toCityCode
     $"https://{cityCode}.kdmid.ru/queue/"
 
+let addUserCredentials = Repository.UserCredentials.add
 let getUserCredentials = Repository.UserCredentials.get
 
 let processCityOrder (order: CityOrder) storage : Async<Result<CityOrderResult seq, string>> =

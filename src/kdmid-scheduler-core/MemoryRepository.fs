@@ -3,6 +3,7 @@
 open Persistence
 open KdmidScheduler.SerDe
 open KdmidScheduler.Mapper
+open Infrastructure.Logging
 
 module User =
     let add user storage =
@@ -34,7 +35,9 @@ module UserCredentials =
 
             match InMemory.add key credentialsStr storage with
             | Error error -> Error error
-            | Ok _ -> Ok()
+            | Ok _ ->
+                $"User credentials for city {city} added to memory storage." |> Log.info
+                Ok()
 
     let get city storage =
         let key = city |> KdmidCredentials.toCityCode

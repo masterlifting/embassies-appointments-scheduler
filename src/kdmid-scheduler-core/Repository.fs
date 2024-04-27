@@ -32,6 +32,6 @@ module UserCredentials =
         async {
             return
                 match storage with
-                | MemoryStorage storage -> MemoryRepository.UserCredentials.get city storage
+                | MemoryStorage mStorage -> MemoryRepository.UserCredentials.get city mStorage
                 | _ -> Error $"Not implemented for '{storage}'."
         }
