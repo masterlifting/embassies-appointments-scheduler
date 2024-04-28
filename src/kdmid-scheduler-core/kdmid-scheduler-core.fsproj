@@ -10,10 +10,12 @@
     <Compile Include="SerDe.fs" />
     <Compile Include="MemoryRepository.fs" />
     <Compile Include="Repository.fs" />
+    <Compile Include="Web.fs" />
     <Compile Include="Core.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj" />
     <ProjectReference Include="..\..\submodules\fsharp-persistence\src\fsharp-persistence.fsproj" />
+    <ProjectReference Include="..\..\submodules\fsharp-web\src\fsharp-web.fsproj" />
   </ItemGroup>
 </Project>
