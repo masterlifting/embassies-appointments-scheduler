@@ -43,7 +43,7 @@ module Http =
             return response
         }
 
-    let getCalendar
+    let getKdmidOrderResults
         (city: Domain.Core.City)
         (credentials: Domain.Core.Kdmid.Credentials)
         : Async<Result<Set<OrderResult> option, string>> =

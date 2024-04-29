@@ -24,8 +24,8 @@ module KdmidCredentials =
 
     let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
         match input with
-        | Domain.Core.Kdmid.Deconstruct(id, cd, Some ems) -> { Id = id; Cd = cd; Ems = ems }
-        | Domain.Core.Kdmid.Deconstruct(id, cd, None) -> { Id = id; Cd = cd; Ems = String.Empty }
+        | Core.Kdmid.Deconstruct(id, cd, Some ems) -> { Id = id; Cd = cd; Ems = ems }
+        | Core.Kdmid.Deconstruct(id, cd, None) -> { Id = id; Cd = cd; Ems = String.Empty }
 
     let toPersistence =
         function
@@ -33,7 +33,7 @@ module KdmidCredentials =
 
     let (|ToCore|) (input: Persistence.Kdmid.Credentials) : Result<Core.Kdmid.Credentials, string> =
         match input with
-        | { Id = id; Cd = cd; Ems = ems } -> Domain.Core.Kdmid.createCredentials id cd (Some ems)
+        | { Id = id; Cd = cd; Ems = ems } -> Core.Kdmid.createCredentials id cd (Some ems)
 
     let toCore =
         function
@@ -49,14 +49,30 @@ module KdmidCredentials =
         function
         | ToCityCode city -> city
 
+    let (|ToCity|) cityCode =
+        match cityCode with
+        | "belgrad" -> Some Core.Belgrade
+        | "budapest" -> Some Core.Budapest
+        | "sarajevo" -> Some Core.Sarajevo
+        | _ -> None
+
+    let toCity =
+        function
+        | ToCity city -> city
+
 module UserCredentials =
     let (|ToPersistence|) (input: Core.UserCredentials) : Persistence.UserCredential seq =
         input
         |> Map.toSeq
-        |> Seq.map (fun (user, credentials) ->
+        |> Seq.map (fun (user, cityCredentials) ->
             { User = User.toPersistence user
-              Credentials = credentials |> Set.map KdmidCredentials.toPersistence |> Set.toList })
-
+              Credentials =
+                cityCredentials
+                |> Map.map (fun city credentials ->
+                    let credentials: Persistence.CityCredentials =
+                        { City = KdmidCredentials.toCityCode city
+                          Credentials =  credentials |> List.map KdmidCredentials.toPersistence }
+                    credentials)})
     let toPersistence =
         function
         | ToPersistence userCredentials -> userCredentials

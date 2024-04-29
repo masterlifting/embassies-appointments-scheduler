@@ -10,31 +10,36 @@ module private WorkerHandlers =
 
     [<Literal>]
     let FindAvailableDatesStepName = "FindAvailableDates"
+    [<Literal>]
+    let PropagateFoundResultStepName = "PropagateFoundResult"
 
     let findAvailableDatesFor city =
         async {
             match Storage.create InMemory with
             | Error error -> return Error error
             | Ok storage ->
-                match! getUserCredentials city storage with
+                match! KdmidScheduler.Core.getUserCredentials city storage with
                 | Error error -> return Error error
                 | Ok(None) -> return Ok "Result: Data was not found."
                 | Ok(Some userCredentials) ->
-
-                    let order =
-                        { City = city
-                          UserCredentials = userCredentials }
-
-                    match! processCityOrder order storage with
+                    let credentials = userCredentials.Values |> Seq.concat |> Seq.toList
+                    match! KdmidScheduler.Core.getOrderResults city credentials with
                     | Error error -> return Error error
                     | Ok result -> return Ok $"Result:\n{result}"
         }
-
+    
+    let propagateFoundResultFor city=
+        async {
+            return Error "propagateFoundResultFor is not implemented."
+        }
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
           [ { Name = WorkerHandlers.FindAvailableDatesStepName
               Handle = fun _ -> WorkerHandlers.findAvailableDatesFor Belgrade
+              Steps = [] }
+            { Name = WorkerHandlers.PropagateFoundResultStepName
+              Handle = fun _ -> WorkerHandlers.propagateFoundResultFor Belgrade
               Steps = [] } ] }
       { Name = "Sarajevo"
         Steps =

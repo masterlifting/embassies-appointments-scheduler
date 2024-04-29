@@ -52,30 +52,15 @@ module Core =
     type UserId = UserId of string
     type User = { Id: UserId; Name: string }
 
-
-    type UserCredentials = Map<User, Set<Kdmid.Credentials>>
     type CityCredentials = Map<City, Set<Kdmid.Credentials>>
-
-    type UserOrder =
-        { User: User
-          CityCredentials: CityCredentials }
-
-    type CityOrder =
-        { City: City
-          UserCredentials: UserCredentials }
-
-    type UserCityOrder =
-        { User: User
-          City: City
-          Credentials: Set<Kdmid.Credentials> }
+    type UserCredentials = Map<User, CityCredentials>
 
     type OrderResult =
         { Date: System.DateOnly
           Time: System.TimeOnly
           Description: string }
 
-    type CityOrderResult = Map<User, Set<OrderResult>>
-    type UserOrderResult = Map<City, Set<OrderResult>>
+    type CityOrderResult = Map<City, Set<OrderResult>>
 
 module Persistence =
     module Kdmid =
@@ -83,6 +68,10 @@ module Persistence =
 
     type User = { Id: string; Name: string }
 
+    type CityCredentials =
+        { City: string
+          Credentials: Kdmid.Credentials list }
+
     type UserCredential =
         { User: User
-          Credentials: Kdmid.Credentials list }
+          Credentials: CityCredentials list }
