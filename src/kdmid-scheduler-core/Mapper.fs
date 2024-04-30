@@ -71,8 +71,10 @@ module UserCredentials =
                 |> Map.map (fun city credentials ->
                     let credentials: Persistence.CityCredentials =
                         { City = KdmidCredentials.toCityCode city
-                          Credentials =  credentials |> List.map KdmidCredentials.toPersistence }
-                    credentials)})
+                          Credentials = credentials |> List.map KdmidCredentials.toPersistence }
+
+                    credentials) })
+
     let toPersistence =
         function
         | ToPersistence userCredentials -> userCredentials
@@ -80,23 +82,32 @@ module UserCredentials =
     let (|ToCore|) (input: Persistence.UserCredential seq) : Result<Core.UserCredentials, string> =
         let result =
             input
-            |> Seq.map (fun userCredentials ->
-                let user = userCredentials.User |> User.toCore
+            |> Seq.map (fun inputItem ->
+                let user = inputItem.User |> User.toCore
 
-                let credentials =
-                    userCredentials.Credentials
-                    |> List.map KdmidCredentials.toCore
-                    |> List.toSeq
+                let cityCredentials =
+                    inputItem.Credentials
+                    |> List.map (fun cityCredentialsItem ->
+                        match cityCredentialsItem.City |> KdmidCredentials.toCity with
+                        | None -> Error "Invalid city code"
+                        | Some city ->
+                            let kdmidCredentialsRes =
+                                cityCredentialsItem.Credentials
+                                |> List.map KdmidCredentials.toCore
+                                |> Infrastructure.DSL.Seq.resultOrError
+
+                            Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials)) kdmidCredentialsRes)
                     |> Infrastructure.DSL.Seq.resultOrError
 
-                match credentials with
-                | Error msg -> Error msg
-                | Ok credentials -> Ok <| (user, credentials |> set))
+                Result.bind (fun credentials -> Ok(user, credentials)) cityCredentials)
             |> Infrastructure.DSL.Seq.resultOrError
 
-        match result with
-        | Error msg -> Error msg
-        | Ok userCredentials -> Ok <| (userCredentials |> Map.ofList)
+        let toUserCredentials userCredentials =
+            userCredentials
+            |> List.map (fun (user, cityCredentials) -> (user, cityCredentials |> List.map id |> Map.ofList))
+            |> Map.ofList
+
+        Result.bind (fun userCredentials -> Ok(toUserCredentials userCredentials)) result
 
     let toCore =
         function

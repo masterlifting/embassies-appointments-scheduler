@@ -27,18 +27,21 @@ module private InMemoryRepository =
             | Error error -> Error error
 
     module UserCredentials =
+        [<Literal>]
+        let UserCredentialsKey = "user_credentials_"
+
         let add city credentials storage =
             match Json.UserCredentials.serialize credentials with
             | Error error -> Error error
             | Ok credentialsStr ->
-                let key = city |> KdmidCredentials.toCityCode
+                let key = UserCredentialsKey + (city |> KdmidCredentials.toCityCode)
 
                 match InMemory.add key credentialsStr storage with
                 | Error error -> Error error
                 | Ok _ -> Ok()
 
         let get city storage =
-            let key = city |> KdmidCredentials.toCityCode
+            let key = UserCredentialsKey + (city |> KdmidCredentials.toCityCode)
 
             match InMemory.get key storage with
             | Error error -> Error error

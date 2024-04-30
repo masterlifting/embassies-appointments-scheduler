@@ -17,5 +17,5 @@ let getOrderResults city credentials =
         }
 
     innerLoop city credentials None
-let getUserCredentials = KdmidScheduler.Persistence.Repository.UserCredentials.get
-let createTestUserCredentials = KdmidScheduler.Persistence.Repository.UserCredentials.createTest
+let getUserCredentials = Persistence.Repository.UserCredentials.get
+let createTestUserCredentials = Persistence.Repository.UserCredentials.createTest

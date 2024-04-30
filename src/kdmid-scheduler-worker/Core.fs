@@ -18,12 +18,12 @@ module private WorkerHandlers =
             match Storage.create InMemory with
             | Error error -> return Error error
             | Ok storage ->
-                match! KdmidScheduler.Core.getUserCredentials city storage with
+                match! getUserCredentials city storage with
                 | Error error -> return Error error
                 | Ok(None) -> return Ok "Result: Data was not found."
                 | Ok(Some userCredentials) ->
                     let credentials = userCredentials.Values |> Seq.concat |> Seq.toList
-                    match! KdmidScheduler.Core.getOrderResults city credentials with
+                    match! getOrderResults city credentials with
                     | Error error -> return Error error
                     | Ok result -> return Ok $"Result:\n{result}"
         }
