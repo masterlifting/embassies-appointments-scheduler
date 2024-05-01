@@ -21,7 +21,6 @@ module User =
         | ToCore user -> user
 
 module KdmidCredentials =
-
     let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
         match input with
         | Core.Kdmid.Deconstruct(id, cd, Some ems) -> { Id = id; Cd = cd; Ems = ems }
@@ -51,10 +50,10 @@ module KdmidCredentials =
 
     let (|ToCity|) cityCode =
         match cityCode with
-        | "belgrad" -> Some Core.Belgrade
-        | "budapest" -> Some Core.Budapest
-        | "sarajevo" -> Some Core.Sarajevo
-        | _ -> None
+        | "belgrad" -> Ok Core.Belgrade
+        | "budapest" -> Ok Core.Budapest
+        | "sarajevo" -> Ok Core.Sarajevo
+        | _ -> Error "Invalid city code"
 
     let toCity =
         function
@@ -63,8 +62,7 @@ module KdmidCredentials =
 module UserCredentials =
     let (|ToPersistence|) (input: Core.UserCredentials) : Persistence.UserCredential seq =
         input
-        |> Map.toSeq
-        |> Seq.map (fun (user, cityCredentials) ->
+        |> Seq.map (fun user cityCredentials ->
             { User = User.toPersistence user
               Credentials =
                 cityCredentials
@@ -80,34 +78,25 @@ module UserCredentials =
         | ToPersistence userCredentials -> userCredentials
 
     let (|ToCore|) (input: Persistence.UserCredential seq) : Result<Core.UserCredentials, string> =
-        let result =
-            input
-            |> Seq.map (fun inputItem ->
-                let user = inputItem.User |> User.toCore
-
-                let cityCredentials =
-                    inputItem.Credentials
-                    |> List.map (fun cityCredentialsItem ->
-                        match cityCredentialsItem.City |> KdmidCredentials.toCity with
-                        | None -> Error "Invalid city code"
-                        | Some city ->
-                            let kdmidCredentialsRes =
-                                cityCredentialsItem.Credentials
-                                |> List.map KdmidCredentials.toCore
-                                |> Infrastructure.DSL.Seq.resultOrError
-
-                            Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials)) kdmidCredentialsRes)
+        input
+        |> Seq.map (fun x ->
+            x.Credentials
+            |> Seq.map (fun y ->
+                y.City
+                |> KdmidCredentials.toCity
+                |> Result.bind (fun city ->
+                    y.Credentials
+                    |> List.map KdmidCredentials.toCore
                     |> Infrastructure.DSL.Seq.resultOrError
-
-                Result.bind (fun credentials -> Ok(user, credentials)) cityCredentials)
+                    |> Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials))))
             |> Infrastructure.DSL.Seq.resultOrError
-
-        let toUserCredentials userCredentials =
+            |> Result.bind (fun cityCredentials -> Ok (x.User |> User.toCore, cityCredentials)))
+        |> Infrastructure.DSL.Seq.resultOrError
+        |> Result.bind (fun userCredentials -> 
             userCredentials
             |> List.map (fun (user, cityCredentials) -> (user, cityCredentials |> List.map id |> Map.ofList))
             |> Map.ofList
-
-        Result.bind (fun userCredentials -> Ok(toUserCredentials userCredentials)) result
+            |> Ok)
 
     let toCore =
         function
