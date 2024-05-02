@@ -62,16 +62,19 @@ module KdmidCredentials =
 module UserCredentials =
     let (|ToPersistence|) (input: Core.UserCredentials) : Persistence.UserCredential seq =
         input
-        |> Seq.map (fun user cityCredentials ->
-            { User = User.toPersistence user
-              Credentials =
-                cityCredentials
-                |> Map.map (fun city credentials ->
-                    let credentials: Persistence.CityCredentials =
-                        { City = KdmidCredentials.toCityCode city
-                          Credentials = credentials |> List.map KdmidCredentials.toPersistence }
-
-                    credentials) })
+        |> Seq.map (fun (user, credentials) ->
+            let userCredentials: Persistence.UserCredential =
+                {   User = user |> User.toPersistence
+                    Credentials =
+                        credentials
+                        |> Seq.map (fun (city, kdmidCredentials) ->
+                            let cityCredentials: Persistence.CityCredentials =
+                                {   City = city |> KdmidCredentials.toCityCode
+                                    Credentials = kdmidCredentials |> Set.map KdmidCredentials.toPersistence |> Seq.toList }
+                            cityCredentials)
+                        |> Seq.toList }    
+            userCredentials)    
+        |> Seq.toList
 
     let toPersistence =
         function
@@ -90,7 +93,9 @@ module UserCredentials =
                     |> Infrastructure.DSL.Seq.resultOrError
                     |> Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials))))
             |> Infrastructure.DSL.Seq.resultOrError
-            |> Result.bind (fun cityCredentials -> Ok (x.User |> User.toCore, cityCredentials)))
+            |> Result.bind (fun cityCredentials -> 
+                let user = x.User |> User.toCore
+                Ok (user, cityCredentials)))
         |> Infrastructure.DSL.Seq.resultOrError
         |> Result.bind (fun userCredentials -> 
             userCredentials
