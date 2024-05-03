@@ -1,40 +1,37 @@
 module KdmidScheduler.Core
 
-let private getKdmidOrderResults city credentials =
+let private handleKdmidCredentials user city credentials =
 
-    let rec innerLoop credentials city error =
+    let rec innerLoop city credentials error =
         async {
             match credentials, error with
             | [], None -> return Ok None
             | [], Some error -> return Error error
-            | credential :: credentialsTail, _ ->
-                match! Web.Http.getKdmidOrderResults city credential with
-                | Error error -> return! innerLoop credentialsTail city (Some error)
+            | credentialsHead :: credentialsTail, _ ->
+                match! Web.Http.getKdmidOrderResults city credentialsHead with
+                | Error error -> return! innerLoop city credentialsTail (Some error)
                 | Ok None -> return Ok None
-                | Ok(Some orderResults) ->
-                    let! tailOrderResults =
-                        credentialsTail
-                        |> Seq.map (fun x -> Web.Http.getKdmidOrderResults city x)
-                        |> Async.Parallel
-
-                    let result = set [ tailOrderResults, Some orderResults ]
-
-                    return Ok <| Some(credential, orderResults)
+                | Ok(Some orderResults) -> return Ok <| Some(user, city, orderResults)
         }
 
     let credentialsList = credentials |> Seq.toList
-    innerLoop credentialsList city None
+    innerLoop city credentialsList None
 
-let private handleCities user (cityCredentials: Domain.Core.CityCredentials) =
+let private handleCityCredentials user (cityCredentials: Domain.Core.CityCredentials) =
     cityCredentials
-    |> Seq.map (fun x -> getKdmidOrderResults x.Key x.Value)
+    |> Seq.map (fun x -> handleKdmidCredentials user x.Key x.Value)
     |> Async.Parallel
 
-let private handleUsers (userCredentials: Domain.Core.UserCredentials) =
+let private handleUserCredentials (userCredentials: Domain.Core.UserCredentials) =
     userCredentials
-    |> Seq.map (fun x -> handleCities x.Key x.Value)
+    |> Seq.map (fun x -> handleCityCredentials x.Key x.Value)
     |> Async.Parallel
 
-let getOrderResults = handleUsers
+let getKdmidResults userCredentials =
+    async {
+        let! results = handleUserCredentials userCredentials
+        return results |> Seq.collect id |> Infrastructure.DSL.Seq.resultOrError
+    }
+
 let getUserCredentials = Persistence.Repository.UserCredentials.get
 let createTestUserCredentials = Persistence.Repository.UserCredentials.createTest

@@ -10,6 +10,7 @@ module private WorkerHandlers =
 
     [<Literal>]
     let FindAvailableDatesStepName = "FindAvailableDates"
+
     [<Literal>]
     let PropagateFoundResultStepName = "PropagateFoundResult"
 
@@ -22,15 +23,14 @@ module private WorkerHandlers =
                 | Error error -> return Error error
                 | Ok(None) -> return Ok "Result: Data was not found."
                 | Ok(Some userCredentials) ->
-                    match! getOrderResults userCredentials with
+                    match! getKdmidResults userCredentials with
                     | Error error -> return Error error
                     | Ok results -> return Ok $"Result:\n{results}"
         }
-    
-    let propagateFoundResultFor city=
-        async {
-            return Error "propagateFoundResultFor is not implemented."
-        }
+
+    let propagateFoundResultFor city =
+        async { return Error "propagateFoundResultFor is not implemented." }
+
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Belgrade"
         Steps =
