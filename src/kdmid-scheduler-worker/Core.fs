@@ -22,10 +22,9 @@ module private WorkerHandlers =
                 | Error error -> return Error error
                 | Ok(None) -> return Ok "Result: Data was not found."
                 | Ok(Some userCredentials) ->
-                    let credentials = userCredentials.Values |> Seq.concat |> Seq.toList
-                    match! getOrderResults city credentials with
+                    match! getOrderResults userCredentials with
                     | Error error -> return Error error
-                    | Ok result -> return Ok $"Result:\n{result}"
+                    | Ok results -> return Ok $"Result:\n{results}"
         }
     
     let propagateFoundResultFor city=

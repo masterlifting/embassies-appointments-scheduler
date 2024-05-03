@@ -62,19 +62,20 @@ module KdmidCredentials =
 module UserCredentials =
     let (|ToPersistence|) (input: Core.UserCredentials) : Persistence.UserCredential seq =
         input
-        |> Seq.map (fun (user, credentials) ->
-            let userCredentials: Persistence.UserCredential =
-                {   User = user |> User.toPersistence
-                    Credentials =
-                        credentials
-                        |> Seq.map (fun (city, kdmidCredentials) ->
-                            let cityCredentials: Persistence.CityCredentials =
-                                {   City = city |> KdmidCredentials.toCityCode
-                                    Credentials = kdmidCredentials |> Set.map KdmidCredentials.toPersistence |> Seq.toList }
-                            cityCredentials)
-                        |> Seq.toList }    
-            userCredentials)    
-        |> Seq.toList
+        |> Seq.map (fun coreUserCredentials ->
+            { User = coreUserCredentials.Key |> User.toPersistence
+              Credentials =
+                coreUserCredentials.Value
+                |> Seq.map (fun coreCityCredentials ->
+                    let persistenceCityCredentials: Persistence.CityCredentials =
+                        { City = coreCityCredentials.Key |> KdmidCredentials.toCityCode
+                          Credentials =
+                            coreCityCredentials.Value
+                            |> Set.map KdmidCredentials.toPersistence
+                            |> Seq.toList }
+
+                    persistenceCityCredentials)
+                |> Seq.toList })
 
     let toPersistence =
         function
@@ -93,11 +94,11 @@ module UserCredentials =
                     |> Infrastructure.DSL.Seq.resultOrError
                     |> Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials))))
             |> Infrastructure.DSL.Seq.resultOrError
-            |> Result.bind (fun cityCredentials -> 
+            |> Result.bind (fun cityCredentials ->
                 let user = x.User |> User.toCore
-                Ok (user, cityCredentials)))
+                Ok(user, cityCredentials)))
         |> Infrastructure.DSL.Seq.resultOrError
-        |> Result.bind (fun userCredentials -> 
+        |> Result.bind (fun userCredentials ->
             userCredentials
             |> List.map (fun (user, cityCredentials) -> (user, cityCredentials |> List.map id |> Map.ofList))
             |> Map.ofList
