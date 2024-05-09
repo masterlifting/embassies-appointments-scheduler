@@ -1,39 +1,36 @@
 module KdmidScheduler.Core
 
-open KdmidScheduler.Domain.Core.Kdmid
+module Kdmid =
+    open KdmidScheduler.Domain.Core.Kdmid
 
-let processKdmidOrder (order: Order) =
+    let getCredentialAppointments credentials =
 
-    let rec innerLoop credentials error =
-        async {
-            match credentials, error with
-            | [], None -> return Ok None
-            | [], Some error -> return Error error
-            | credentialsHead :: credentialsTail, _ ->
-                match! Web.Http.getKdmidOrderResults credentialsHead with
-                | Error(InvalidRequest error) -> return Error error
-                | Error(InvalidResponse error) -> return! innerLoop credentialsTail (Some error)
-                | Error(InvalidCredentials error) -> return! innerLoop credentialsTail (Some error)
-                | Ok resultSet when resultSet.IsEmpty -> return Ok None
-                | Ok resultSet ->
+        let rec innerLoop credentials error =
+            async {
+                match credentials, error with
+                | [], None -> return Ok None
+                | [], Some error -> return Error error
+                | credentialsHead :: credentialsTail, _ ->
+                    match! Web.Http.getKdmidAppointmentsResult credentialsHead with
+                    | Error(InvalidRequest error) -> return Error error
+                    | Error(InvalidResponse error) -> return! innerLoop credentialsTail (Some error)
+                    | Error(InvalidCredentials error) -> return! innerLoop credentialsTail (Some error)
+                    | Ok appointmentsSet when appointmentsSet.IsEmpty -> return Ok None
+                    | Ok appointmentsSet ->
 
-                    let orderResult =
-                        { Credentials = credentialsHead
-                          Results = resultSet }
-                        
-                    match! innerLoop credentialsTail error with
-                    | Error error -> return Error error
-                    | Ok None -> return Ok <| Some [ orderResult ]
-                    | Ok(Some next) -> return Ok <| Some(orderResult :: next)
-        }
+                        let result =
+                            { Credentials = credentialsHead
+                              Appointments = appointmentsSet }
 
-    let credentialsList = order |> Set.toList
-    innerLoop credentialsList None
-    
-let processUserKdmidOrders orders =
-    async {
-        return Error "processUserKdmidOrders is not implemented."
-    }
+                        match! innerLoop credentialsTail error with
+                        | Error error -> return Error error
+                        | Ok None -> return Ok <| Some [ result ]
+                        | Ok(Some next) -> return Ok <| Some(result :: next)
+            }
 
-let getUserKdmidOrdersByCity = Persistence.Repository.getOrdersByCity
-let createTestUserKdmidOrderForCity = Persistence.Repository.createTestOrder
+        let credentialsList = credentials |> Set.toList
+        innerLoop credentialsList None
+
+module User =
+    let getUserKdmidOrders = Persistence.Repository.User.getKdmidOrders
+    let createKdmidOrder = Persistence.Repository.User.createKdmidOrder

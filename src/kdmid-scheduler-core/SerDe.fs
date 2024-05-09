@@ -5,8 +5,8 @@ module Json =
     open Domain
     open Mapper
 
-    module UserKdmidOrders =
-        let serialize = UserKdmidOrders.toPersistence >> serialize
+    module User =
+        let serializeKdmidOrder = UserKdmidOrders.toPersistence >> serialize
 
         let deserialize credentials =
             match deserialize<Persistence.UserKdmdidOrder seq> credentials with

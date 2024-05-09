@@ -19,11 +19,11 @@ module private WorkerHandlers =
             match Storage.create InMemory with
             | Error error -> return Error error
             | Ok storage ->
-                match! getUserKdmidOrdersByCity city storage with
+                match! User.getUserKdmidOrders city storage with
                 | Error error -> return Error error
                 | Ok None -> return Ok "Result: Data was not found."
                 | Ok(Some orders) ->
-                    match! processUserKdmidOrders orders with
+                    match! Kdmid.getCredentialAppointments orders with
                     | Error error -> return Error error
                     | Ok results -> return Ok $"Result:\n{results}"
         }

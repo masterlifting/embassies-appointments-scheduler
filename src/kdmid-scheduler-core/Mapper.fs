@@ -26,7 +26,7 @@ module User =
 module Kdmid =
     module Credentials =
         let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
-            let city, id, cd, ems = input.deconstruct()
+            let city, id, cd, ems = input.Deconstructed()
             match ems with
             | None -> { City= city; Id = id; Cd = cd; Ems = String.Empty }
             | Some ems -> { City= city; Id = id; Cd = cd; Ems = ems }
@@ -39,9 +39,9 @@ module Kdmid =
             match input with
             | {City = city; Id = id; Cd = cd; Ems = ems } ->
                 let city' = Core.Kdmid.PublicCity city
-                let id' = Core.Kdmid.PublicId id
-                let cd' = Core.Kdmid.PublicCd cd
-                let ems' = if ems = String.Empty then Core.Kdmid.PublicEms None else Core.Kdmid.PublicEms (Some ems)
+                let id' = Core.Kdmid.PublicKdmidId id
+                let cd' = Core.Kdmid.PublicKdmidCd cd
+                let ems' = if ems = String.Empty then Core.Kdmid.PublicKdmidEms None else Core.Kdmid.PublicKdmidEms (Some ems)
                 Core.Kdmid.createCredentials city' id' cd' ems'
                 
         let toCore =

@@ -3,9 +3,6 @@
 open System
 
 module Core =
-    module User =
-        type Id = UserId of string
-        type User = { Id: Id; Name: string }
 
     module Kdmid =
         module private SupportedCities =
@@ -23,9 +20,15 @@ module Core =
         type Ems = private KdmidEms of string option
 
         type City =
+            private
             | Belgrade
             | Budapest
             | Sarajevo
+
+        type PublicCity = PublicCity of string
+        type PublicId = PublicKdmidId of int
+        type PublicCd = PublicKdmidCd of string
+        type PublicEms = PublicKdmidEms of string option
 
         type Credentials =
             { City: City
@@ -33,21 +36,21 @@ module Core =
               Cd: Cd
               Ems: Ems }
 
-            member this.deconstruct() =
+            member this.Deconstructed =
                 match this with
                 | { City = city
                     Id = KdmidId id
                     Cd = KdmidCd cd
                     Ems = KdmidEms ems } ->
                     match city with
-                    | Belgrade -> (SupportedCities.Belgrade, id, cd, ems)
-                    | Budapest -> (SupportedCities.Budapest, id, cd, ems)
-                    | Sarajevo -> (SupportedCities.Sarajevo, id, cd, ems)
+                    | Belgrade ->
+                        (PublicCity SupportedCities.Belgrade, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
+                    | Budapest ->
+                        (PublicCity SupportedCities.Budapest, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
+                    | Sarajevo ->
+                        (PublicCity SupportedCities.Sarajevo, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
 
-        type PublicCity = PublicCity of string
-        type PublicId = PublicId of int
-        type PublicCd = PublicCd of string
-        type PublicEms = PublicEms of string option
+
 
         let createCredentials city id cd ems =
 
@@ -60,25 +63,25 @@ module Core =
 
             let id' =
                 match id with
-                | PublicId id when id > 1000 -> Ok(KdmidId id)
+                | PublicKdmidId id when id > 1000 -> Ok <| KdmidId id
                 | _ -> Error "Invalid KDMID.ID credential."
 
             let cd' =
                 match cd with
-                | PublicCd cd ->
+                | PublicKdmidCd cd ->
                     match cd with
-                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd -> Ok(KdmidCd cd)
+                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd -> Ok <| KdmidCd cd
                     | _ -> Error "Invalid KDMID.CD credential."
 
             let ems' =
                 match ems with
-                | PublicEms ems ->
+                | PublicKdmidEms ems ->
                     match ems with
-                    | None -> Ok(KdmidEms(None))
+                    | None -> Ok <| KdmidEms None
                     | Some ems ->
                         match ems with
-                        | Infrastructure.DSL.AP.IsString ems -> Ok(KdmidEms(Some ems))
-                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> Ok(KdmidEms(Some ems))
+                        | Infrastructure.DSL.AP.IsString ems -> Ok <| KdmidEms(Some ems)
+                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> Ok <| KdmidEms(Some ems)
                         | _ -> Error "Invalid KDMID.EMS credential."
 
             city'
@@ -94,35 +97,37 @@ module Core =
                               Cd = cd
                               Ems = ems }))))
 
-        type Result =
+        type Appointment =
             { Date: DateOnly
               Time: TimeOnly
               Description: string }
 
-        type Order = Credentials Set
-
-        type OrderResult =
+        type CredentialAppointments =
             { Credentials: Credentials
-              Results: Result Set }
+              Appointments: Appointment Set }
 
         type Error =
             | InvalidCredentials of string
             | InvalidResponse of string
             | InvalidRequest of string
 
-    open User
-    open Kdmid
+    module User =
+        open Kdmid
 
-    type UserKdmidOrder = { User: User; Order: Order }
+        type Type =
+            | Admin
+            | Regular
 
-    type UserKdmidOrderResult =
-        { User: User; OrderResult: OrderResult }
+        type Id = UserId of string
+        type User = { Id: Id; Name: string; Type: Type }
+
+        type KdmidOrder = { User: User; Order: Credentials Set }
+
+        type KdmidOrderResult =
+            { User: User
+              Result: CredentialAppointments }
 
 module Persistence =
-
-    module User =
-        type User = { Id: string; Name: string }
-
     module Kdmid =
         type Credentials =
             { City: string
@@ -130,23 +135,27 @@ module Persistence =
               Cd: string
               Ems: string }
 
-        type Result =
+        type Appointment =
             { Date: DateTime
               Time: DateTime
               Description: string }
 
-        type Order = Credentials seq
-
-        type OrderResult =
+        type CredentialAppointments =
             { Credentials: Credentials
-              Results: Result seq }
+              Appointments: Appointment seq }
 
-    open User
-    open Kdmid
+    module User =
+        open Kdmid
 
-    type UserKdmidOrder =
-        { User: User
-          Credentials: Credentials seq }
+        type User =
+            { Id: string
+              Name: string
+              Type: string }
 
-    type UserKdmidOrderResult =
-        { User: User; OrderResult: OrderResult }
+        type KdmidOrder =
+            { User: User
+              Credentials: Credentials seq }
+
+        type KdmidOrderResult =
+            { User: User
+              Result: CredentialAppointments seq }

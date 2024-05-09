@@ -5,11 +5,29 @@ module Http =
     open Domain.Core
 
     let private createUrlParams id cd ems =
+
+        let id =
+            match id with
+            | PublicKdmidId id -> id
+
+        let cd =
+            match cd with
+            | PublicKdmidCd cd -> cd
+
+        let ems =
+            match ems with
+            | PublicKdmidEms ems -> ems
+
         match ems with
         | None -> $"id={id}&cd={cd}"
         | Some ems -> $"id={id}&cd={cd}&ems={ems}"
 
-    let private createBaseUrl city = $"https://{city}.kdmid.ru/queue/"
+    let private createBaseUrl city =
+        let city' =
+            match city with
+            | PublicCity city -> city
+
+        $"https://{city'}.kdmid.ru/queue/"
 
     let private getStartPage () =
         async {
@@ -41,9 +59,9 @@ module Http =
             return response
         }
 
-    let getKdmidOrderResults (credentials: Credentials) : Async<Result<Set<Kdmid.Result>, Kdmid.Error>> =
+    let getKdmidAppointmentsResult (credentials: Credentials) : Async<Result<Set<Appointment>, Kdmid.Error>> =
         async {
-            let city, id, cd, ems = credentials.deconstruct ()
+            let city, id, cd, ems = credentials.Deconstructed
             let baseUrl = createBaseUrl city
             let credentialParams = createUrlParams id cd ems
             //let! response = getCalendarPage url
