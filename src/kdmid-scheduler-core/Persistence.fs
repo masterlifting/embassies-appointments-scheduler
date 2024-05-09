@@ -3,116 +3,82 @@
 module private InMemoryRepository =
     open Persistence
     open KdmidScheduler.SerDe
-    open KdmidScheduler.Mapper
 
-    module User =
-        let add user storage =
-            match Json.User.serialize user with
-            | Error error -> Error error
-            | Ok userStr ->
-                let key = user.Id |> string
+    [<Literal>]
+    let UserCredentialsKey = "user_credentials_"
 
-                match InMemory.add key userStr storage with
-                | Ok _ -> Ok()
-                | Error error -> Error error
-
-        let get userId storage =
-            let key = userId |> string
-
-            match InMemory.get key storage with
-            | Ok getResult ->
-                match getResult with
-                | Some userStr -> Ok <| (Some <| Json.User.deserialize userStr)
-                | None -> Ok <| None
-            | Error error -> Error error
-
-    module UserCredentials =
-        [<Literal>]
-        let UserCredentialsKey = "user_credentials_"
-
-        let add city credentials storage =
-            match Json.UserCredentials.serialize credentials with
-            | Error error -> Error error
-            | Ok credentialsStr ->
-                let key = UserCredentialsKey + (city |> KdmidCredentials.toCityCode)
-
-                match InMemory.add key credentialsStr storage with
-                | Error error -> Error error
-                | Ok _ -> Ok()
-
-        let get city storage =
+    let addOrder order storage =
+        match Json.UserKdmidOrders.serialize order with
+        | Error error -> Error error
+        | Ok credentialsStr ->
             let key = UserCredentialsKey + (city |> KdmidCredentials.toCityCode)
 
-            match InMemory.get key storage with
+            match InMemory.add key credentialsStr storage with
             | Error error -> Error error
-            | Ok getResult ->
-                match getResult with
-                | Some credentialsStr ->
-                    match Json.UserCredentials.deserialize credentialsStr with
-                    | Error error -> Error error
-                    | Ok credentials -> Ok <| Some credentials
-                | None -> Ok <| None
+            | Ok _ -> Ok()
+
+    let getOrdersByCity city storage =
+        let key = UserCredentialsKey + (city |> KdmidCredentials.toCityCode)
+
+        match InMemory.get key storage with
+        | Error error -> Error error
+        | Ok getResult ->
+            match getResult with
+            | Some credentialsStr ->
+                match Json.UserKdmidOrders.deserialize credentialsStr with
+                | Error error -> Error error
+                | Ok credentials -> Ok <| Some credentials
+            | None -> Ok <| None
 
 module Repository =
-    open Persistence.Core.Storage
 
-    module User =
-        let add user storage =
-            async {
-                return
-                    match storage with
-                    | MemoryStorage storage -> InMemoryRepository.User.add user storage
-                    | _ -> Error $"Not implemented for '{storage}'."
-            }
+    open Persistence.Core
+    open Infrastructure.Logging
+    open Domain.Core
+    open Domain.Core.User
+    open Domain.Core.Kdmid
 
-        let get id storage =
-            async {
-                return
-                    match storage with
-                    | MemoryStorage storage -> InMemoryRepository.User.get id storage
-                    | _ -> Error $"Not implemented for '{storage}'."
-            }
+    let addOrder order storage =
+        async {
+            return
+                match storage with
+                | Storage.MemoryStorage storage -> InMemoryRepository.addOrder order storage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }
 
-    module UserCredentials =
-        open Infrastructure.Logging
-        open KdmidScheduler.Domain.Core
+    let getOrdersByCity city storage =
+        async {
+            return
+                match storage with
+                | Storage.MemoryStorage mStorage -> InMemoryRepository.getOrdersByCity city mStorage
+                | _ -> Error $"Not implemented for '{storage}'."
+        }
 
-        let add city credentials storage =
-            async {
-                return
-                    match storage with
-                    | MemoryStorage storage -> InMemoryRepository.UserCredentials.add city credentials storage
-                    | _ -> Error $"Not implemented for '{storage}'."
-            }
+    let createTestOrder city =
+        async {
+            match Storage.create Type.InMemory with
+            | Error error -> error |> Log.error
+            | Ok storage ->
 
-        let get city storage =
-            async {
-                return
-                    match storage with
-                    | MemoryStorage mStorage -> InMemoryRepository.UserCredentials.get city mStorage
-                    | _ -> Error $"Not implemented for '{storage}'."
-            }
+                let user = { Id = UserId "1"; Name = "John" }
 
-        let createTest city =
-            async {
-                match create Persistence.Core.Type.InMemory with
+                let kdmidCredentials =
+                    [| 1; 2 |]
+                    |> Seq.map (fun x ->
+                        let city = PublicCity city
+                        let id = PublicId x
+                        let cd = PublicCd(x |> string)
+                        let ems = PublicEms None
+                        createCredentials city id cd ems)
+                    |> Infrastructure.DSL.Seq.resultOrError
+
+                match kdmidCredentials with
                 | Error error -> error |> Log.error
-                | Ok storage ->
+                | Ok credentials ->
 
-                    let user: User = { Id = UserId "1"; Name = "John" }
+                    let order = { User = user; Order = set credentials }
 
-                    let kdmidCredentials =
-                        [| 1; 2 |]
-                        |> Seq.map (fun x -> Kdmid.createCredentials x (x |> string) None)
-                        |> Infrastructure.DSL.Seq.resultOrError
-
-                    match kdmidCredentials with
+                    match! addOrder order storage with
                     | Error error -> error |> Log.error
-                    | Ok kdmidCredentials ->
-                        let userCredentials: UserCredentials =
-                            Map [ user, Map [ city, kdmidCredentials |> set ] ]
-
-                        match! add city userCredentials storage with
-                        | Error error -> error |> Log.error
-                        | Ok _ -> $"User credentials added.\n{userCredentials}" |> Log.info
-            }
+                    | Ok _ -> $"User order was added.\n%A{order}" |> Log.info
+        }

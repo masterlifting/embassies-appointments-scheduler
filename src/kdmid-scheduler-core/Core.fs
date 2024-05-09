@@ -1,37 +1,39 @@
 module KdmidScheduler.Core
 
-let private handleKdmidCredentials user city credentials =
+open KdmidScheduler.Domain.Core.Kdmid
 
-    let rec innerLoop city credentials error =
+let processKdmidOrder (order: Order) =
+
+    let rec innerLoop credentials error =
         async {
             match credentials, error with
             | [], None -> return Ok None
             | [], Some error -> return Error error
             | credentialsHead :: credentialsTail, _ ->
-                match! Web.Http.getKdmidOrderResults city credentialsHead with
-                | Error error -> return! innerLoop city credentialsTail (Some error)
-                | Ok None -> return Ok None
-                | Ok(Some orderResults) -> return Ok <| Some(user, city, orderResults)
+                match! Web.Http.getKdmidOrderResults credentialsHead with
+                | Error(InvalidRequest error) -> return Error error
+                | Error(InvalidResponse error) -> return! innerLoop credentialsTail (Some error)
+                | Error(InvalidCredentials error) -> return! innerLoop credentialsTail (Some error)
+                | Ok resultSet when resultSet.IsEmpty -> return Ok None
+                | Ok resultSet ->
+
+                    let orderResult =
+                        { Credentials = credentialsHead
+                          Results = resultSet }
+                        
+                    match! innerLoop credentialsTail error with
+                    | Error error -> return Error error
+                    | Ok None -> return Ok <| Some [ orderResult ]
+                    | Ok(Some next) -> return Ok <| Some(orderResult :: next)
         }
 
-    let credentialsList = credentials |> Seq.toList
-    innerLoop city credentialsList None
-
-let private handleCityCredentials user (cityCredentials: Domain.Core.CityCredentials) =
-    cityCredentials
-    |> Seq.map (fun x -> handleKdmidCredentials user x.Key x.Value)
-    |> Async.Parallel
-
-let private handleUserCredentials (userCredentials: Domain.Core.UserCredentials) =
-    userCredentials
-    |> Seq.map (fun x -> handleCityCredentials x.Key x.Value)
-    |> Async.Parallel
-
-let getKdmidResults userCredentials =
+    let credentialsList = order |> Set.toList
+    innerLoop credentialsList None
+    
+let processUserKdmidOrders orders =
     async {
-        let! results = handleUserCredentials userCredentials
-        return results |> Seq.collect id |> Infrastructure.DSL.Seq.resultOrError
+        return Error "processUserKdmidOrders is not implemented."
     }
 
-let getUserCredentials = Persistence.Repository.UserCredentials.get
-let createTestUserCredentials = Persistence.Repository.UserCredentials.createTest
+let getUserKdmidOrdersByCity = Persistence.Repository.getOrdersByCity
+let createTestUserKdmidOrderForCity = Persistence.Repository.createTestOrder

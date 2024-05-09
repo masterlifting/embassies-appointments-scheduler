@@ -2,7 +2,7 @@ module internal KdmidScheduler.Worker.Core
 
 open System
 open Infrastructure
-open KdmidScheduler.Domain.Core
+open KdmidScheduler.Domain.Core.Kdmid
 
 module private WorkerHandlers =
     open Persistence.Core
@@ -14,16 +14,16 @@ module private WorkerHandlers =
     [<Literal>]
     let PropagateFoundResultStepName = "PropagateFoundResult"
 
-    let findAvailableDatesFor city =
+    let findAvailableDatesFor (city: City) =
         async {
             match Storage.create InMemory with
             | Error error -> return Error error
             | Ok storage ->
-                match! getUserCredentials city storage with
+                match! getUserKdmidOrdersByCity city storage with
                 | Error error -> return Error error
-                | Ok(None) -> return Ok "Result: Data was not found."
-                | Ok(Some userCredentials) ->
-                    match! getKdmidResults userCredentials with
+                | Ok None -> return Ok "Result: Data was not found."
+                | Ok(Some orders) ->
+                    match! processUserKdmidOrders orders with
                     | Error error -> return Error error
                     | Ok results -> return Ok $"Result:\n{results}"
         }
@@ -52,7 +52,7 @@ let configure (args: string array) =
         Logging.useConsoleLogger <| Configuration.AppSettings
 
         //TODO: Remove this line
-        do! KdmidScheduler.Core.createTestUserCredentials Belgrade
+        do! KdmidScheduler.Core.createTestUserKdmidOrderForCity Belgrade
 
         match! Repository.getWorkerTasks () with
         | Error error -> return Error error

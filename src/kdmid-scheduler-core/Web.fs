@@ -4,14 +4,12 @@ module Http =
     open KdmidScheduler.Domain.Core.Kdmid
     open Domain.Core
 
-    let private createUrlParams credentials =
-        match credentials with
-        | Deconstruct(id, cd, None) -> $"id={id}&cd={cd}"
-        | Deconstruct(id, cd, Some ems) -> $"id={id}&cd={cd}&ems={ems}"
+    let private createUrlParams id cd ems =
+        match ems with
+        | None -> $"id={id}&cd={cd}"
+        | Some ems -> $"id={id}&cd={cd}&ems={ems}"
 
-    let private createBaseUrl city =
-        let cityCode = city |> Mapper.KdmidCredentials.toCityCode
-        $"https://{cityCode}.kdmid.ru/queue/"
+    let private createBaseUrl city = $"https://{city}.kdmid.ru/queue/"
 
     let private getStartPage () =
         async {
@@ -43,15 +41,13 @@ module Http =
             return response
         }
 
-    let getKdmidOrderResults
-        (city: Domain.Core.City)
-        (credentials: Domain.Core.Kdmid.Credentials)
-        : Async<Result<Set<OrderResult> option, string>> =
+    let getKdmidOrderResults (credentials: Credentials) : Async<Result<Set<Kdmid.Result>, Kdmid.Error>> =
         async {
+            let city, id, cd, ems = credentials.deconstruct ()
             let baseUrl = createBaseUrl city
-            let credentialParams = createUrlParams credentials
+            let credentialParams = createUrlParams id cd ems
             //let! response = getCalendarPage url
-            return Error "getKdmidCalendar not implemented."
+            return Error <| Kdmid.Error.InvalidRequest "getKdmidOrderResults not implemented."
         }
 
     let confirmKdmidOrder city credentials : Async<Result<string, string>> =
