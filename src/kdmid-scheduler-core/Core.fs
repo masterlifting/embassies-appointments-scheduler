@@ -1,5 +1,9 @@
 module KdmidScheduler.Core
 
+open Infrastructure.Domain
+open Infrastructure.Domain.Errors
+open KdmidScheduler.Domain.Core.Embassies
+
 module Kdmid =
     open KdmidScheduler.Domain.Core.Kdmid
 
@@ -34,3 +38,17 @@ module Kdmid =
 module User =
     let getUserKdmidOrders = Persistence.Repository.User.getKdmidOrders
     let createKdmidOrder = Persistence.Repository.User.createKdmidOrder
+
+let processEmbassy (embassy: Embassy) : Async<Result<AppointmentResult, AppError>> =
+    async {
+        return
+            match embassy with
+            | Russian russian ->
+                match russian with
+                | Serbia serbia ->
+                    match serbia with
+                    | Belgrade -> Error <| LogicError NotImplemented
+                    | _ -> Error <| LogicError NotSupported
+                | _ -> Error <| LogicError NotSupported
+            | _ -> Error <| LogicError NotSupported
+    }

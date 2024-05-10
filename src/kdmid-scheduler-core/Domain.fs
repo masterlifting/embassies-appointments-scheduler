@@ -1,115 +1,117 @@
 ﻿module KdmidScheduler.Domain
 
 open System
+open Infrastructure.Domain.Errors
 
 module Core =
-
-    module Kdmid =
-        module private SupportedCities =
-            [<Literal>]
-            let Belgrade = "belgrad"
-
-            [<Literal>]
-            let Budapest = "budapest"
-
-            [<Literal>]
-            let Sarajevo = "sarajevo"
-
-        type Id = private KdmidId of int
-        type Cd = private KdmidCd of string
-        type Ems = private KdmidEms of string option
+    module Embassies =
+        type Request = Request of string
 
         type City =
-            private
             | Belgrade
             | Budapest
             | Sarajevo
+            | Paris
+            | Rome
 
-        type PublicCity = PublicCity of string
-        type PublicId = PublicKdmidId of int
-        type PublicCd = PublicKdmidCd of string
-        type PublicEms = PublicKdmidEms of string option
+        type Country =
+            | Serbia of City
+            | Hungary of City
+            | Bosnia of City
 
-        type Credentials =
-            { City: City
-              Id: Id
-              Cd: Cd
-              Ems: Ems }
-
-            member this.Deconstructed =
-                match this with
-                | { City = city
-                    Id = KdmidId id
-                    Cd = KdmidCd cd
-                    Ems = KdmidEms ems } ->
-                    match city with
-                    | Belgrade ->
-                        (PublicCity SupportedCities.Belgrade, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
-                    | Budapest ->
-                        (PublicCity SupportedCities.Budapest, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
-                    | Sarajevo ->
-                        (PublicCity SupportedCities.Sarajevo, PublicKdmidId id, PublicKdmidCd cd, PublicKdmidEms ems)
-
-
-
-        let createCredentials city id cd ems =
-
-            let city' =
-                match city with
-                | PublicCity SupportedCities.Belgrade -> Ok Belgrade
-                | PublicCity SupportedCities.Budapest -> Ok Budapest
-                | PublicCity SupportedCities.Sarajevo -> Ok Sarajevo
-                | _ -> Error "Invalid KDMID.City is not recognized."
-
-            let id' =
-                match id with
-                | PublicKdmidId id when id > 1000 -> Ok <| KdmidId id
-                | _ -> Error "Invalid KDMID.ID credential."
-
-            let cd' =
-                match cd with
-                | PublicKdmidCd cd ->
-                    match cd with
-                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd -> Ok <| KdmidCd cd
-                    | _ -> Error "Invalid KDMID.CD credential."
-
-            let ems' =
-                match ems with
-                | PublicKdmidEms ems ->
-                    match ems with
-                    | None -> Ok <| KdmidEms None
-                    | Some ems ->
-                        match ems with
-                        | Infrastructure.DSL.AP.IsString ems -> Ok <| KdmidEms(Some ems)
-                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> Ok <| KdmidEms(Some ems)
-                        | _ -> Error "Invalid KDMID.EMS credential."
-
-            city'
-            |> Result.bind (fun city ->
-                id'
-                |> Result.bind (fun id ->
-                    cd'
-                    |> Result.bind (fun cd ->
-                        ems'
-                        |> Result.map (fun ems ->
-                            { City = city
-                              Id = id
-                              Cd = cd
-                              Ems = ems }))))
+        type Embassy =
+            | Russian of Country
+            | Serbian of Country
+            | Hungarian of Country
+            | French of Country
+            | Italian of Country
+            | Albanian of Country
 
         type Appointment =
             { Date: DateOnly
               Time: TimeOnly
               Description: string }
 
-        type CredentialAppointments =
-            { Credentials: Credentials
+        type AppointmentResult =
+            { Embassy: Embassy
               Appointments: Appointment Set }
 
-        type Error =
-            | InvalidCredentials of string
-            | InvalidResponse of string
-            | InvalidRequest of string
+        module Russian =
+            type Id = private Id of int
+            type Cd = private Cd of string
+            type Ems = private Ems of string option
+
+            type Credentials =
+                { City: City
+                  Id: Id
+                  Cd: Cd
+                  Ems: Ems }
+
+                member this.Deconstructed =
+                    match this with
+                    | { City = city
+                        Id = Id id
+                        Cd = Cd cd
+                        Ems = Ems ems } ->
+                        match city with
+                        | Belgrade -> ("belgrade", id, cd, ems)
+                        | Budapest -> ("budapest", id, cd, ems)
+                        | Sarajevo -> ("sarajevo", id, cd, ems)
+                        | Paris -> ("paris", id, cd, ems)
+                        | Rome -> ("rome", id, cd, ems)
+
+            let createCredentials url =
+                match url with
+                | Request url ->
+                    Web.Core.Http.getUri url
+                    |> Result.bind (fun uri ->
+                        match uri.Host.Split('.') with
+                        | hostParts when hostParts.Length < 3 -> Error "City is not recognized in URL."
+                        | hostParts ->
+                            let city =
+                                match hostParts[0] with
+                                | "belgrad" -> Ok Belgrade
+                                | "budapest" -> Ok Budapest
+                                | "sarajevo" -> Ok Sarajevo
+                                | _ -> Error "City is not supported."
+
+                            match Web.Core.Http.getQueryParameters uri with
+                            | Ok paramsMap when paramsMap.Keys |> Seq.forall (fun key -> key = "id" || key = "cd") ->
+                                let id =
+                                    match paramsMap["id"] with
+                                    | Infrastructure.DSL.AP.IsInt id when id > 1000 -> Ok <| Id id
+                                    | _ -> Error "Invalid id parameter in URL."
+
+                                let cd =
+                                    match paramsMap["cd"] with
+                                    | Infrastructure.DSL.AP.IsLettersOrNumbers cd -> Ok <| Cd cd
+                                    | _ -> Error "Invalid cd parameter in URL."
+
+                                let ems =
+                                    match paramsMap.TryGetValue "ems" with
+                                    | false, _ -> Ok <| Ems None
+                                    | true, value ->
+                                        match value with
+                                        | Infrastructure.DSL.AP.IsLettersOrNumbers ems -> Ok <| Ems(Some ems)
+                                        | _ -> Error "Invalid ems parameter in URL."
+
+                                city
+                                |> Result.bind (fun city ->
+                                    id
+                                    |> Result.bind (fun id ->
+                                        cd
+                                        |> Result.bind (fun cd ->
+                                            ems
+                                            |> Result.map (fun ems ->
+                                                { City = city
+                                                  Id = id
+                                                  Cd = cd
+                                                  Ems = ems }))))
+                            | _ -> Error "Invalid query parameters in URL.")
+
+            type Error =
+                | InfrastructureError of InfrastructureError
+                | InvalidCredentials of string
 
     module User =
         open Kdmid

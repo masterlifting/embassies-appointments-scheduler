@@ -2,11 +2,29 @@ module internal KdmidScheduler.Worker.Core
 
 open System
 open Infrastructure
-open KdmidScheduler.Domain.Core.Kdmid
+open Infrastructure.Domain
+open Infrastructure.Domain.Errors
+open KdmidScheduler.Domain.Core.Embassies
 
 module private WorkerHandlers =
     open Persistence.Core
     open KdmidScheduler.Core
+
+    let prepareRussianEmbassyFor (city: City) =
+        async {
+            let embassy = city |> Serbia |> Russian
+            let! result = KdmidScheduler.Core.processEmbassy embassy
+
+            match result with
+            | Ok _ -> return Ok "Result: The Russian embassy was processed."
+            | Error(LogicError NotImplemented) -> return Error "Not implemented."
+            | Error _ -> return Error "Some error occurred."
+
+        }
+
+    let prepareHungarianEmbassyFor (city: City) =
+        async { return Error <| LogicError NotImplemented }
+
 
     [<Literal>]
     let FindAvailableDatesStepName = "FindAvailableDates"
@@ -24,27 +42,32 @@ module private WorkerHandlers =
                 | Ok None -> return Ok "Result: Data was not found."
                 | Ok(Some orders) ->
                     match! Kdmid.getCredentialAppointments orders with
-                    | Error error -> return Error error
+                    | Error(LogicError NotImplemented) -> return Error "Not implemented."
+                    | Error _ -> return Error "Some error occurred."
                     | Ok results -> return Ok $"Result:\n{results}"
         }
 
     let propagateFoundResultFor city =
         async { return Error "propagateFoundResultFor is not implemented." }
 
-let private handlers: Worker.Domain.Core.TaskHandler list =
-    [ { Name = "Belgrade"
+
+let BelgradeSteps: Worker.Domain.Core.TaskStepHandler list =
+    [ { Name = "ProcessRussianEmbassy"
+        Handle = fun _ -> WorkerHandlers.prepareRussianEmbassyFor Belgrade
         Steps =
-          [ { Name = WorkerHandlers.FindAvailableDatesStepName
+          [ { Name = "FindAvailableDates"
               Handle = fun _ -> WorkerHandlers.findAvailableDatesFor Belgrade
               Steps = [] }
-            { Name = WorkerHandlers.PropagateFoundResultStepName
+            { Name = "PropagateFoundResult"
               Handle = fun _ -> WorkerHandlers.propagateFoundResultFor Belgrade
               Steps = [] } ] }
-      { Name = "Sarajevo"
-        Steps =
-          [ { Name = WorkerHandlers.FindAvailableDatesStepName
-              Handle = fun _ -> WorkerHandlers.findAvailableDatesFor Sarajevo
-              Steps = [] } ] } ]
+      { Name = "ProcessHungarianEmbassy"
+        Handle = fun _ -> WorkerHandlers.prepareHungarianEmbassyFor Belgrade
+        Steps = [] } ]
+
+let private handlers: Worker.Domain.Core.TaskHandler list =
+    [ { Name = "Belgrade"
+        Steps = BelgradeSteps } ]
 
 let configure (args: string array) =
     async {
