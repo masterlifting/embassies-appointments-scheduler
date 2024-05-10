@@ -13,11 +13,11 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-worker", "submodules
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-web", "submodules\fsharp-web\src\fsharp-web.fsproj", "{B6222822-F5B1-45A9-BAB3-B3C07C65C237}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-core", "src\kdmid-scheduler-core\kdmid-scheduler-core.fsproj", "{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "eas-core", "src\eas-core\eas-core.fsproj", "{9C487AA6-FFDD-4183-BCB3-3045E5C9CA35}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-webapi", "src\kdmid-scheduler-webapi\kdmid-scheduler-webapi.fsproj", "{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "eas-webapi", "src\eas-webapi\eas-webapi.fsproj", "{2C24EF13-F003-42A3-96CB-7C0A47A0BB2F}"
 EndProject
-Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "kdmid-scheduler-worker", "src\kdmid-scheduler-worker\kdmid-scheduler-worker.fsproj", "{CB4DF5E6-43FE-418B-B8BB-ED9614726309}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "eas-worker", "src\eas-worker\eas-worker.fsproj", "{CB4DF5E6-43FE-418B-B8BB-ED9614726309}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
