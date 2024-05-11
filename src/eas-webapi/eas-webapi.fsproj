@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-web\src\fsharp-web.fsproj" />
-    <ProjectReference Include="..\kdmid-scheduler-core\kdmid-scheduler-core.fsproj" />
+    <ProjectReference Include="..\eas-core\eas-core.fsproj" />
   </ItemGroup>
 
 </Project>

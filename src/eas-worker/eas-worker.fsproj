@@ -16,6 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-worker\src\fsharp-worker.fsproj" />
-    <ProjectReference Include="..\kdmid-scheduler-core\kdmid-scheduler-core.fsproj" />
+    <ProjectReference Include="..\eas-core\eas-core.fsproj" />
   </ItemGroup>
 </Project>

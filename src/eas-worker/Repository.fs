@@ -1,17 +1,17 @@
 module internal KdmidScheduler.Worker.Repository
 
 [<Literal>]
-let private WorkerSectionName = "KdmidQueueChecker"
+let private WorkerSectionName = "EmbassiesAppointmentsScheduler"
 
 let getWorkerTasks () =
     async {
         let sectionResult =
-            Configuration.getSection<Worker.Domain.Settings.Section> WorkerSectionName
+            Configuration.getSection<Worker.Domain.Persistence.Task array> WorkerSectionName
 
         return
             match sectionResult with
             | None -> Error $"Worker section '%s{WorkerSectionName}' was not found for the worker."
-            | Some section -> Ok <| (section.Tasks |> Seq.map (fun x -> Worker.Mapper.toTask x.Key x.Value))
+            | Some tasks -> Ok <| Array.map Worker.Mapper.mapToTask tasks
     }
 
 let getWorkerTask name =

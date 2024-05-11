@@ -113,51 +113,51 @@ module Core =
                 | InfrastructureError of InfrastructureError
                 | InvalidCredentials of string
 
-    module User =
-        open Kdmid
+//    module User =
+//        open Kdmid
 
-        type Type =
-            | Admin
-            | Regular
+//        type Type =
+//            | Admin
+//            | Regular
 
-        type Id = UserId of string
-        type User = { Id: Id; Name: string; Type: Type }
+//        type Id = UserId of string
+//        type User = { Id: Id; Name: string; Type: Type }
 
-        type KdmidOrder = { User: User; Order: Credentials Set }
+//        type KdmidOrder = { User: User; Order: Credentials Set }
 
-        type KdmidOrderResult =
-            { User: User
-              Result: CredentialAppointments }
+//        type KdmidOrderResult =
+//            { User: User
+//              Result: CredentialAppointments }
 
-module Persistence =
-    module Kdmid =
-        type Credentials =
-            { City: string
-              Id: int
-              Cd: string
-              Ems: string }
+//module Persistence =
+//    module Kdmid =
+//        type Credentials =
+//            { City: string
+//              Id: int
+//              Cd: string
+//              Ems: string }
 
-        type Appointment =
-            { Date: DateTime
-              Time: DateTime
-              Description: string }
+//        type Appointment =
+//            { Date: DateTime
+//              Time: DateTime
+//              Description: string }
 
-        type CredentialAppointments =
-            { Credentials: Credentials
-              Appointments: Appointment seq }
+//        type CredentialAppointments =
+//            { Credentials: Credentials
+//              Appointments: Appointment seq }
 
-    module User =
-        open Kdmid
+//    module User =
+//        open Kdmid
 
-        type User =
-            { Id: string
-              Name: string
-              Type: string }
+//        type User =
+//            { Id: string
+//              Name: string
+//              Type: string }
 
-        type KdmidOrder =
-            { User: User
-              Credentials: Credentials seq }
+//        type KdmidOrder =
+//            { User: User
+//              Credentials: Credentials seq }
 
-        type KdmidOrderResult =
-            { User: User
-              Result: CredentialAppointments seq }
+//        type KdmidOrderResult =
+//            { User: User
+//              Result: CredentialAppointments seq }
