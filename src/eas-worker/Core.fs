@@ -17,7 +17,13 @@ module private WorkerHandlers =
                             Steps = [] } ] }
                     { Name = "HungarianEmbassy"
                       Handle = None
-                      Steps = [] } ] } ]
+                      Steps =
+                        [ { Name = "GetAvailableDates"
+                            Handle = None
+                            Steps = [] }
+                          { Name = "NotifyUsers"
+                            Handle = None
+                            Steps = [] } ] } ] } ]
 
 let private handlers: Worker.Domain.Core.TaskHandler list =
     [ { Name = "Serbia"
