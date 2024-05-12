@@ -11,10 +11,10 @@ let getWorkerTasks () =
         return
             match sectionResult with
             | None -> Error $"Worker section '%s{WorkerSectionName}' was not found for the worker."
-            | Some tasks -> Ok <| Array.map Worker.Mapper.mapToTask tasks
+            | Some tasks -> Ok <| Worker.Mapper.mapTasks tasks
     }
 
-let getWorkerTask name =
+let getTaskSchedule name =
     async {
         let! tasksResult = getWorkerTasks ()
 
@@ -24,5 +24,5 @@ let getWorkerTask name =
             | Ok tasks ->
                 match tasks |> Seq.tryFind (fun x -> x.Name = name) with
                 | None -> Error $"Task '%s{name}' was not found in the section '%s{WorkerSectionName}' of the worker."
-                | Some task -> Ok task
+                | Some task -> Ok task.Schedule
     }

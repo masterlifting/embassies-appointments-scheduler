@@ -30,7 +30,7 @@ let configure () =
         | Error error -> return Error error
         | Ok tasks ->
             let config: Worker.Domain.Configuration =
-                { getTask = Repository.getWorkerTask
+                { getSchedule = Repository.getTaskSchedule
                   Tasks = tasks
                   Handlers = handlers }
 
