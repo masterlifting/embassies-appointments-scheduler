@@ -10,7 +10,7 @@ let getWorkerTasks () =
 
         return
             match sectionResult with
-            | None -> Error $"Worker section '%s{WorkerSectionName}' was not found for the worker."
+            | None -> Error $"Section '%s{WorkerSectionName}' was not found."
             | Some tasks -> Ok <| Worker.Mapper.mapTasks tasks
     }
 
@@ -22,7 +22,22 @@ let getTaskSchedule name =
             match tasksResult with
             | Error error -> Error error
             | Ok tasks ->
-                match tasks |> Seq.tryFind (fun x -> x.Name = name) with
-                | None -> Error $"Task '%s{name}' was not found in the section '%s{WorkerSectionName}' of the worker."
-                | Some task -> Ok task.Schedule
+
+                let rec innerLoop targetName taskName (tasks: Worker.Domain.Core.Task list) =
+                    tasks
+                    |> List.map (fun task ->
+                        let nodeName = taskName |> Infrastructure.DSL.Tree.buildNodeName <| task.Name
+
+                        let result =
+                            match nodeName = targetName with
+                            | true -> Some task.Schedule
+                            | _ ->
+                                innerLoop targetName nodeName task.Steps
+                                None
+
+                        return result)
+
+                match innerLoop name None tasks with
+                | Some schedule -> Ok schedule
+                | None -> Error $"Task '%s{name}'was not found in the section '%s{WorkerSectionName}'."
     }
