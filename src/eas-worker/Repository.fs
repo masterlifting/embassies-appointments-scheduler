@@ -6,7 +6,7 @@ let private WorkerSectionName = "EmbassiesAppointmentsScheduler"
 let getWorkerTasks () =
     async {
         let sectionResult =
-            KdmidScheduler.Worker.Configuration.getSection<Worker.Domain.Persistence.Task array> WorkerSectionName
+            Configuration.getSection<Worker.Domain.Persistence.Task array> WorkerSectionName
 
         return
             match sectionResult with
@@ -22,7 +22,7 @@ let getTaskSchedule name =
             match tasksResult with
             | Error error -> Error error
             | Ok tasks ->
-                match Infrastructure.DSL.Tree.findNode name tasks with
+                match Infrastructure.DSL.Graph.findNode'<Worker.Domain.Core.Task> name tasks with
                 | Some task -> Ok task.Schedule
                 | None -> Error $"Task '{name}' was not found in the section '{WorkerSectionName}'."
     }

@@ -1,34 +1,38 @@
 module internal KdmidScheduler.Worker.Core
 
+open Infrastructure.Domain
+open Worker.Domain.Core
+
 module private WorkerHandlers =
     module Serbia =
-        let BelgradeSteps: Worker.Domain.Core.TaskHandler list =
-            [ { Name = "Belgrade"
-                Handle = None
-                Steps =
-                  [ { Name = "RussianEmbassy"
-                      Handle = None
-                      Steps =
-                        [ { Name = "GetAvailableDates"
-                            Handle = None
-                            Steps = [] }
-                          { Name = "NotifyUsers"
-                            Handle = None
-                            Steps = [] } ] }
-                    { Name = "HungarianEmbassy"
-                      Handle = None
-                      Steps =
-                        [ { Name = "GetAvailableDates"
-                            Handle = None
-                            Steps = [] }
-                          { Name = "NotifyUsers"
-                            Handle = None
-                            Steps = [] } ] } ] } ]
 
-let private handlers: Worker.Domain.Core.TaskHandler list =
-    [ { Name = "Serbia"
-        Handle = None
-        Steps = WorkerHandlers.Serbia.BelgradeSteps } ]
+        let BelgradeSteps: Graph<TaskHandler> list =
+            [ Graph(
+                  { Name = "Belgrade"; Handle = None },
+                  [ Graph(
+                        { Name = "RussianEmbassy"
+                          Handle = None },
+                        [ Graph(
+                              { Name = "GetAvailableDates"
+                                Handle = None },
+                              []
+                          )
+                          Graph({ Name = "NotifyUsers"; Handle = None }, []) ]
+                    )
+                    Graph(
+                        { Name = "HungarianEmbassy"
+                          Handle = None },
+                        [ Graph(
+                              { Name = "GetAvailableDates"
+                                Handle = None },
+                              []
+                          )
+                          Graph({ Name = "NotifyUsers"; Handle = None }, []) ]
+                    ) ]
+              ) ]
+
+let private handlers: Graph<TaskHandler> list =
+    [ Graph({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ]
 
 let configure () =
     async {
