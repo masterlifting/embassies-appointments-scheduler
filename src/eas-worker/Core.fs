@@ -5,8 +5,7 @@ open Worker.Domain.Core
 
 module private WorkerHandlers =
     module Serbia =
-
-        let BelgradeSteps: Graph<TaskHandler> list =
+        let BelgradeSteps =
             [ Graph(
                   { Name = "Belgrade"; Handle = None },
                   [ Graph(
@@ -31,18 +30,16 @@ module private WorkerHandlers =
                     ) ]
               ) ]
 
-let private handlers: Graph<TaskHandler> list =
-    [ Graph({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ]
+open Worker.Domain
 
 let configure () =
     async {
         match! Repository.getWorkerTasks () with
         | Error error -> return Error error
         | Ok tasks ->
-            let config: Worker.Domain.Configuration =
-                { getSchedule = Repository.getTaskSchedule
-                  Tasks = tasks
-                  Handlers = handlers }
-
-            return Ok config
+            return
+                Ok
+                <| { getSchedule = Repository.getTaskSchedule
+                     Tasks = tasks
+                     Handlers = [ Graph({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ] }
     }
