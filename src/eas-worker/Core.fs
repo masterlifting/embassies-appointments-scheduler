@@ -1,32 +1,32 @@
 module internal KdmidScheduler.Worker.Core
 
-open Infrastructure.Domain
+open Infrastructure.Domain.Graph
 open Worker.Domain.Core
 
 module private WorkerHandlers =
     module Serbia =
         let BelgradeSteps =
-            [ Graph(
+            [ Node(
                   { Name = "Belgrade"; Handle = None },
-                  [ Graph(
+                  [ Node(
                         { Name = "RussianEmbassy"
                           Handle = None },
-                        [ Graph(
+                        [ Node(
                               { Name = "GetAvailableDates"
                                 Handle = None },
                               []
                           )
-                          Graph({ Name = "NotifyUsers"; Handle = None }, []) ]
+                          Node({ Name = "NotifyUsers"; Handle = None }, []) ]
                     )
-                    Graph(
+                    Node(
                         { Name = "HungarianEmbassy"
                           Handle = None },
-                        [ Graph(
+                        [ Node(
                               { Name = "GetAvailableDates"
                                 Handle = None },
                               []
                           )
-                          Graph({ Name = "NotifyUsers"; Handle = None }, []) ]
+                          Node({ Name = "NotifyUsers"; Handle = None }, []) ]
                     ) ]
               ) ]
 
@@ -41,5 +41,5 @@ let configure () =
                 Ok
                 <| { getSchedule = Repository.getTaskSchedule
                      Tasks = tasks
-                     Handlers = [ Graph({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ] }
+                     Handlers = [ Node({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ] }
     }
