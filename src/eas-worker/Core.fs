@@ -31,7 +31,7 @@ module private WorkerHandlers =
               ) ]
 
 open Worker.Domain
-
+open WorkerHandlers
 let configure () =
     async {
         match! Repository.getWorkerTasks () with
@@ -41,5 +41,5 @@ let configure () =
                 Ok
                 <| { getSchedule = Repository.getTaskSchedule
                      Tasks = tasks
-                     Handlers = [ Node({ Name = "Serbia"; Handle = None }, WorkerHandlers.Serbia.BelgradeSteps) ] }
+                     Handlers = [ Node({ Name = "Serbia"; Handle = None }, Serbia.BelgradeSteps) ] }
     }
