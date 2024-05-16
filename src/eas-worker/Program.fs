@@ -12,4 +12,7 @@ let main _ =
     |> Worker.Core.start
     |> Async.RunSynchronously
 
+    Async.Sleep (System.TimeSpan.FromSeconds 0.5)
+    |> Async.RunSynchronously
+
     0

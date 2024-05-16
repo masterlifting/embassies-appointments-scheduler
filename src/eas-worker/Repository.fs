@@ -15,7 +15,7 @@ let getTaskSchedule name =
         match! getWorkerTasks () with
         | Error error -> return Error error
         | Ok tasks ->
-            match Infrastructure.DSL.Graph.findNode'<Worker.Domain.Core.Task> name tasks with
+            match Infrastructure.DSL.Graph.findNode' name tasks with
             | Some task -> return Ok task.Schedule
             | None -> return Error $"Task '{name}' was not found in the section '{WorkerSectionName}'."
     }
