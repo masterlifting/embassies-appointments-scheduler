@@ -7,6 +7,7 @@ let getWorkerTasks () =
     async {
         match Configuration.getSection<Worker.Domain.Persistence.Task array> WorkerSectionName with
         | None -> return Error $"Section '%s{WorkerSectionName}' was not found."
+        | Some tasks when tasks.Length = 0 -> return Error $"Section '%s{WorkerSectionName}' is empty."
         | Some tasks -> return Ok <| Worker.Mapper.mapTasks tasks
     }
 
