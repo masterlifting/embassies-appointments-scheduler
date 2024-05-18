@@ -1,3 +1,2 @@
 ﻿[<EntryPoint>]
-let main args =
-    0
+let main args = 0

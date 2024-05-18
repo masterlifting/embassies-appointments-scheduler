@@ -32,6 +32,7 @@ module private WorkerHandlers =
 
 open Worker.Domain
 open WorkerHandlers
+
 let configure () =
     async {
         match! Repository.getWorkerTasks () with

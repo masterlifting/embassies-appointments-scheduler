@@ -22,7 +22,7 @@ module KdmidScheduler.Mapper
 //    let toCore =
 //        function
 //        | ToCore user -> user
-        
+
 //module Kdmid =
 //    module Credentials =
 //        let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
@@ -43,7 +43,7 @@ module KdmidScheduler.Mapper
 //                let cd' = Core.Kdmid.PublicKdmidCd cd
 //                let ems' = if ems = String.Empty then Core.Kdmid.PublicKdmidEms None else Core.Kdmid.PublicKdmidEms (Some ems)
 //                Core.Kdmid.createCredentials city' id' cd' ems'
-                
+
 //        let toCore =
 //            function
 //            | ToCore credentials -> credentials
