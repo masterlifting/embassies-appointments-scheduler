@@ -5,10 +5,17 @@ open Worker.Domain.Core
 
 module private WorkerHandlers =
     open System.Threading
+    open Infrastructure.Domain.Errors
 
     module Serbia =
 
         let handleRusianEmbassy (cts: CancellationTokenSource) = async { return Ok "That's all" }
+
+        let handleHungarianEmbassy (cts: CancellationTokenSource) =
+            async {
+                cts.Cancel()
+                return Error(Logical NotImplemented)
+            }
 
         let BelgradeSteps =
             [ Node(
@@ -29,15 +36,15 @@ module private WorkerHandlers =
                     )
                     Node(
                         { Name = "HungarianEmbassy"
-                          Handle = Some handleRusianEmbassy },
+                          Handle = Some handleHungarianEmbassy },
                         [ Node(
                               { Name = "GetAvailableDates"
-                                Handle = Some handleRusianEmbassy },
+                                Handle = Some handleHungarianEmbassy },
                               []
                           )
                           Node(
                               { Name = "NotifyUsers"
-                                Handle = Some handleRusianEmbassy },
+                                Handle = Some handleHungarianEmbassy },
                               []
                           ) ]
                     ) ]
