@@ -36,7 +36,7 @@ module private WorkerHandlers =
                     )
                     Node(
                         { Name = "HungarianEmbassy"
-                          Handle = Some handleHungarianEmbassy },
+                          Handle = Some handleRusianEmbassy },
                         [ Node(
                               { Name = "GetAvailableDates"
                                 Handle = Some handleHungarianEmbassy },
