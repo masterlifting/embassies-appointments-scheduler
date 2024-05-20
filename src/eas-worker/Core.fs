@@ -9,7 +9,7 @@ module private WorkerHandlers =
 
     module Serbia =
 
-        let handleRusianEmbassy (cts: CancellationTokenSource) = async { return Ok "That's all" }
+        let handleRussianEmbassy (cts: CancellationTokenSource) = async { return Ok "That's all" }
 
         let handleHungarianEmbassy (cts: CancellationTokenSource) =
             async {
@@ -22,21 +22,21 @@ module private WorkerHandlers =
                   { Name = "Belgrade"; Handle = None },
                   [ Node(
                         { Name = "RussianEmbassy"
-                          Handle = Some handleRusianEmbassy },
+                          Handle = Some handleRussianEmbassy },
                         [ Node(
                               { Name = "GetAvailableDates"
-                                Handle = Some handleRusianEmbassy },
+                                Handle = Some handleRussianEmbassy },
                               []
                           )
                           Node(
                               { Name = "NotifyUsers"
-                                Handle = Some handleRusianEmbassy },
+                                Handle = Some handleRussianEmbassy },
                               []
                           ) ]
                     )
                     Node(
                         { Name = "HungarianEmbassy"
-                          Handle = Some handleRusianEmbassy },
+                          Handle = Some handleRussianEmbassy },
                         [ Node(
                               { Name = "GetAvailableDates"
                                 Handle = Some handleHungarianEmbassy },
