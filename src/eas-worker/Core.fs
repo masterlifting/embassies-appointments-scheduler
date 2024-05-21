@@ -9,11 +9,10 @@ module private WorkerHandlers =
 
     module Serbia =
 
-        let handleRussianEmbassy (cts: CancellationTokenSource) = async { return Ok "That's all" }
+        let handleRussianEmbassy (cToken: CancellationToken) = async { return Ok "That's all" }
 
-        let handleHungarianEmbassy (cts: CancellationTokenSource) =
+        let handleHungarianEmbassy (cToken: CancellationToken) =
             async {
-                cts.Cancel()
                 return Error(Logical NotImplemented)
             }
 
@@ -36,15 +35,15 @@ module private WorkerHandlers =
                     )
                     Node(
                         { Name = "HungarianEmbassy"
-                          Handle = Some handleRussianEmbassy },
+                          Handle = None },
                         [ Node(
                               { Name = "GetAvailableDates"
-                                Handle = Some handleHungarianEmbassy },
+                                Handle = None },
                               []
                           )
                           Node(
                               { Name = "NotifyUsers"
-                                Handle = Some handleHungarianEmbassy },
+                                Handle = None },
                               []
                           ) ]
                     ) ]
