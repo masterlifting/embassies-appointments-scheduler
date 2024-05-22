@@ -6,15 +6,17 @@ open Worker.Domain.Core
 module private WorkerHandlers =
     open System.Threading
     open Infrastructure.Domain.Errors
+    open Infrastructure.DSL.Threading
 
     module Serbia =
 
-        let handleRussianEmbassy (cToken: CancellationToken) = async { return Ok "That's all" }
+        let handleRussianEmbassy (cToken: CancellationToken) =
+            async {
+                return Ok <| if cToken |> canceled then "Task duration" else "Done."
+            }
 
         let handleHungarianEmbassy (cToken: CancellationToken) =
-            async {
-                return Error(Logical NotImplemented)
-            }
+            async { return Error(Logical NotImplemented) }
 
         let BelgradeSteps =
             [ Node(
@@ -41,11 +43,7 @@ module private WorkerHandlers =
                                 Handle = None },
                               []
                           )
-                          Node(
-                              { Name = "NotifyUsers"
-                                Handle = None },
-                              []
-                          ) ]
+                          Node({ Name = "NotifyUsers"; Handle = None }, []) ]
                     ) ]
               ) ]
 
