@@ -1,12 +1,13 @@
 ﻿open Infrastructure
-open KdmidScheduler.Worker
+open Eas.Worker
+open Eas
 
 [<EntryPoint>]
 let main _ =
-    Logging.useConsoleLogger Configuration.AppSettings
+    Logging.useConsole Configuration.AppSettings
 
-    Core.configure |> Worker.Core.start |> Async.RunSynchronously
-
-    Async.Sleep(System.TimeSpan.FromSeconds 300) |> Async.RunSynchronously
+    Worker.Core.Configuration.configure
+    |> Worker.Core.start
+    |> Async.RunSynchronously
 
     0

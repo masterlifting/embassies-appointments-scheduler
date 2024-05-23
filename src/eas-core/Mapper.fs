@@ -1,4 +1,4 @@
-module KdmidScheduler.Mapper
+module Eas.Mapper
 
 //open System
 //open Domain

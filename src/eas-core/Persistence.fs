@@ -1,4 +1,4 @@
-﻿module internal KdmidScheduler.Persistence
+﻿module internal Eas.Persistence
 
 //module private InMemoryRepository =
 //    open Persistence

@@ -1,4 +1,4 @@
-module internal KdmidScheduler.Web
+module internal Eas.Web
 
 //module Http =
 //    open KdmidScheduler.Domain.Core.Kdmid

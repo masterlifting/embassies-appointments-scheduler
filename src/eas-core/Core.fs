@@ -1,4 +1,4 @@
-module KdmidScheduler.Core
+module Eas.Core
 
 //open Infrastructure.Domain
 //open Infrastructure.Domain.Errors

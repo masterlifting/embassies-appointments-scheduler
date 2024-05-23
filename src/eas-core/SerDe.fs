@@ -1,4 +1,4 @@
-﻿module internal KdmidScheduler.SerDe
+﻿module internal Eas.SerDe
 
 //module Json =
 //    open Infrastructure.DSL.SerDe.Json

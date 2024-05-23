@@ -5,8 +5,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Configuration.fs" />
-    <Compile Include="Repository.fs" />
-    <Compile Include="Core.fs" />
+    <Compile Include="Data.fs" />
+    <Compile Include="core\Core.Embassies.fs" />
+    <Compile Include="core\Core.Countries.fs" />
+    <Compile Include="core\Core.Configurationfs.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

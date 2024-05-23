@@ -1,11 +1,10 @@
-module internal KdmidScheduler.Worker.Repository
+module internal Eas.Worker.Data
 
 
 let getWorkerTasks workerName =
     async {
         match Configuration.getSection<Worker.Domain.Persistence.Task array> workerName with
         | None -> return Error $"Section '%s{workerName}' was not found."
-        | Some tasks when tasks.Length = 0 -> return Error $"Section '%s{workerName}' is empty."
         | Some tasks -> return Ok <| Worker.Mapper.mapTasks tasks
     }
 

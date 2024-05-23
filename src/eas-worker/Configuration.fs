@@ -1,4 +1,4 @@
-module internal KdmidScheduler.Worker.Configuration
+module internal Eas.Worker.Configuration
 
 open Infrastructure
 
