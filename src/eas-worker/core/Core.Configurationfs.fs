@@ -14,13 +14,13 @@ let configure () =
     async {
         let workerName = "EmbassiesAppointmentsScheduler"
 
-        match! Data.getWorkerTasks workerName with
-        | Error error -> return Error error
+        match! Data.getTasks workerName with
+        | Error error -> return Error error.Message
         | Ok tasks ->
             return
                 Ok
                     { Name = workerName
-                      getSchedule = Data.getTaskSchedule workerName
                       Tasks = tasks
-                      Handlers = handlers }
+                      Handlers = handlers
+                      Refresh = Data.getTask workerName }
     }

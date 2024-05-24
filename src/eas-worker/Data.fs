@@ -1,20 +1,32 @@
 module internal Eas.Worker.Data
 
+open Infrastructure.Domain.Errors
+open Infrastructure.Domain.Graph
+open Infrastructure.Logging
 
-let getWorkerTasks workerName =
+let getTasks workerName =
     async {
         match Configuration.getSection<Worker.Domain.Persistence.Task array> workerName with
-        | None -> return Error $"Section '%s{workerName}' was not found."
+        | None ->
+            return
+                Error
+                <| AppError.Infrastructure(PersistenceError $"Section '%s{workerName}' was not found.")
         | Some tasks -> return Ok <| Worker.Mapper.mapTasks tasks
     }
 
-let getTaskSchedule workerName =
+let rec getTask workerName =
     fun taskName ->
         async {
-            match! getWorkerTasks workerName with
-            | Error error -> return Error error
+            match! getTasks workerName with
+            | Error error ->
+                error.Message |> Log.error
+                return None
             | Ok tasks ->
                 match Infrastructure.DSL.Graph.findNode' taskName tasks with
-                | Some task -> return Ok task.Schedule
-                | None -> return Error $"Task '{taskName}' was not found in the section '{workerName}'."
-    }
+                | Some task ->
+                    let! children = getTask workerName task.Name 
+                    return Some <| Node (task, children)
+                | None ->
+                    $"Task '{taskName}' was not found in the section '{workerName}'." |> Log.warning
+                    return None
+        }
