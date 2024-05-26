@@ -6,8 +6,11 @@ open Eas
 let main _ =
     Logging.useConsole Configuration.AppSettings
 
-    Worker.Core.Configuration.configure
-    |> Worker.Core.start
-    |> Async.RunSynchronously
+    let workerConfigRes =
+        Worker.Core.Configuration.configure () |> Async.RunSynchronously
+
+    match workerConfigRes with
+    | Error error -> error |> Logging.Log.error
+    | Ok workerConfig -> workerConfig |> Worker.Core.start |> Async.RunSynchronously
 
     0

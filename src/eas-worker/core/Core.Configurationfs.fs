@@ -12,15 +12,12 @@ let private handlers =
 
 let configure () =
     async {
-        let workerName = "EmbassiesAppointmentsScheduler"
-
-        match! Data.getTasks workerName with
+        match! Data.getTasksGraph () with
         | Error error -> return Error error.Message
-        | Ok tasks ->
+        | Ok tasksGraph ->
             return
                 Ok
-                    { Name = workerName
-                      Tasks = tasks
+                    { TasksGraph = tasksGraph
                       Handlers = handlers
-                      Refresh = Data.getTask workerName }
+                      getTaskNode = Data.getTask }
     }
