@@ -1,23 +1,22 @@
 module internal Eas.Worker.Core.Configuration
 
 open Eas.Worker
-open Worker.Domain
+open Worker.Domain.Core
+open Infrastructure.Domain.Graph
 
 let private handlers =
-    [ Countries.Serbia.Handler
-      Countries.Bosnia.Handler
-      Countries.Montenegro.Handler
-      Countries.Hungary.Handler
-      Countries.Albania.Handler ]
+    Node(
+        { Name = "Scheduler"
+          Handle = Some(fun _ -> async { return Ok "Embassies Appointments Scheduler is running." }) },
+        [ Countries.Serbia.Handler
+          Countries.Bosnia.Handler
+          Countries.Montenegro.Handler
+          Countries.Hungary.Handler
+          Countries.Albania.Handler ]
+    )
+
+open Worker.Domain
 
 let configure () =
-    async {
-        match! Data.getTasksGraph () with
-        | Error error -> return Error error.Message
-        | Ok tasksGraph ->
-            return
-                Ok
-                    { TasksGraph = tasksGraph
-                      Handlers = handlers
-                      getTaskNode = Data.getTask }
-    }
+    { TaskHandlersGraph = handlers
+      getTaskNode = Data.getTaskNode handlers }
