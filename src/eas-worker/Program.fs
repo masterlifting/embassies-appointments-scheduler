@@ -1,11 +1,11 @@
 ﻿open Infrastructure
 open Eas.Worker
-open Eas
+open Eas.Worker.Core.Configuration
 
 [<EntryPoint>]
 let main _ =
     Logging.useConsole Configuration.AppSettings
 
-    Core.Configuration.configure () |> Worker.Core.start |> Async.RunSynchronously
+    Worker.Core.start RootName getTaskNode |> Async.RunSynchronously
 
     0
