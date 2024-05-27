@@ -12,7 +12,7 @@ module Russian =
             async {
 
                 if ct |> canceled then
-                    return Error <| AppError.Logical(Cancelled "GetAvailableDates")
+                    return Error <| Logical(Cancelled "GetAvailableDates")
                 else
                     return Ok ""
             }
