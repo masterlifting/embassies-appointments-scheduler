@@ -4,7 +4,7 @@ open Eas.Worker
 open Worker.Domain.Core
 open Infrastructure.Domain.Graph
 
-let private handlers =
+let private handler =
     Node(
         { Name = "Scheduler"
           Handle = Some(fun _ -> async { return Ok "Embassies Appointments Scheduler is running." }) },
@@ -18,5 +18,5 @@ let private handlers =
 open Worker.Domain
 
 let configure () =
-    { TaskHandlersGraph = handlers
-      getTaskNode = Data.getTaskNode handlers }
+    { RootName = handler.Value.Name
+      getTaskNode = Data.getTaskNode handler }
