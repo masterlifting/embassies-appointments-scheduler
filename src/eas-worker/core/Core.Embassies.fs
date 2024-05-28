@@ -14,10 +14,10 @@ module Russian =
                 if ct |> canceled then
                     return Error <| Logical(Cancelled "GetAvailableDates")
                 else
-                    return Ok ""
+                    return Ok city
             }
 
-    let private notifyUsers ct city = async { return Ok "" }
+    let private notifyUsers city = fun ct -> async { return Ok city }
 
     let createNode city =
         Node(
