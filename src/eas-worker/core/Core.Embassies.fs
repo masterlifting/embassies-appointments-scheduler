@@ -10,6 +10,7 @@ module Russian =
     let private getAvailableDates city =
         fun (ct: CancellationToken) ->
             async {
+                do! Async.Sleep 11000
 
                 if ct |> canceled then
                     return Error <| Logical(Cancelled "GetAvailableDates")
