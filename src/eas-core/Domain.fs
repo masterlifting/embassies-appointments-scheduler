@@ -11,6 +11,8 @@ module Core =
             | Belgrade
             | Budapest
             | Sarajevo
+            | Podgorica
+            | Tirana
             | Paris
             | Rome
 

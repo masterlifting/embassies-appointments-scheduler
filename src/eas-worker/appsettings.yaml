@@ -2,7 +2,7 @@
 
 Logging:
   LogLevel:
-    Default: Debug
+    Default: Information
 
 Worker:
   Name: Scheduler
@@ -25,17 +25,17 @@ Worker:
                     Delay: 00:00:05
               Schedule:
                 IsEnabled: true
-                Limit: 3
-                WorkDays: mon,tue,wed,thu,fri
+                Limit: 2
+                Workdays: mon,tue,wed,thu,fri
           Schedule:
             IsEnabled: true
-            WorkDays: mon,tue,wed,thu,fri,sat,sun
+            Workdays: mon,tue,wed,thu,fri,sat,sun
     - Name: Hungary
       Parallel: true
       Steps:
         - Name: Budapest
           Steps:
-            - Name: HungarianEmbassy
+            - Name: RussianEmbassy
               Parallel: true
               Recursively: true
               Duration: 00:00:10
@@ -47,8 +47,8 @@ Worker:
                     Delay: 00:00:02
               Schedule:
                 IsEnabled: true
-                Limit: 10
+                Limit: 5
                 WorkDays: mon,tue,wed,thu,fri
           Schedule:
             IsEnabled: true
-            WorkDays: mon,tue,wed,thu,fri,sat,sun
+            Workdays: mon,tue,wed,thu,fri,sat,sun
