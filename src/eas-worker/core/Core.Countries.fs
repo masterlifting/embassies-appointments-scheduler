@@ -29,6 +29,6 @@ module Albania =
 
 module Hungary =
     let private Budapest =
-        [ Node({ Name = "Budapest"; Handle = None }, [ Embassies.Russian.createNode "Budapest" ]) ]
+        [ Node({ Name = "Budapest"; Handle = None }, [ Embassies.Hungarian.createNode "Budapest" ]) ]
 
     let Handler = Node({ Name = "Hungary"; Handle = None }, Budapest)
