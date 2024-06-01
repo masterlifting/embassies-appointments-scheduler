@@ -33,7 +33,14 @@
 //                    | Ok credentials -> Ok <| Some credentials
 //                | None -> Ok <| None
 
-//module Repository =
+module Repository =
+    open Infrastructure.Domain.Errors
+
+    module Russian =
+        open Domain.Core.Russian
+
+        let getCredentials city ct : Async<Result<Credentials Set option, InfrastructureError>> =
+            async { return Ok <| Some [] }
 //    module User =
 //        open Persistence.Core
 //        open Infrastructure.Logging

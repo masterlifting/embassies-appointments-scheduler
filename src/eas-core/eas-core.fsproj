@@ -9,7 +9,6 @@
     <Compile Include="Mapper.fs" />
     <Compile Include="SerDe.fs" />
     <Compile Include="Persistence.fs" />
-    <Compile Include="Web.fs" />
     <Compile Include="Core.fs" />
   </ItemGroup>
   <ItemGroup>
