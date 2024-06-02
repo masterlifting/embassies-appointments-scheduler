@@ -12,10 +12,8 @@ let private getTasksGraph handlersGraph configuration =
             match Configuration.getSection<Worker.Domain.Persistence.Task> configuration sectionName with
             | None ->
                 Error
-                <| PersistenceError $"Section '%s{sectionName}' was not found in the configuration."
-            | Some graph ->
-                Worker.Mapper.buildCoreGraph graph handlersGraph
-                |> Result.mapError PersistenceError
+                <| Persistence $"Section '%s{sectionName}' was not found in the configuration."
+            | Some graph -> Worker.Mapper.buildCoreGraph graph handlersGraph |> Result.mapError Persistence
     }
 
 let getTaskNode handlersGraph configuration =
@@ -29,6 +27,6 @@ let getTaskNode handlersGraph configuration =
                     | Some node -> Ok node
                     | None ->
                         Error
-                        <| PersistenceError
+                        <| Persistence
                             $"Task '{taskName}' was not found in the section '{sectionName}' of the configuration."
         }

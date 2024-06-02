@@ -8,9 +8,9 @@ module Russian =
     let private getAvailableDates city =
         fun ct ->
             async {
-                match! Eas.Core.Russian.getAvailableDates city ct 3 with
+                match! Eas.Core.Russian.findAppointments city ct 3 with
                 | Error error -> return Error error
-                | Ok None -> return Ok <| Info "No available dates"
+                | Ok None -> return Ok <| Info "No data available"
                 | Ok(Some result) -> return Ok <| Data result
             }
 
@@ -19,7 +19,7 @@ module Russian =
             async {
                 match! Eas.Core.Russian.notifyUsers city ct with
                 | Ok(Some result) -> return Ok <| Data result
-                | Ok None -> return Ok <| Info "No users to notify"
+                | Ok None -> return Ok <| Info "No data to notify"
                 | Error error -> return Error error
             }
 

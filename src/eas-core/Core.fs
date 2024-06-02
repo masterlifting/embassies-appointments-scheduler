@@ -75,48 +75,62 @@ module Russian =
             return Error <| Logical NotImplemented
         }
 
-    let getAvailableDates city ct attempts =
+    let rec tryGetAppointments credentials attempts ct =
         async {
-
-            let rec tryGetResult credentials attempts =
-                async {
-                    match credentials with
-                    | [] -> return Ok None
-                    | head :: tail ->
-                        match! getAppointments head ct with
-                        | Ok None -> return Ok None
-                        | Ok(Some appointments) -> return Ok <| Some(appointments, head, tail)
-                        | Error error ->
-                            match error with
-                            | Infrastructure(InvalidRequest _) ->
-                                if attempts = 0 then
-                                    return Error error
-                                else
-                                    return! tryGetResult tail (attempts - 1)
-                            | _ -> return Error error
-                }
-
-            let rec trySetResult credentials set fail success =
-                async {
-                    match! tryGetResult credentials attempts with
-                    | Ok None -> return Ok None
-                    | Error error -> return Error error
-                    | Ok(Some(appointments, credentials, unhandledCredentials)) ->
-
-                        match! set credentials appointments ct with
-                        | Ok _ -> trySetResult unhandledCredentials set fail (success + 1)
-                        | Error error -> trySetResult unhandledCredentials set (fail + 1) success
-
-                        return Ok <| Some $"Success: {success}, Fail: {fail}"
-                }
-
-            match! Repository.Russian.getCredentials city ct with
-            | Error error -> return Error <| Infrastructure error
-            | Ok None -> return Ok None
-            | Ok(Some credentials) ->
-                let credentials = List.ofSeq credentials
-                let set = Repository.Russian.setAppointments
-                return! trySetResult credentials set
+            match credentials with
+            | [] -> return Ok None
+            | head :: tail ->
+                match! getAppointments head ct with
+                | Ok None -> return Ok None
+                | Ok(Some appointments) -> return Ok <| Some appointments
+                | Error error ->
+                    match error with
+                    | Infrastructure(InvalidRequest _) ->
+                        if attempts = 0 then
+                            return Error error
+                        else
+                            return! tryGetAppointments tail (attempts - 1) ct
+                    | _ -> return Error error
         }
 
-    let notifyUsers (city: City) (ct: CancellationToken) = async { return Ok <| None }
+    let findAppointments city ct attempts =
+        async {
+            match Repository.getMemoryStorage () with
+            | Error error -> return Error <| Infrastructure error
+            | Ok storage ->
+                match! Repository.Russian.getCredentials city storage ct with
+                | Error error -> return Error <| Infrastructure error
+                | Ok None -> return Ok None
+                | Ok(Some credentials) ->
+                    let credentials = credentials |> List.ofSeq
+
+                    match! tryGetAppointments credentials attempts ct with
+                    | Error error -> return Error error
+                    | Ok None -> return Ok None
+                    | Ok(Some appointments) ->
+                        match! Repository.Russian.setAppointments city appointments storage ct with
+                        | Error error -> return Error <| Infrastructure error
+                        | Ok _ -> return Ok <| Some appointments
+
+        }
+
+    let notifyUsers city ct =
+        async {
+            match Repository.getMemoryStorage () with
+            | Error error -> return Error <| Infrastructure error
+            | Ok storage ->
+                match! Repository.Russian.getTelegramClients city storage ct with
+                | Error error -> return Error <| Infrastructure error
+                | Ok None -> return Ok None
+                | Ok(Some clients) ->
+                    match! Repository.Russian.getAppointments city storage ct with
+                    | Error error -> return Error <| Infrastructure error
+                    | Ok None -> return Ok None
+                    | Ok(Some appointments) ->
+
+                        let send client =
+                            Web.Core.Bots.Telegram.sendMessage "token" "chatId" "message"
+
+                        return response
+
+        }

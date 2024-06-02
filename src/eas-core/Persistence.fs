@@ -37,19 +37,38 @@ module Repository =
     open System.Threading
     open Eas.Domain.Core
     open Infrastructure.Domain.Errors
+    open Persistence.Core
+
+    let getMemoryStorage () = getStorage InMemory
 
     module Russian =
         open Domain.Core.Russian
 
         let getCredentials
             (city: City)
+            (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<Set<Credentials> option, InfrastructureError>> =
             async { return Ok <| Some [] }
 
+        let getAppointments
+            (city: City)
+            (storage: Storage)
+            (ct: CancellationToken)
+            : Async<Result<Set<Appointment> option, InfrastructureError>> =
+            async { return Ok <| Some [] }
+
         let setAppointments
-            (credentials: Credentials)
-            (appointments: Set<Appointment>)
+            (city: City)
+            (appointments: Appointment seq)
+            (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<unit, InfrastructureError>> =
             async { return Ok() }
+
+        let getTelegramClients
+            (city: City)
+            (storage: Storage)
+            (ct: CancellationToken)
+            : Async<Result<Set<int64> option, InfrastructureError>> =
+            async { return Ok <| Some [] }

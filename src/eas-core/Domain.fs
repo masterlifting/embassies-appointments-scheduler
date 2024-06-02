@@ -95,4 +95,4 @@ module Core =
                                           Cd = cd
                                           Ems = ems }))))
                     | _ -> Error $"Invalid query parameters in url: {url}.")
-            |> Result.mapError (fun error -> ParsingError error)
+            |> Result.mapError (fun error -> Parsing error)
