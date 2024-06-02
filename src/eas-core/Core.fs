@@ -52,7 +52,7 @@ module Russian =
             return response
         }
 
-    let private getAppointments (credentials: Credentials) : Async<Result<Response, AppError>> =
+    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment> option, AppError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
@@ -75,18 +75,48 @@ module Russian =
             return Error <| Logical NotImplemented
         }
 
-    let getAvailableDates (city: City) (ct: CancellationToken) =
+    let getAvailableDates city ct attempts =
         async {
-            let! credentialsSetRes = Repository.Russian.getCredentials city ct
 
-            match credentialsSetRes with
+            let rec tryGetResult credentials attempts =
+                async {
+                    match credentials with
+                    | [] -> return Ok None
+                    | head :: tail ->
+                        match! getAppointments head ct with
+                        | Ok None -> return Ok None
+                        | Ok(Some appointments) -> return Ok <| Some(appointments, head, tail)
+                        | Error error ->
+                            match error with
+                            | Infrastructure(InvalidRequest _) ->
+                                if attempts = 0 then
+                                    return Error error
+                                else
+                                    return! tryGetResult tail (attempts - 1)
+                            | _ -> return Error error
+                }
+
+            let rec trySetResult credentials set fail success =
+                async {
+                    match! tryGetResult credentials attempts with
+                    | Ok None -> return Ok None
+                    | Error error -> return Error error
+                    | Ok(Some(appointments, credentials, unhandledCredentials)) ->
+
+                        match! set credentials appointments ct with
+                        | Ok _ -> trySetResult unhandledCredentials set fail (success + 1)
+                        | Error error -> trySetResult unhandledCredentials set (fail + 1) success
+
+                        return Ok <| Some $"Success: {success}, Fail: {fail}"
+                }
+
+            match! Repository.Russian.getCredentials city ct with
             | Error error -> return Error <| Infrastructure error
             | Ok None -> return Ok None
-            | Ok(Some credentialsSet) ->
-                match! credentialsSet |> Seq.head |> getAppointments with
-                | Error error -> return Error error
-                | Ok response -> return Ok <| Some response
-
+            | Ok(Some credentials) ->
+                let credentials = List.ofSeq credentials
+                let set = Repository.Russian.setAppointments
+                return! trySetResult credentials set
         }
 
     let notifyUsers (city: City) (ct: CancellationToken) = async { return Ok <| None }

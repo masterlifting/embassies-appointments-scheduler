@@ -1,6 +1,5 @@
 ﻿module internal Eas.Worker.Core.Embassies
 
-open Infrastructure.Domain.Errors
 open Infrastructure.Domain.Graph
 open Worker.Domain.Core
 
@@ -9,10 +8,10 @@ module Russian =
     let private getAvailableDates city =
         fun ct ->
             async {
-                match! Eas.Core.Russian.getAvailableDates city ct with
-                | Ok(Some result) -> return Ok <| Data result
-                | Ok None -> return Ok <| Info "No available dates"
+                match! Eas.Core.Russian.getAvailableDates city ct 3 with
                 | Error error -> return Error error
+                | Ok None -> return Ok <| Info "No available dates"
+                | Ok(Some result) -> return Ok <| Data result
             }
 
     let private notifyUsers city =

@@ -34,63 +34,22 @@
 //                | None -> Ok <| None
 
 module Repository =
+    open System.Threading
+    open Eas.Domain.Core
     open Infrastructure.Domain.Errors
 
     module Russian =
         open Domain.Core.Russian
 
-        let getCredentials city ct : Async<Result<Credentials Set option, InfrastructureError>> =
+        let getCredentials
+            (city: City)
+            (ct: CancellationToken)
+            : Async<Result<Set<Credentials> option, InfrastructureError>> =
             async { return Ok <| Some [] }
-//    module User =
-//        open Persistence.Core
-//        open Infrastructure.Logging
-//        open Domain.Core.User
-//        open Domain.Core.Kdmid
 
-//        let createKdmidOrder order storage =
-//            async {
-//                return
-//                    match storage with
-//                    | Storage.MemoryStorage storage -> InMemoryRepository.User.createKdmidOrder order storage
-//                    | _ -> Error $"Not implemented for '{storage}'."
-//            }
-
-//        let getKdmidOrders city storage =
-//            async {
-//                return
-//                    match storage with
-//                    | Storage.MemoryStorage mStorage -> InMemoryRepository.User.getKdmidOrders city mStorage
-//                    | _ -> Error $"Not implemented for '{storage}'."
-//            }
-
-//        let createTestKdmidOrder city =
-//            async {
-//                match Storage.create Type.InMemory with
-//                | Error error -> error |> Log.error
-//                | Ok storage ->
-
-//                    let user =
-//                        { Id = UserId "1"
-//                          Name = "John"
-//                          Type = Regular }
-
-//                    let kdmidCredentials =
-//                        [| 1; 2 |]
-//                        |> Seq.map (fun x ->
-//                            let city = PublicCity city
-//                            let id = PublicKdmidId x
-//                            let cd = PublicKdmidCd(x |> string)
-//                            let ems = PublicKdmidEms None
-//                            createCredentials city id cd ems)
-//                        |> Infrastructure.DSL.Seq.resultOrError
-
-//                    match kdmidCredentials with
-//                    | Error error -> error |> Log.error
-//                    | Ok credentials ->
-
-//                        let order = { User = user; Order = set credentials }
-
-//                        match! createKdmidOrder order storage with
-//                        | Error error -> error |> Log.error
-//                        | Ok _ -> $"User order was added.\n%A{order}" |> Log.info
-//            }
+        let setAppointments
+            (credentials: Credentials)
+            (appointments: Set<Appointment>)
+            (ct: CancellationToken)
+            : Async<Result<unit, InfrastructureError>> =
+            async { return Ok() }
