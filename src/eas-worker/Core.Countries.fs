@@ -2,7 +2,7 @@
 
 open Infrastructure.Domain.Graph
 open Worker.Domain.Core
-open Eas.Domain.Core
+open Eas.Domain.Internal
 
 module Serbia =
     let private Belgrade =

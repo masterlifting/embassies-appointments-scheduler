@@ -35,15 +35,15 @@
 
 module Repository =
     open System.Threading
-    open Eas.Domain.Core
+    open Eas.Domain.Internal
     open Infrastructure.Domain.Errors
     open Persistence.Core
 
     let getMemoryStorage () = getStorage InMemory
 
     module Russian =
-        open Domain.Core.Russian
-        open Web.Domain.Core.Bots.Telegram
+        open Domain.Internal.Russian
+        open Web.Domain.Internal.Bots.Telegram
 
         let getCredentials
             (city: City)

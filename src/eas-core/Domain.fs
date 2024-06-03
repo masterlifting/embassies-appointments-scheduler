@@ -2,7 +2,16 @@
 
 open System
 
-module Core =
+module Internal =
+
+    type Embassy = | Russian
+
+    type Country =
+        | Serbia
+        | Bosnia
+        | Montenegro
+        | Albania
+        | Hungary
 
     type City =
         | Belgrade
@@ -12,6 +21,8 @@ module Core =
         | Tirana
         | Paris
         | Rome
+
+    type Credentials = string
 
     type Appointment =
         { Date: DateOnly
@@ -96,3 +107,8 @@ module Core =
                                           Ems = ems }))))
                     | _ -> Error $"Invalid query parameters in url: {url}.")
             |> Result.mapError (fun error -> Parsing error)
+
+module External =
+    type City = { Name: string }
+    type Country = { Name: string }
+    type Embassy = { Name: string }

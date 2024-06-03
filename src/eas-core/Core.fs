@@ -1,15 +1,15 @@
-module Eas.Core
+module internal Eas.Core
 
 open System.Threading
-open Eas.Domain.Core
+open Eas.Domain.Internal
 open Eas.Persistence
 open Infrastructure.Domain.Errors
 
 module Russian =
     open System
-    open Eas.Domain.Core.Russian
+    open Eas.Domain.Internal.Russian
     open Web.Core.Bots
-    open Web.Domain.Core.Bots.Telegram
+    open Web.Domain.Internal.Bots.Telegram
 
     let private createBaseUrl city = $"https://kdmid.ru/queue/%s{city}/"
 
@@ -54,7 +54,7 @@ module Russian =
             return response
         }
 
-    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment> option, AppError>> =
+    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment> option, ApiError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
@@ -150,3 +150,23 @@ module Russian =
                         return response
 
         }
+
+let getEmbassies ct : Async<Result<Embassy Set, ApiError>> =
+    async { 
+        return Ok <| set [ Russian ]
+     }
+
+let getEmbassyCountries embassy ct : Async<Result<Country Set, ApiError>> =
+    async { return Error <| Logical NotImplemented }
+
+let getEmbassyCountryCities embassy country ct : Async<Result<City Set, ApiError>> =
+    async { return Error <| Logical NotImplemented }
+
+let setEmbassyCredentials embassy country city credentials ct : Async<Result<string, ApiError>> =
+    async { return Error <| Logical NotImplemented }
+
+let getEmbassyAppointments credentials ct : Async<Result<Appointment Set, ApiError>> =
+    async { return Error <| Logical NotImplemented }
+
+let setEmbassyAppointment appointment ct : Async<Result<string, ApiError>> =
+    async { return Error <| Logical NotImplemented }

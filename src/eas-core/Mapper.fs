@@ -1,98 +1,51 @@
 module Eas.Mapper
 
-//open System
-//open Domain
+open Infrastructure.DSL.ActivePatterns
+open Infrastructure.Domain.Errors
 
-//module User =
-//    let (|ToPersistence|) (input: Core.User.User) : Persistence.User.User =
-//        match input with
-//        | { Id = Core.User.UserId id
-//            Name = name } -> { Id = id; Name = name }
+let mapToInternalEmbassy (embassy: Domain.External.Embassy) : Result<Domain.Internal.Embassy, InfrastructureError> =
+    match embassy.Name with
+    | IsString "Russian" -> Ok <| Domain.Internal.Embassy.Russian
+    | _ -> Error <| Mapping "Embassy not supported"
 
-//    let toPersistence =
-//        function
-//        | ToPersistence user -> user
+let mapToExternalEmbassy (embassy: Domain.Internal.Embassy) : Domain.External.Embassy =
+    match embassy with
+    | Domain.Internal.Embassy.Russian -> { Name = "Russian" }
 
-//    let (|ToCore|) (input: Persistence.User.User) : Core.User.User =
-//        match input with
-//        | { Id = id; Name = name } ->
-//            { Id = Core.User.UserId id
-//              Name = name }
+let mapToInternalCountry (country: Domain.External.Country) : Result<Domain.Internal.Country, InfrastructureError> =
+    match country.Name with
+    | IsString "Serbia" -> Ok <| Domain.Internal.Country.Serbia
+    | IsString "Bosnia" -> Ok <| Domain.Internal.Country.Bosnia
+    | IsString "Montenegro" -> Ok <| Domain.Internal.Country.Montenegro
+    | IsString "Albania" -> Ok <| Domain.Internal.Country.Albania
+    | IsString "Hungary" -> Ok <| Domain.Internal.Country.Hungary
+    | _ -> Error <| Mapping "Country not supported"
 
-//    let toCore =
-//        function
-//        | ToCore user -> user
+let mapToExternalCountry (country: Domain.Internal.Country) : Domain.External.Country =
+    match country with
+    | Domain.Internal.Country.Serbia -> { Name = "Serbia" }
+    | Domain.Internal.Country.Bosnia -> { Name = "Bosnia" }
+    | Domain.Internal.Country.Montenegro -> { Name = "Montenegro" }
+    | Domain.Internal.Country.Albania -> { Name = "Albania" }
+    | Domain.Internal.Country.Hungary -> { Name = "Hungary" }
 
-//module Kdmid =
-//    module Credentials =
-//        let (|ToPersistence|) (input: Core.Kdmid.Credentials) : Persistence.Kdmid.Credentials =
-//            let city, id, cd, ems = input.Deconstructed()
-//            match ems with
-//            | None -> { City= city; Id = id; Cd = cd; Ems = String.Empty }
-//            | Some ems -> { City= city; Id = id; Cd = cd; Ems = ems }
+let mapToInternalCity (city: Domain.External.City) : Result<Domain.Internal.City, InfrastructureError> =
+    match city.Name with
+    | IsString "Belgrade" -> Ok <| Domain.Internal.City.Belgrade
+    | IsString "Budapest" -> Ok <| Domain.Internal.City.Budapest
+    | IsString "Sarajevo" -> Ok <| Domain.Internal.City.Sarajevo
+    | IsString "Podgorica" -> Ok <| Domain.Internal.City.Podgorica
+    | IsString "Tirana" -> Ok <| Domain.Internal.City.Tirana
+    | IsString "Paris" -> Ok <| Domain.Internal.City.Paris
+    | IsString "Rome" -> Ok <| Domain.Internal.City.Rome
+    | _ -> Error <| Mapping "City not supported"
 
-//        let toPersistence =
-//            function
-//            | ToPersistence credentials -> credentials
-
-//        let (|ToCore|) (input: Persistence.Kdmid.Credentials) : Result<Core.Kdmid.Credentials, string> =
-//            match input with
-//            | {City = city; Id = id; Cd = cd; Ems = ems } ->
-//                let city' = Core.Kdmid.PublicCity city
-//                let id' = Core.Kdmid.PublicKdmidId id
-//                let cd' = Core.Kdmid.PublicKdmidCd cd
-//                let ems' = if ems = String.Empty then Core.Kdmid.PublicKdmidEms None else Core.Kdmid.PublicKdmidEms (Some ems)
-//                Core.Kdmid.createCredentials city' id' cd' ems'
-
-//        let toCore =
-//            function
-//            | ToCore credentials -> credentials
-
-//module UserKdmidOrders =
-//    let (|ToPersistence|) (input: Core.KdmidOrder) : Persistence.UserKdmdidOrder seq =
-//        input
-//        |> Seq.map (fun coreUserCredentials ->
-//            { User = coreUserCredentials.Key |> User.toPersistence
-//              Credentials =
-//                coreUserCredentials.Value
-//                |> Seq.map (fun coreCityCredentials ->
-//                    let persistenceCityCredentials: Persistence.CityCredentials =
-//                        { City = coreCityCredentials.Key |> KdmidCredentials.toCityCode
-//                          Credentials =
-//                            coreCityCredentials.Value
-//                            |> Set.map KdmidCredentials.toPersistence
-//                            |> Seq.toList }
-
-//                    persistenceCityCredentials)
-//                |> Seq.toList })
-
-//    let toPersistence =
-//        function
-//        | ToPersistence userCredentials -> userCredentials
-
-//    let (|ToCore|) (input: Persistence.UserKdmdidOrder seq) : Result<Core.KdmidOrder, string> =
-//        input
-//        |> Seq.map (fun x ->
-//            x.Credentials
-//            |> Seq.map (fun y ->
-//                y.City
-//                |> KdmidCredentials.toCity
-//                |> Result.bind (fun city ->
-//                    y.Credentials
-//                    |> List.map UserKdmid.toCore
-//                    |> Infrastructure.DSL.Seq.resultOrError
-//                    |> Result.bind (fun kdmidCredentials -> Ok(city, set kdmidCredentials))))
-//            |> Infrastructure.DSL.Seq.resultOrError
-//            |> Result.bind (fun cityCredentials ->
-//                let user = x.User |> User.toCore
-//                Ok(user, cityCredentials)))
-//        |> Infrastructure.DSL.Seq.resultOrError
-//        |> Result.bind (fun userCredentials ->
-//            userCredentials
-//            |> List.map (fun (user, cityCredentials) -> (user, cityCredentials |> List.map id |> Map.ofList))
-//            |> Map.ofList
-//            |> Ok)
-
-//    let toCore =
-//        function
-//        | ToCore userCredentials -> userCredentials
+let mapToExternalCity (city: Domain.Internal.City) : Domain.External.City =
+    match city with
+    | Domain.Internal.City.Belgrade -> { Name = "Belgrade" }
+    | Domain.Internal.City.Budapest -> { Name = "Budapest" }
+    | Domain.Internal.City.Sarajevo -> { Name = "Sarajevo" }
+    | Domain.Internal.City.Podgorica -> { Name = "Podgorica" }
+    | Domain.Internal.City.Tirana -> { Name = "Tirana" }
+    | Domain.Internal.City.Paris -> { Name = "Paris" }
+    | Domain.Internal.City.Rome -> { Name = "Rome" }
