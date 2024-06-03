@@ -8,6 +8,8 @@ open Infrastructure.Domain.Errors
 module Russian =
     open System
     open Eas.Domain.Core.Russian
+    open Web.Core.Bots
+    open Web.Domain.Core.Bots.Telegram
 
     let private createBaseUrl city = $"https://kdmid.ru/queue/%s{city}/"
 
@@ -93,7 +95,7 @@ module Russian =
                     | _ -> return Error error
         }
 
-    let findAppointments city ct attempts =
+    let findAppointments city ct =
         async {
             match Repository.getMemoryStorage () with
             | Error error -> return Error <| Infrastructure error
@@ -104,14 +106,13 @@ module Russian =
                 | Ok(Some credentials) ->
                     let credentials = credentials |> List.ofSeq
 
-                    match! tryGetAppointments credentials attempts ct with
+                    match! tryGetAppointments credentials 3 ct with
                     | Error error -> return Error error
                     | Ok None -> return Ok None
                     | Ok(Some appointments) ->
                         match! Repository.Russian.setAppointments city appointments storage ct with
                         | Error error -> return Error <| Infrastructure error
                         | Ok _ -> return Ok <| Some appointments
-
         }
 
     let notifyUsers city ct =
@@ -119,17 +120,32 @@ module Russian =
             match Repository.getMemoryStorage () with
             | Error error -> return Error <| Infrastructure error
             | Ok storage ->
-                match! Repository.Russian.getTelegramClients city storage ct with
+                match! Repository.Russian.getTelegramSubscribers city storage ct with
                 | Error error -> return Error <| Infrastructure error
                 | Ok None -> return Ok None
-                | Ok(Some clients) ->
+                | Ok(Some subscribers) ->
                     match! Repository.Russian.getAppointments city storage ct with
                     | Error error -> return Error <| Infrastructure error
                     | Ok None -> return Ok None
                     | Ok(Some appointments) ->
+                        
+                        let buttonsGroup: ButtonsGroup = {
+                            Id = None
+                            Buttons = 
+                                appointments
+                                    |> Set.map (fun appointment ->
+                                        let button: Button = {
+                                            Button {
+                                                Text = appointment.Date |> Option.defaultValue "No date"
+                                                Url = appointment.Url |> Option.defaultValue ""
+                                            })
+                            Cloumns = 1
+                        }
+                        let tasks =
+                            subscribers
+                            |> Set.map (fun chatId ->
 
-                        let send client =
-                            Web.Core.Bots.Telegram.sendMessage "token" "chatId" "message"
+                                Telegram.sendText chatId message ct)
 
                         return response
 

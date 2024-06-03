@@ -43,6 +43,7 @@ module Repository =
 
     module Russian =
         open Domain.Core.Russian
+        open Web.Domain.Core.Bots.Telegram
 
         let getCredentials
             (city: City)
@@ -66,9 +67,9 @@ module Repository =
             : Async<Result<unit, InfrastructureError>> =
             async { return Ok() }
 
-        let getTelegramClients
+        let getTelegramSubscribers
             (city: City)
             (storage: Storage)
             (ct: CancellationToken)
-            : Async<Result<Set<int64> option, InfrastructureError>> =
+            : Async<Result<Set<ChatId> option, InfrastructureError>> =
             async { return Ok <| Some [] }
