@@ -35,29 +35,37 @@
 
 module Repository =
     open System.Threading
-    open Eas.Domain.Internal
     open Infrastructure.Domain.Errors
     open Persistence.Core
+    open Domain.Internal.Core
 
     let getMemoryStorage () = getStorage InMemory
 
     module Russian =
+
         open Domain.Internal.Russian
         open Web.Domain.Internal.Bots.Telegram
+
+        let setCredentials
+            (credentials: Credentials)
+            (storage: Storage)
+            (ct: CancellationToken)
+            : Async<Result<unit, InfrastructureError>> =
+            async { return Error <| Persistence "Not implemented" }
 
         let getCredentials
             (city: City)
             (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<Set<Credentials> option, InfrastructureError>> =
-            async { return Ok <| Some [] }
+            async { return Error <| Persistence "Not implemented" }
 
         let getAppointments
             (city: City)
             (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<Set<Appointment> option, InfrastructureError>> =
-            async { return Ok <| Some [] }
+            async { return Error <| Persistence "Not implemented" }
 
         let setAppointments
             (city: City)
@@ -65,11 +73,11 @@ module Repository =
             (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<unit, InfrastructureError>> =
-            async { return Ok() }
+            async { return Error <| Persistence "Not implemented" }
 
         let getTelegramSubscribers
             (city: City)
             (storage: Storage)
             (ct: CancellationToken)
             : Async<Result<Set<ChatId> option, InfrastructureError>> =
-            async { return Ok <| Some [] }
+            async { return Error <| Persistence "Not implemented" }

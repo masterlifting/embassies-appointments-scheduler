@@ -7,6 +7,7 @@ open Infrastructure.Domain.Errors
 
 module Russian =
     open System
+    open Domain.Internal.Core
     open Eas.Domain.Internal.Russian
     open Web.Core.Bots
     open Web.Domain.Internal.Bots.Telegram
@@ -54,7 +55,7 @@ module Russian =
             return response
         }
 
-    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment> option, ApiError>> =
+    let private getAppointments' (credentials: Credentials) ct : Async<Result<Set<Appointment> option, ApiError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
@@ -76,13 +77,13 @@ module Russian =
             //let! response = getCalendarPage url
             return Error <| Logical NotImplemented
         }
-
-    let rec tryGetAppointments credentials attempts ct =
+    
+    let rec private tryGetAppointments credentials attempts ct =
         async {
             match credentials with
             | [] -> return Ok None
             | head :: tail ->
-                match! getAppointments head ct with
+                match! getAppointments' head ct with
                 | Ok None -> return Ok None
                 | Ok(Some appointments) -> return Ok <| Some appointments
                 | Error error ->
@@ -93,6 +94,26 @@ module Russian =
                         else
                             return! tryGetAppointments tail (attempts - 1) ct
                     | _ -> return Error error
+        }
+    
+    let setCredentials (request: Core.Request) storage ct =
+        async {
+            match createCredentials request with
+            | Error error -> return Error <| Infrastructure error
+            | Ok credentials ->
+                match! Repository.Russian.setCredentials credentials storage ct with
+                | Error error -> return Error <| Infrastructure error
+                | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
+        }
+
+    let getAppointments (request: Core.Request) ct =
+        async {
+            match createCredentials request with
+            | Error error -> return Error <| Infrastructure error
+            | Ok credentials ->
+                match! getAppointments' credentials ct with
+                | Error error -> return Error error
+                | Ok appointments -> return Ok appointments
         }
 
     let findAppointments city ct =
@@ -151,22 +172,4 @@ module Russian =
 
         }
 
-let getEmbassies ct : Async<Result<Embassy Set, ApiError>> =
-    async { 
-        return Ok <| set [ Russian ]
-     }
 
-let getEmbassyCountries embassy ct : Async<Result<Country Set, ApiError>> =
-    async { return Error <| Logical NotImplemented }
-
-let getEmbassyCountryCities embassy country ct : Async<Result<City Set, ApiError>> =
-    async { return Error <| Logical NotImplemented }
-
-let setEmbassyCredentials embassy country city credentials ct : Async<Result<string, ApiError>> =
-    async { return Error <| Logical NotImplemented }
-
-let getEmbassyAppointments credentials ct : Async<Result<Appointment Set, ApiError>> =
-    async { return Error <| Logical NotImplemented }
-
-let setEmbassyAppointment appointment ct : Async<Result<string, ApiError>> =
-    async { return Error <| Logical NotImplemented }

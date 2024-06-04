@@ -4,32 +4,41 @@ open System
 
 module Internal =
 
-    type Embassy = | Russian
+    module Core =
 
-    type Country =
-        | Serbia
-        | Bosnia
-        | Montenegro
-        | Albania
-        | Hungary
+        type Embassy =
+            | Russian
+            | Spanish
+            | Italian
+            | French
+            | German
+            | British
 
-    type City =
-        | Belgrade
-        | Budapest
-        | Sarajevo
-        | Podgorica
-        | Tirana
-        | Paris
-        | Rome
+        type Country =
+            | Serbia
+            | Bosnia
+            | Montenegro
+            | Albania
+            | Hungary
 
-    type Credentials = string
+        type City =
+            | Belgrade
+            | Budapest
+            | Sarajevo
+            | Podgorica
+            | Tirana
+            | Paris
+            | Rome
 
-    type Appointment =
-        { Date: DateOnly
-          Time: TimeOnly
-          Description: string }
+        type Request = string
+
+        type Appointment =
+            { Date: DateOnly
+              Time: TimeOnly
+              Description: string }
 
     module Russian =
+        open Core
         open Web.Core.Http.Mapper
         open Infrastructure.DSL.ActivePatterns
         open Infrastructure.Domain.Errors
