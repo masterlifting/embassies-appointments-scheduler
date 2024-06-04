@@ -2,39 +2,36 @@
 
 open Infrastructure.Domain.Graph
 open Worker.Domain.Core
+open Eas.Domain.Internal.Core
 
 module Russian =
 
-    let private getAvailableDates city =
+    let private getAvailableDates country =
         fun ct ->
             async {
-                match! Eas.Core.Russian.findAppointments city ct with
+
+                let getEmbassyResponse = Eas.Api.createGetEmbassyResponse None
+
+                let getAvailableDates () =
+                    getEmbassyResponse
+                        { User = { Name = "Test" }
+                          Embassy = Russian country
+                          Value = "" }
+                        ct
+
+                match! getAvailableDates () with
                 | Error error -> return Error error
                 | Ok None -> return Ok <| Info "No data available"
                 | Ok(Some result) -> return Ok <| Data result
             }
 
-    let private notifyUsers city =
-        fun ct ->
-            async {
-                match! Eas.Core.Russian.notifyUsers city ct with
-                | Ok(Some result) -> return Ok <| Data result
-                | Ok None -> return Ok <| Info "No data to notify"
-                | Error error -> return Error error
-            }
-
-    let createStepsFor city =
+    let createStepsFor country =
         Node(
             { Name = "RussianEmbassy"
               Handle = None },
             [ Node(
                   { Name = "GetAvailableDates"
-                    Handle = Some <| getAvailableDates city },
-                  []
-              )
-              Node(
-                  { Name = "NotifyUsers"
-                    Handle = Some <| notifyUsers city },
+                    Handle = Some <| getAvailableDates country },
                   []
               ) ]
         )

@@ -2,34 +2,35 @@
 
 open Infrastructure.Domain.Graph
 open Worker.Domain.Core
-open Eas.Domain.Internal
+open Eas.Domain.Internal.Core
 
 module Serbia =
+
     let private Belgrade =
-        Node({ Name = "Belgrade"; Handle = None }, [ Embassies.Russian.createStepsFor Belgrade ])
+        Node({ Name = "Belgrade"; Handle = None }, [ Embassies.Russian.createStepsFor <| Serbia Belgrade ])
 
     let Handler = Node({ Name = "Serbia"; Handle = None }, [ Belgrade ])
 
 module Bosnia =
     let private Sarajevo =
-        Node({ Name = "Sarajevo"; Handle = None }, [ Embassies.Russian.createStepsFor Sarajevo ])
+        Node({ Name = "Sarajevo"; Handle = None }, [ Embassies.Russian.createStepsFor <| Bosnia Sarajevo ])
 
     let Handler = Node({ Name = "Bosnia"; Handle = None }, [ Sarajevo ])
 
 module Montenegro =
     let private Podgorica =
-        Node({ Name = "Podgorica"; Handle = None }, [ Embassies.Russian.createStepsFor Podgorica ])
+        Node({ Name = "Podgorica"; Handle = None }, [ Embassies.Russian.createStepsFor <| Montenegro Podgorica ])
 
     let Handler = Node({ Name = "Montenegro"; Handle = None }, [ Podgorica ])
 
 module Albania =
     let private Tirana =
-        Node({ Name = "Tirana"; Handle = None }, [ Embassies.Russian.createStepsFor Tirana ])
+        Node({ Name = "Tirana"; Handle = None }, [ Embassies.Russian.createStepsFor <| Albania Tirana ])
 
     let Handler = Node({ Name = "Albania"; Handle = None }, [ Tirana ])
 
 module Hungary =
     let private Budapest =
-        Node({ Name = "Budapest"; Handle = None }, [ Embassies.Russian.createStepsFor Budapest ])
+        Node({ Name = "Budapest"; Handle = None }, [ Embassies.Russian.createStepsFor <| Hungary Budapest ])
 
     let Handler = Node({ Name = "Hungary"; Handle = None }, [ Budapest ])

@@ -5,21 +5,7 @@ open System
 module Internal =
 
     module Core =
-
-        type Embassy =
-            | Russian
-            | Spanish
-            | Italian
-            | French
-            | German
-            | British
-
-        type Country =
-            | Serbia
-            | Bosnia
-            | Montenegro
-            | Albania
-            | Hungary
+        type User = { Name: string }
 
         type City =
             | Belgrade
@@ -30,12 +16,35 @@ module Internal =
             | Paris
             | Rome
 
-        type Request = string
+        type Country =
+            | Serbia of City
+            | Bosnia of City
+            | Montenegro of City
+            | Albania of City
+            | Hungary of City
+
+        type Embassy =
+            | Russian of Country
+            | Spanish of Country
+            | Italian of Country
+            | French of Country
+            | German of Country
+            | British of Country
 
         type Appointment =
             { Date: DateOnly
               Time: TimeOnly
               Description: string }
+
+        type Request =
+            { User: User
+              Embassy: Embassy
+              Value: string }
+
+        type Response =
+            { User: User
+              Embassy: Embassy
+              Appointments: Set<Appointment> }
 
     module Russian =
         open Core

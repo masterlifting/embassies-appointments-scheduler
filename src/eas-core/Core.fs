@@ -96,7 +96,7 @@ module Russian =
                     | _ -> return Error error
         }
     
-    let setCredentials (request: Core.Request) storage ct =
+    let setCredentials (request: Request) storage ct =
         async {
             match createCredentials request with
             | Error error -> return Error <| Infrastructure error
@@ -106,7 +106,7 @@ module Russian =
                 | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
         }
 
-    let getAppointments (request: Core.Request) ct =
+    let getAppointments (request: Core.Request) storage ct =
         async {
             match createCredentials request with
             | Error error -> return Error <| Infrastructure error
@@ -114,6 +114,16 @@ module Russian =
                 match! getAppointments' credentials ct with
                 | Error error -> return Error error
                 | Ok appointments -> return Ok appointments
+        }
+        
+    let confirmAppointment (request: Response) storage ct =
+        async {
+            match createCredentials request with
+            | Error error -> return Error <| Infrastructure error
+            | Ok credentials ->
+                match! Repository.Russian.setCredentials credentials storage ct with
+                | Error error -> return Error <| Infrastructure error
+                | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
         }
 
     let findAppointments city ct =

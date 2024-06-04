@@ -1,49 +1,52 @@
 module Eas.Api
 
+open System.Threading
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal.Core
 
-let getEmbassies () =
-    async { return Ok <| set [ Russian; Spanish; Italian; French; German; British ] }
+let getSupportedEmbassies () =
+    Set
+    <| [ Russian <| Serbia Belgrade
+         Russian <| Bosnia Sarajevo
+         Russian <| Hungary Budapest
+         Russian <| Montenegro Podgorica
+         Russian <| Albania Tirana ]
 
-let getEmbassyCountries embassy =
-    async {
-        return
-            match embassy with
-            | Russian -> Ok <| set [ Serbia; Bosnia; Montenegro; Albania; Hungary ]
-            | _ -> Error <| Logical NotImplemented
-    }
-
-let getEmbassyCountryCities embassy country =
-    async {
-        return
-            match embassy, country with
-            | Russian, Serbia -> Ok <| set [ Belgrade ]
-            | Russian, Bosnia -> Ok <| set [ Sarajevo ]
-            | Russian, Montenegro -> Ok <| set [ Podgorica ]
-            | Russian, Albania -> Ok <| set [ Tirana ]
-            | Russian, Hungary -> Ok <| set [ Budapest ]
-            | _ -> Error <| Logical NotImplemented
-    }
-
-let setEmbassyRequest storage =
+let createSetEmbassyRequest storage =
     let storageRes =
         match storage with
         | Some storage -> Ok storage
         | None -> Persistence.Repository.getMemoryStorage ()
 
-    fun embassy country city request ct ->
+    fun (request: Request) (ct: CancellationToken) ->
         match storageRes with
         | Error error -> async { return Error <| Infrastructure error }
         | Ok storage ->
-            match embassy with
-            | Russian -> Core.Russian.setCredentials request storage ct
+            match request.Embassy with
+            | Russian _ -> Core.Russian.setCredentials request storage ct
             | _ -> async { return Error <| Logical NotImplemented }
 
-let getEmbassyAppointments embassy request ct =
-    match embassy with
-    | Russian -> Core.Russian.getAppointments request ct
-    | _ -> async { return Error <| Logical NotImplemented }
+let createGetEmbassyResponse storage =
+    let storageRes =
+        match storage with
+        | Some storage -> Ok storage
+        | None -> Persistence.Repository.getMemoryStorage ()
 
-let setEmbassyAppointment appointment ct : Async<Result<string, ApiError>> =
-    async { return Error <| Logical NotImplemented }
+    fun (request: Request) (ct: CancellationToken) ->
+        match request.Embassy with
+        | Russian _ -> Core.Russian.getAppointments request storage ct
+        | _ -> async { return Error <| Logical NotImplemented }
+
+let createSetEmbassyResponse storage =
+    let storageRes =
+        match storage with
+        | Some storage -> Ok storage
+        | None -> Persistence.Repository.getMemoryStorage ()
+
+    fun (response: Response) (ct: CancellationToken) ->
+        match storageRes with
+        | Error error -> async { return Error <| Infrastructure error }
+        | Ok storage ->
+            match response.Embassy with
+            | Russian _ -> Core.Russian.confirmAppointment response storage ct
+            | _ -> async { return Error <| Logical NotImplemented }
