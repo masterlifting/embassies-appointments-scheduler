@@ -79,23 +79,34 @@ module Russian =
             return Error <| Logical NotImplemented
         }
 
-    // let rec private tryGetAppointments credentials attempts ct =
-    //     async {
-    //         match credentials with
-    //         | [] -> return Ok None
-    //         | head :: tail ->
-    //             match! getAppointments' head ct with
-    //             | Ok None -> return Ok None
-    //             | Ok(Some appointments) -> return Ok <| Some appointments
-    //             | Error error ->
-    //                 match error with
-    //                 | Infrastructure(InvalidRequest _) ->
-    //                     if attempts = 0 then
-    //                         return Error error
-    //                     else
-    //                         return! tryGetAppointments tail (attempts - 1) ct
-    //                 | _ -> return Error error
-    //     }
+    
+
+    let getUserCredentials storage user country ct =
+        async {
+            let getCredentials = Repository.Russian.createGetUserCredentials storage
+
+            match! getCredentials user country ct with
+            | Error error -> return Error <| Infrastructure error
+            | Ok credentials -> return Ok credentials
+        }
+
+    let getCountryCredentials storage country ct =
+        async {
+            let getCredentials = Repository.Russian.createGetCountryCredentials storage
+
+            match! getCredentials country ct with
+            | Error error -> return Error <| Infrastructure error
+            | Ok credentials -> return Ok credentials
+        }
+
+    let setCredentials storage user country credentials ct =
+        async {
+            let setCredentials = Repository.Russian.createSetCredentials storage
+
+            match! setCredentials user country credentials ct with
+            | Error error -> return Error <| Infrastructure error
+            | Ok _ -> return Ok()
+        }
 
     let getEmbassyResponse (request: Request) storage ct =
         async {

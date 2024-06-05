@@ -39,45 +39,20 @@ module Repository =
     open Persistence.Core
     open Domain.Internal.Core
 
-    let getMemoryStorage () = getStorage InMemory
+    let getStorage storage =
+        match storage with
+        | Some storage -> Ok storage
+        | _ -> getStorage InMemory
 
     module Russian =
 
-        open Domain.Internal.Russian
-        open Web.Domain.Internal.Bots.Telegram
+        let createSetCredentials (storage: Storage) =
+            fun (user: User) (country: Country) (credentials: string) (ct: CancellationToken) ->
+                async { return Error <| Persistence "Not implemented" }
 
-        let setCredentials
-            (credentials: Credentials)
-            (storage: Storage)
-            (ct: CancellationToken)
-            : Async<Result<unit, InfrastructureError>> =
-            async { return Error <| Persistence "Not implemented" }
+        let createGetUserCredentials (storage: Storage) =
+            fun (user: User) (city: Country) (ct: CancellationToken) ->
+                async { return Error <| Persistence "Not implemented" }
 
-        let getCredentials
-            (city: City)
-            (storage: Storage)
-            (ct: CancellationToken)
-            : Async<Result<Set<Credentials> option, InfrastructureError>> =
-            async { return Error <| Persistence "Not implemented" }
-
-        let getAppointments
-            (city: City)
-            (storage: Storage)
-            (ct: CancellationToken)
-            : Async<Result<Set<Appointment> option, InfrastructureError>> =
-            async { return Error <| Persistence "Not implemented" }
-
-        let setAppointments
-            (city: City)
-            (appointments: Appointment seq)
-            (storage: Storage)
-            (ct: CancellationToken)
-            : Async<Result<unit, InfrastructureError>> =
-            async { return Error <| Persistence "Not implemented" }
-
-        let getTelegramSubscribers
-            (city: City)
-            (storage: Storage)
-            (ct: CancellationToken)
-            : Async<Result<Set<ChatId> option, InfrastructureError>> =
-            async { return Error <| Persistence "Not implemented" }
+        let createGetCountryCredentials (storage: Storage) =
+            fun (city: Country) (ct: CancellationToken) -> async { return Error <| Persistence "Not implemented" }
