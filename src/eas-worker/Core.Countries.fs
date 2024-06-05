@@ -5,7 +5,6 @@ open Worker.Domain.Core
 open Eas.Domain.Internal.Core
 
 module Serbia =
-
     let private Belgrade =
         Node({ Name = "Belgrade"; Handle = None }, [ Embassies.Russian.createStepsFor <| Serbia Belgrade ])
 

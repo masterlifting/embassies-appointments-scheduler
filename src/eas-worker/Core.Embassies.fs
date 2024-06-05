@@ -13,16 +13,12 @@ module Russian =
                 let getEmbassyResponse = Eas.Api.createGetEmbassyResponse None
 
                 let getAvailableDates () =
-                    getEmbassyResponse
-                        { User = { Name = "Test" }
-                          Embassy = Russian country
-                          Value = "" }
-                        ct
+                    getEmbassyResponse { Embassy = Russian country; Data = "" } ct
 
                 match! getAvailableDates () with
                 | Error error -> return Error error
                 | Ok None -> return Ok <| Info "No data available"
-                | Ok(Some result) -> return Ok <| Data result
+                | Ok(Some result) -> return Ok <| Data result.Appointments
             }
 
     let createStepsFor country =

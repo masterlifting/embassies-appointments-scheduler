@@ -2,6 +2,7 @@ module internal Eas.Core
 
 open System.Threading
 open Eas.Domain.Internal
+open Eas.Domain.Internal.Core
 open Eas.Persistence
 open Infrastructure.Domain.Errors
 
@@ -55,7 +56,7 @@ module Russian =
             return response
         }
 
-    let private getAppointments' (credentials: Credentials) ct : Async<Result<Set<Appointment> option, ApiError>> =
+    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
@@ -69,7 +70,7 @@ module Russian =
             | Error error -> return Error <| Logical NotImplemented
         }
 
-    let confirmKdmidOrder (credentials: Credentials) =
+    let confirmKdmidOrder (credentials: Credentials) ct =
         async {
             let city, id, cd, ems = credentials.Value
             let baseUrl = createBaseUrl city
@@ -77,109 +78,53 @@ module Russian =
             //let! response = getCalendarPage url
             return Error <| Logical NotImplemented
         }
-    
-    let rec private tryGetAppointments credentials attempts ct =
-        async {
-            match credentials with
-            | [] -> return Ok None
-            | head :: tail ->
-                match! getAppointments' head ct with
-                | Ok None -> return Ok None
-                | Ok(Some appointments) -> return Ok <| Some appointments
-                | Error error ->
-                    match error with
-                    | Infrastructure(InvalidRequest _) ->
-                        if attempts = 0 then
-                            return Error error
-                        else
-                            return! tryGetAppointments tail (attempts - 1) ct
-                    | _ -> return Error error
-        }
-    
-    let setCredentials (request: Request) storage ct =
-        async {
-            match createCredentials request with
-            | Error error -> return Error <| Infrastructure error
-            | Ok credentials ->
-                match! Repository.Russian.setCredentials credentials storage ct with
-                | Error error -> return Error <| Infrastructure error
-                | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
-        }
 
-    let getAppointments (request: Core.Request) storage ct =
+    // let rec private tryGetAppointments credentials attempts ct =
+    //     async {
+    //         match credentials with
+    //         | [] -> return Ok None
+    //         | head :: tail ->
+    //             match! getAppointments' head ct with
+    //             | Ok None -> return Ok None
+    //             | Ok(Some appointments) -> return Ok <| Some appointments
+    //             | Error error ->
+    //                 match error with
+    //                 | Infrastructure(InvalidRequest _) ->
+    //                     if attempts = 0 then
+    //                         return Error error
+    //                     else
+    //                         return! tryGetAppointments tail (attempts - 1) ct
+    //                 | _ -> return Error error
+    //     }
+
+    let getEmbassyResponse (request: Request) storage ct =
         async {
-            match createCredentials request with
+            match createCredentials request.Data with
             | Error error -> return Error <| Infrastructure error
             | Ok credentials ->
-                match! getAppointments' credentials ct with
+                match! getAppointments credentials ct with
                 | Error error -> return Error error
-                | Ok appointments -> return Ok appointments
-        }
-        
-    let confirmAppointment (request: Response) storage ct =
-        async {
-            match createCredentials request with
-            | Error error -> return Error <| Infrastructure error
-            | Ok credentials ->
-                match! Repository.Russian.setCredentials credentials storage ct with
-                | Error error -> return Error <| Infrastructure error
-                | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
+                | Ok appointments ->
+                    match appointments with
+                    | appointments when appointments.Count = 0 -> return Ok None
+                    | appointments ->
+                        return
+                            Ok
+                            <| Some
+                                { Embassy = request.Embassy
+                                  Appointments = appointments
+                                  Data = Map [ "credentials", request.Data ] }
         }
 
-    let findAppointments city ct =
+    let setEmbassyResponse (response: Response) storage ct =
         async {
-            match Repository.getMemoryStorage () with
-            | Error error -> return Error <| Infrastructure error
-            | Ok storage ->
-                match! Repository.Russian.getCredentials city storage ct with
+            match response.Data |> Map.tryFind "credentials" with
+            | None -> return Error <| (Infrastructure <| InvalidRequest "No credentials found in response.")
+            | Some credentials ->
+                match createCredentials credentials with
                 | Error error -> return Error <| Infrastructure error
-                | Ok None -> return Ok None
-                | Ok(Some credentials) ->
-                    let credentials = credentials |> List.ofSeq
-
-                    match! tryGetAppointments credentials 3 ct with
+                | Ok credentials ->
+                    match! confirmKdmidOrder credentials ct with
                     | Error error -> return Error error
-                    | Ok None -> return Ok None
-                    | Ok(Some appointments) ->
-                        match! Repository.Russian.setAppointments city appointments storage ct with
-                        | Error error -> return Error <| Infrastructure error
-                        | Ok _ -> return Ok <| Some appointments
+                    | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
         }
-
-    let notifyUsers city ct =
-        async {
-            match Repository.getMemoryStorage () with
-            | Error error -> return Error <| Infrastructure error
-            | Ok storage ->
-                match! Repository.Russian.getTelegramSubscribers city storage ct with
-                | Error error -> return Error <| Infrastructure error
-                | Ok None -> return Ok None
-                | Ok(Some subscribers) ->
-                    match! Repository.Russian.getAppointments city storage ct with
-                    | Error error -> return Error <| Infrastructure error
-                    | Ok None -> return Ok None
-                    | Ok(Some appointments) ->
-                        
-                        let buttonsGroup: ButtonsGroup = {
-                            Id = None
-                            Buttons = 
-                                appointments
-                                    |> Set.map (fun appointment ->
-                                        let button: Button = {
-                                            Button {
-                                                Text = appointment.Date |> Option.defaultValue "No date"
-                                                Url = appointment.Url |> Option.defaultValue ""
-                                            })
-                            Cloumns = 1
-                        }
-                        let tasks =
-                            subscribers
-                            |> Set.map (fun chatId ->
-
-                                Telegram.sendText chatId message ct)
-
-                        return response
-
-        }
-
-

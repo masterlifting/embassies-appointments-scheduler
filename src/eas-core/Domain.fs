@@ -36,15 +36,12 @@ module Internal =
               Time: TimeOnly
               Description: string }
 
-        type Request =
-            { User: User
-              Embassy: Embassy
-              Value: string }
+        type Request = { Embassy: Embassy; Data: string }
 
         type Response =
-            { User: User
-              Embassy: Embassy
-              Appointments: Set<Appointment> }
+            { Embassy: Embassy
+              Appointments: Set<Appointment>
+              Data: Map<string, string> }
 
     module Russian =
         open Core
@@ -79,7 +76,8 @@ module Internal =
                     | Tirana -> ("tirana", id, cd, ems)
 
         let createCredentials url =
-            toUri url
+            url
+            |> toUri
             |> Result.bind (fun uri ->
                 match uri.Host.Split('.') with
                 | hostParts when hostParts.Length < 3 -> Error $"City is not recognized in url: {url}."
@@ -124,7 +122,7 @@ module Internal =
                                           Cd = cd
                                           Ems = ems }))))
                     | _ -> Error $"Invalid query parameters in url: {url}.")
-            |> Result.mapError (fun error -> Parsing error)
+            |> Result.mapError Parsing
 
 module External =
     type City = { Name: string }
