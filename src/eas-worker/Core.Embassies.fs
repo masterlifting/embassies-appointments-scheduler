@@ -1,5 +1,6 @@
 ﻿module internal Eas.Worker.Core.Embassies
 
+open Infrastructure.DSL
 open Infrastructure.Domain.Graph
 open Infrastructure.Domain.Errors
 open Worker.Domain.Core
@@ -28,30 +29,29 @@ module Russian =
 
     let private getAvailableDates country =
         fun ct ->
-            async {
-
-                match Core.getStorage Core.InMemory with
-                | Error error -> return Error <| Infrastructure error
-                | Ok storage ->
-                    let getEmbassyResponse = Eas.Api.createGetEmbassyResponse <| Some storage
-
-                    let getCountryCredentials =
-                        Eas.Api.createGetEmbassyCountryRequestData <| Some storage
-
-                    let getAvailableDates credentials ct =
-                        getEmbassyResponse
-                            { Embassy = Russian country
-                              Data = credentials }
-                            ct
-
+            Core.createStorage Core.InMemory
+            |> Result.mapError Infrastructure
+            |> ResultAsync.bind (fun storage ->
+                let getEmbassyResponse = Eas.Api.initGetEmbassyResponse <| Some storage
+                
+                let getCountryCredentials =
+                    Eas.Api.initGetEmbassyCountryRequestData <| Some storage
+                
+                let getAvailableDates credentials ct =
+                    getEmbassyResponse
+                        { Embassy = Russian country
+                          Data = credentials }
+                        ct
+                
+                async {
                     match! getCountryCredentials (Russian country) ct with
                     | Error error -> return Error error
                     | Ok credentials ->
                         match! tryGetAvailableDates credentials 3 ct getAvailableDates with
                         | Error error -> return Error error
                         | Ok None -> return Ok <| Info "No data available"
-                        | Ok(Some result) -> return Ok <| Data result.Appointments
-            }
+                        | Ok(Some result) -> return  Ok <| Data result.Appointments
+                })
 
     let createStepsFor country =
         Node(

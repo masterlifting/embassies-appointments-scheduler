@@ -42,7 +42,7 @@ module Repository =
     let getStorage storage =
         match storage with
         | Some storage -> Ok storage
-        | _ -> getStorage InMemory
+        | _ -> createStorage InMemory
 
     module Russian =
 
