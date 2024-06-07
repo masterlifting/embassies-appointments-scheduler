@@ -1,7 +1,7 @@
 ﻿module internal Eas.Worker.Core.Countries
 
 open Infrastructure.Domain.Graph
-open Worker.Domain.Core
+open Worker.Domain.Internal
 open Eas.Domain.Internal.Core
 
 module Serbia =

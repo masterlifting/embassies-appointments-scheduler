@@ -9,7 +9,7 @@ let private sectionName = "Worker"
 let private getTasksGraph handlersGraph configuration =
     async {
         return
-            match Configuration.getSection<Worker.Domain.Persistence.Task> configuration sectionName with
+            match Configuration.getSection<Worker.Domain.External.Task> configuration sectionName with
             | None ->
                 Error
                 <| Persistence $"Section '%s{sectionName}' was not found in the configuration."

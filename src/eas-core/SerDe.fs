@@ -1,17 +1,12 @@
 ﻿module internal Eas.SerDe
 
-//module Json =
-//    open Infrastructure.DSL.SerDe.Json
-//    open Domain
-//    open Mapper
+module Json =
+   open Infrastructure.DSL
+   open Domain
+   open Mapper
 
-//    module User =
-//        let serializeKdmidOrder = UserKdmidOrders.toPersistence >> serialize
+   module Russian =
+         open System
+         let serializeCredentials (credentials: string) : External.Russian.Credentials =
+             let credentials = SerDe.Json.deserialize<External.Russian.Credentials> credentials
 
-//        let deserialize credentials =
-//            match deserialize<Persistence.UserKdmdidOrder seq> credentials with
-//            | Error error -> Error error
-//            | Ok credentials ->
-//                match UserKdmidOrders.toCore credentials with
-//                | Error error -> Error error
-//                | Ok credentials -> Ok credentials

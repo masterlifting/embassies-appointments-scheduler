@@ -1,6 +1,6 @@
 ﻿open Infrastructure
 open Infrastructure.Domain.Graph
-open Worker.Domain.Core
+open Worker.Domain.Internal
 
 [<EntryPoint>]
 let main _ =

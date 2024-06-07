@@ -125,6 +125,43 @@ module Internal =
             |> Result.mapError Parsing
 
 module External =
-    type City = { Name: string }
-    type Country = { Name: string }
-    type Embassy = { Name: string }
+    module Core =
+
+        open System.Collections.Generic
+
+        type User() =
+            member val Name: string = String.Empty with get, set
+
+        type City() =
+            member val Name: string = String.Empty with get, set
+
+        type Country() =
+            member val Name: string = String.Empty with get, set
+            member val City: City = City() with get, set
+
+        type Embassy() =
+            member val Name: string = String.Empty with get, set
+            member val Country: Country = Country() with get, set
+
+        type Appointment() =
+            member val Date: DateTime = DateTime.MinValue with get, set
+            member val Time: DateTime = DateTime.MinValue with get, set
+            member val Description: string = String.Empty with get, set
+
+        type Request() =
+            member val Embassy: Embassy = Embassy() with get, set
+            member val Data: string = String.Empty with get, set
+
+        type Response() =
+            member val Embassy: Embassy = Embassy() with get, set
+            member val Appointments: Appointment array = [||] with get, set
+            member val Data: Dictionary<string, string> = Dictionary() with get, set
+
+    module Russian =
+        open Core
+
+        type Credentials() =
+            member val City: City = City() with get, set
+            member val Id: int = 0 with get, set
+            member val Cd: string = String.Empty with get, set
+            member val Ems: string = String.Empty with get, set

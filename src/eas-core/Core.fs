@@ -1,17 +1,12 @@
 module internal Eas.Core
 
-open System.Threading
-open Eas.Domain.Internal
 open Eas.Domain.Internal.Core
 open Eas.Persistence
+open Infrastructure.DSL
 open Infrastructure.Domain.Errors
 
 module Russian =
-    open System
-    open Domain.Internal.Core
     open Eas.Domain.Internal.Russian
-    open Web.Core.Bots
-    open Web.Domain.Internal.Bots.Telegram
 
     let private createBaseUrl city = $"https://kdmid.ru/queue/%s{city}/"
 
@@ -66,8 +61,8 @@ module Russian =
             match Web.Core.Http.Mapper.toUri <| baseUrl + urlParams with
             | Ok uri ->
                 let! response = getCalendarPage uri
-                return Error <| Logical NotImplemented
-            | Error error -> return Error <| Logical NotImplemented
+                return Error <| Logical(NotImplemented "getAppointments")
+            | Error error -> return Error <| (Logical <| NotImplemented "getAppointments")
         }
 
     let confirmKdmidOrder (credentials: Credentials) ct =
@@ -76,37 +71,20 @@ module Russian =
             let baseUrl = createBaseUrl city
             let urlParams = createUrlParams id cd ems
             //let! response = getCalendarPage url
-            return Error <| Logical NotImplemented
+            return Error <| Logical(NotImplemented "confirmKdmidOrder")
         }
-
-    
 
     let getUserCredentials storage user country ct =
-        async {
-            let getCredentials = Repository.Russian.createGetUserCredentials storage
-
-            match! getCredentials user country ct with
-            | Error error -> return Error <| Infrastructure error
-            | Ok credentials -> return Ok credentials
-        }
+        Repository.Russian.initGetUserCredentials storage user country ct
+        |> ResultAsync.mapError Infrastructure
 
     let getCountryCredentials storage country ct =
-        async {
-            let getCredentials = Repository.Russian.createGetCountryCredentials storage
-
-            match! getCredentials country ct with
-            | Error error -> return Error <| Infrastructure error
-            | Ok credentials -> return Ok credentials
-        }
+        Repository.Russian.initGetCountryCredentials storage country ct
+        |> ResultAsync.mapError Infrastructure
 
     let setCredentials storage user country credentials ct =
-        async {
-            let setCredentials = Repository.Russian.createSetCredentials storage
-
-            match! setCredentials user country credentials ct with
-            | Error error -> return Error <| Infrastructure error
-            | Ok _ -> return Ok()
-        }
+        Repository.Russian.initSetCredentials storage user country credentials ct
+        |> ResultAsync.mapError Infrastructure
 
     let getEmbassyResponse (request: Request) storage ct =
         async {

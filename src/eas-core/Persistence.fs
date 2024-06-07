@@ -1,43 +1,56 @@
 ﻿module internal Eas.Persistence
 
-//module private InMemoryRepository =
-//    open Persistence
-//    open KdmidScheduler.SerDe
+open System.Threading
+open Infrastructure.Domain.Errors
+open Infrastructure.DSL.Threading
+open Persistence.Core
+open Domain.Internal.Core
 
-//    module User =
+module private InMemoryRepository =
+    open Persistence.InMemory
+    open Infrastructure.DSL.SerDe
 
-//        [<Literal>]
-//        let UserKey = "user_"
+    module Get =
 
-//        let createKdmidOrder order storage =
-//            match Json.User.serializeKdmidOrder order with
-//            | Error error -> Error error
-//            | Ok credentialsStr ->
-//                let key = UserKey + (order.User.Id |> string)
+        let initGetCountryCredentials (storage: Storage) =
+            fun (city: Country) (ct: CancellationToken) ->
+                async {
+                    let key = $"{city}"
 
-//                match InMemory.add key credentialsStr storage with
-//                | Error error -> Error error
-//                | Ok _ -> Ok()
+                    return
+                        match ct |> notCanceled with
+                        | true -> 
+                            let credentials =
+                                get storage key
+                                |> Result.bind Option.map Json.deserialize<Domain.External.Russian.Credentials>
+                        | _ -> Error <| Persistence "Operation canceled initGetCountryCredentials"
+                }
 
+        let initGetUserCredentials (storage: Storage) =
+            fun (user: User) (city: Country) (ct: CancellationToken) ->
+                async {
+                    let key = $"{city}-{user.Name}"
 
-//        let getKdmidOrders city storage =
-//            let key = UserKey + (city |> KdmidCredentials.toCityCode)
+                    return
+                        match ct |> notCanceled with
+                        | true -> get storage key
+                        | _ -> Error <| Persistence "Operation canceled initGetUserCredentials"
+                }
 
-//            match InMemory.get key storage with
-//            | Error error -> Error error
-//            | Ok getResult ->
-//                match getResult with
-//                | Some credentialsStr ->
-//                    match Json.User.deserialize credentialsStr with
-//                    | Error error -> Error error
-//                    | Ok credentials -> Ok <| Some credentials
-//                | None -> Ok <| None
+    module Set =
+        let initSetCredentials (storage: Storage) =
+            fun (user: User) (city: Country) (credentials: string) (ct: CancellationToken) ->
+                async {
+                    let key = $"{city}-{user.Name}"
+
+                    return
+                        match ct |> notCanceled with
+                        | true -> add storage key credentials
+                        | _ -> Error <| Persistence "Operation canceled initSetCredentials"
+                }
+
 
 module Repository =
-    open System.Threading
-    open Infrastructure.Domain.Errors
-    open Persistence.Core
-    open Domain.Internal.Core
 
     let getStorage storage =
         match storage with
@@ -46,13 +59,18 @@ module Repository =
 
     module Russian =
 
-        let createSetCredentials (storage: Storage) =
+        let initSetCredentials (storage: Storage) =
             fun (user: User) (country: Country) (credentials: string) (ct: CancellationToken) ->
-                async { return Error <| Persistence "Not implemented" }
+                async { return Error <| Persistence $"Not implemented initSetCredentials" }
 
-        let createGetUserCredentials (storage: Storage) =
+        let initGetUserCredentials (storage: Storage) =
             fun (user: User) (city: Country) (ct: CancellationToken) ->
-                async { return Error <| Persistence "Not implemented" }
+                match storage with
+                | MemoryStorage storage -> InMemoryRepository.Get.initGetUserCredentials storage user city ct
+                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let createGetCountryCredentials (storage: Storage) =
-            fun (city: Country) (ct: CancellationToken) -> async { return Error <| Persistence "Not implemented" }
+        let initGetCountryCredentials (storage: Storage) =
+            fun (city: Country) (ct: CancellationToken) ->
+                match storage with
+                | MemoryStorage storage -> InMemoryRepository.Get.initGetCountryCredentials storage city ct
+                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
