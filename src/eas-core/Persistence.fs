@@ -17,12 +17,13 @@ module private InMemoryRepository =
                 async {
                     let key = $"{city}"
 
+                    let deserialize =
+                        Option.map <| Domain.Internal.Russian.createCredentials
+                        >> Option.defaultValue (Error <| Persistence $"Not found credentials for {city}")
+
                     return
                         match ct |> notCanceled with
-                        | true -> 
-                            let credentials =
-                                get storage key
-                                |> Result.bind Option.map Json.deserialize<Domain.External.Russian.Credentials>
+                        | true -> get storage key |> Result.bind deserialize
                         | _ -> Error <| Persistence "Operation canceled initGetCountryCredentials"
                 }
 
@@ -59,18 +60,20 @@ module Repository =
 
     module Russian =
 
-        let initSetCredentials (storage: Storage) =
-            fun (user: User) (country: Country) (credentials: string) (ct: CancellationToken) ->
-                async { return Error <| Persistence $"Not implemented initSetCredentials" }
+        let initSetCredentials storage =
+            fun user country credentials ct ->
+                match storage with
+                | MemoryStorage storage -> InMemoryRepository.Set.initSetCredentials storage user country credentials ct
+                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
 
-        let initGetUserCredentials (storage: Storage) =
-            fun (user: User) (city: Country) (ct: CancellationToken) ->
+        let initGetUserCredentials storage =
+            fun user city ct ->
                 match storage with
                 | MemoryStorage storage -> InMemoryRepository.Get.initGetUserCredentials storage user city ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let initGetCountryCredentials (storage: Storage) =
-            fun (city: Country) (ct: CancellationToken) ->
+        let initGetCountryCredentials storage =
+            fun city ct ->
                 match storage with
                 | MemoryStorage storage -> InMemoryRepository.Get.initGetCountryCredentials storage city ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
