@@ -12,7 +12,8 @@ module private InMemoryRepository =
 
     let private mapRequests filter =
         let deserialize =
-            Option.map <| Json.deserialize<External.Request array>
+            Json.deserialize<External.Request array>
+            |> Option.map
             >> Option.defaultValue (Ok [||])
 
         let map requests =
