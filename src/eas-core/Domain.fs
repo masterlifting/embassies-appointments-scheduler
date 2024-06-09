@@ -133,26 +133,26 @@ module Internal =
             |> toUri
             |> Result.bind (fun uri ->
                 match uri.Host.Split('.') with
-                | hostParts when hostParts.Length < 3 -> Error $"City is not recognized in url: {url}."
+                | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized in url: {url}."
                 | hostParts ->
                     let city =
                         match hostParts[0] with
                         | "belgrad" -> Ok Belgrade
                         | "budapest" -> Ok Budapest
                         | "sarajevo" -> Ok Sarajevo
-                        | _ -> Error $"City {hostParts[0]} is not supported for url: {url}."
+                        | _ -> Error <| Parsing $"City {hostParts[0]} is not supported for url: {url}."
 
                     match toQueryParams uri with
                     | Ok paramsMap when paramsMap.Keys |> Seq.forall (fun key -> key = "id" || key = "cd") ->
                         let id =
                             match paramsMap["id"] with
                             | IsInt id when id > 1000 -> Ok <| Id id
-                            | _ -> Error $"Invalid id parameter in url: {url}."
+                            | _ -> Error <| Parsing $"Invalid id parameter in url: {url}."
 
                         let cd =
                             match paramsMap["cd"] with
                             | IsLettersOrNumbers cd -> Ok <| Cd cd
-                            | _ -> Error $"Invalid cd parameter in url: {url}."
+                            | _ -> Error <| Parsing $"Invalid cd parameter in url: {url}."
 
                         let ems =
                             match paramsMap.TryGetValue "ems" with
@@ -160,7 +160,7 @@ module Internal =
                             | true, value ->
                                 match value with
                                 | IsLettersOrNumbers ems -> Ok <| Ems(Some ems)
-                                | _ -> Error $"Invalid ems parameter in url: {url}."
+                                | _ -> Error <| Parsing $"Invalid ems parameter in url: {url}."
 
                         city
                         |> Result.bind (fun city ->
@@ -174,8 +174,7 @@ module Internal =
                                           Id = id
                                           Cd = cd
                                           Ems = ems }))))
-                    | _ -> Error $"Invalid query parameters in url: {url}.")
-            |> Result.mapError Parsing
+                    | _ -> Error <| Parsing $"Invalid query parameters in url: {url}.")
 
 module External =
 

@@ -2,15 +2,15 @@
 
 open System.Threading
 open Infrastructure
-open Infrastructure.Domain.Errors
+open Infrastructure.DSL.SerDe
 open Infrastructure.DSL.Threading
+open Infrastructure.Domain.Errors
 open Persistence.Core
+open Domain
 
 module private InMemoryRepository =
-    open Infrastructure.DSL.SerDe
-    open Domain
 
-    let private mapRequests filter =
+    let private getEmbassyRequests filter =
         let deserialize =
             Json.deserialize<External.Request array>
             |> Option.map
@@ -36,8 +36,10 @@ module private InMemoryRepository =
                     return
                         match ct |> notCanceled with
                         | true ->
-                            Persistence.InMemory.get storage key
-                            |> mapRequests (fun x ->
+                            storage
+                            |> Persistence.InMemory.get
+                            |> fun get -> get key
+                            |> getEmbassyRequests (fun x ->
                                 x.Embassy.Name = embassy.Model.Name
                                 && x.Embassy.Country.Name = embassy.Model.Country.Name
                                 && x.Embassy.Country.City.Name = embassy.Model.Country.City.Name)
@@ -52,8 +54,11 @@ module private InMemoryRepository =
                     return
                         match ct |> notCanceled with
                         | true ->
-                            Persistence.InMemory.get storage key
-                            |> mapRequests (fun x ->
+
+                            storage
+                            |> Persistence.InMemory.get
+                            |> fun get -> get key
+                            |> getEmbassyRequests (fun x ->
                                 x.User.Name = user.Name
                                 && x.Embassy.Name = embassy.Model.Name
                                 && x.Embassy.Country.Name = embassy.Model.Country.Name
@@ -71,8 +76,10 @@ module private InMemoryRepository =
                     return
                         match ct |> notCanceled with
                         | true ->
-                            Persistence.InMemory.get storage key
-                            |> mapRequests (fun x ->
+                            storage
+                            |> Persistence.InMemory.get
+                            |> fun get -> get key
+                            |> getEmbassyRequests (fun x ->
                                 x.User.Name = user.Name
                                 && x.Embassy.Name = request.Embassy.Model.Name
                                 && x.Embassy.Country.Name = request.Embassy.Model.Country.Name
@@ -103,12 +110,14 @@ module private InMemoryRepository =
                                 | [] ->
                                     [ request ]
                                     |> Json.serialize
-                                    |> Result.bind (fun value -> Persistence.InMemory.add storage key value)
+                                    |> Result.bind (fun value ->
+                                        storage |> Persistence.InMemory.add |> (fun add -> add key value))
                                 | _ ->
                                     requests
                                     |> List.append [ request ]
                                     |> Json.serialize
-                                    |> Result.bind (fun value -> Persistence.InMemory.update storage key value))
+                                    |> Result.bind (fun value ->
+                                        storage |> Persistence.InMemory.update |> (fun update -> update key value)))
                         | _ -> Error <| Persistence "Operation canceled initSetRequest"
                 }
 

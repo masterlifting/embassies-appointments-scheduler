@@ -19,29 +19,21 @@ module Russian =
     let private getStartPage () =
         async {
             match Web.Core.Http.Mapper.toUri "https://kdmid.ru/" with
-            | Ok uri ->
-                let! response = Web.Core.Http.get uri
-                return response
-            | Error error -> return Error error
+            | Ok uri -> return! Web.Core.Http.get uri |> ResultAsync.mapError Infrastructure
+            | Error error -> return error
         }
 
     let private getCapchaImage () =
         async {
             match Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/" with
-            | Ok uri ->
-                let! response = Web.Core.Http.get uri
-                return response
+            | Ok uri -> return! Web.Core.Http.get uri |> ResultAsync.mapError Infrastructure
             | Error error -> return Error error
         }
 
     let private solveCapcha (image: byte[]) =
-        async {
-            match Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/" with
-            | Ok uri ->
-                let! response = Web.Core.Http.get uri
-                return response
-            | Error error -> return Error error
-        }
+        Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/"
+        |> Result.mapError Infrastructure
+        |> Result.bind (fun uri -> Web.Core.Http.post uri image |> ResultAsync.wrap)
 
     let private postStartPage (data: string) =
         async { return Error "postStartPage not implemented." }
