@@ -5,7 +5,8 @@ open System
 module Internal =
 
     module Core =
-        type User = { Name: string }
+
+        type User = { Id: int; Name: string }
 
         type City =
             | Belgrade
@@ -125,43 +126,54 @@ module Internal =
             |> Result.mapError Parsing
 
 module External =
-    module Core =
 
-        open System.Collections.Generic
+    type User() =
+        member val Id: int = 0 with get, set
+        member val Name: string = String.Empty with get, set
 
-        type User() =
-            member val Name: string = String.Empty with get, set
+    type City() =
+        member val Id: int = 0 with get, set
+        member val Name: string = String.Empty with get, set
 
-        type City() =
-            member val Name: string = String.Empty with get, set
+    type Country() =
+        member val Id: int = 0 with get, set
+        member val Name: string = String.Empty with get, set
+        member val CityId: int = 0 with get, set
+        member val City: City = City() with get, set
 
-        type Country() =
-            member val Name: string = String.Empty with get, set
-            member val City: City = City() with get, set
+    type Embassy() =
+        member val Id: int = 0 with get, set
+        member val Name: string = String.Empty with get, set
+        member val CountryId: int = 0 with get, set
+        member val Country: Country = Country() with get, set
 
-        type Embassy() =
-            member val Name: string = String.Empty with get, set
-            member val Country: Country = Country() with get, set
+    type Request() =
+        member val Id: int = 0 with get, set
+        member val Data: string = String.Empty with get, set
+        member val EmbassyId: int = 0 with get, set
+        member val Embassy: Embassy = Embassy() with get, set
+        member val UserId: int = 0 with get, set
+        member val User: User = User() with get, set
 
-        type Appointment() =
-            member val Date: DateTime = DateTime.MinValue with get, set
-            member val Time: DateTime = DateTime.MinValue with get, set
-            member val Description: string = String.Empty with get, set
+    type Response() =
+        member val Id: int = 0 with get, set
+        member val Appointments: Appointment array = [||] with get, set
+        member val Data: ResponseData array = [||] with get, set
+        member val RequestId: int = 0 with get, set
+        member val Request: Request = Request() with get, set
+        member val IsConfirmed: bool = false with get, set
 
-        type Request() =
-            member val Embassy: Embassy = Embassy() with get, set
-            member val Data: string = String.Empty with get, set
+    and Appointment() =
+        member val Id: int = 0 with get, set
+        member val Date: DateTime = DateTime.MinValue with get, set
+        member val Time: DateTime = DateTime.MinValue with get, set
+        member val Description: string = String.Empty with get, set
+        member val ResponseId: int = 0 with get, set
+        member val Response: Response = Response() with get, set
 
-        type Response() =
-            member val Embassy: Embassy = Embassy() with get, set
-            member val Appointments: Appointment array = [||] with get, set
-            member val Data: Dictionary<string, string> = Dictionary() with get, set
-
-    module Russian =
-        open Core
-
-        type Credentials() =
-            member val City: City = City() with get, set
-            member val Id: int = 0 with get, set
-            member val Cd: string = String.Empty with get, set
-            member val Ems: string = String.Empty with get, set
+    and ResponseData() =
+        member val Id: int = 0 with get, set
+        member val Key: string = String.Empty with get, set
+        member val Value: string = String.Empty with get, set
+        member val ResponseId: int = 0 with get, set
+        member val Response: Response = Response() with get, set

@@ -16,27 +16,27 @@ module Get =
 
     let initGetEmbassyUserRequests storage =
         fun user embassy ct ->
-            Persistence.Repository.getStorage storage
+            Persistence.Repository.createStorage storage
             |> Result.mapError Infrastructure
             |> ResultAsync.bind (fun storage ->
                 match embassy with
-                | Russian country -> Core.Russian.getUserCredentials storage user country ct
+                | Russian _ -> Core.Russian.getUserCredentials storage user embassy ct
                 | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initGetEmbassyUserRequests") })
 
     let initGetEmbassyCountryRequests storageOpt =
         fun embassy ct ->
             storageOpt
-            |> Persistence.Repository.getStorage
+            |> Persistence.Repository.createStorage
             |> Result.mapError Infrastructure
             |> ResultAsync.bind (fun storage ->
                 match embassy with
-                | Russian country -> Core.Russian.getCountryCredentials storage country ct
+                | Russian country -> Core.Russian.getCountryCredentials storage embassy ct
                 | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initGetEmbassyCountryRequests") })
 
     let initGetEmbassyResponse storageOpt =
         fun (request: Request) ct ->
             storageOpt
-            |> Persistence.Repository.getStorage
+            |> Persistence.Repository.createStorage
             |> Result.mapError Infrastructure
             |> ResultAsync.bind (fun storage ->
                 match request.Embassy with
@@ -47,17 +47,17 @@ module Set =
     let initSetEmbassyUserRequest storageOpt =
         fun user embassy credentials ct ->
             storageOpt
-            |> Persistence.Repository.getStorage
+            |> Persistence.Repository.createStorage
             |> Result.mapError Infrastructure
             |> ResultAsync.bind (fun storage ->
                 match embassy with
-                | Russian country -> Core.Russian.setCredentials storage user country credentials ct
+                | Russian _ -> Core.Russian.setCredentials storage user embassy credentials ct
                 | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initSetEmbassyUserRequest") })
 
     let initSetEmbassyResponse storageOpt =
         fun (response: Response) ct ->
             storageOpt
-            |> Persistence.Repository.getStorage
+            |> Persistence.Repository.createStorage
             |> Result.mapError Infrastructure
             |> ResultAsync.bind (fun storage ->
                 match response.Embassy with

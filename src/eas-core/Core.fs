@@ -1,9 +1,9 @@
 module internal Eas.Core
 
-open Eas.Domain.Internal.Core
-open Eas.Persistence
-open Infrastructure.DSL
 open Infrastructure.Domain.Errors
+open Infrastructure.DSL
+open Eas.Persistence
+open Eas.Domain.Internal.Core
 
 module Russian =
     open Eas.Domain.Internal.Russian
@@ -74,16 +74,16 @@ module Russian =
             return Error <| Logical(NotImplemented "confirmKdmidOrder")
         }
 
-    let getUserCredentials storage user country ct =
-        Repository.Russian.initGetUserCredentials storage user country ct
+    let getUserCredentials storage user embassy ct =
+        Repository.Russian.initGetUserCredentials storage user embassy ct
         |> ResultAsync.mapError Infrastructure
 
-    let getCountryCredentials storage country ct =
-        Repository.Russian.initGetCountryCredentials storage country ct
+    let getCountryCredentials storage embassy ct =
+        Repository.Russian.initGetCredentials storage embassy ct
         |> ResultAsync.mapError Infrastructure
 
-    let setCredentials storage user country credentials ct =
-        Repository.Russian.initSetCredentials storage user country credentials ct
+    let setCredentials storage user embassy credentials ct =
+        Repository.Russian.initSetCredentials storage user embassy credentials ct
         |> ResultAsync.mapError Infrastructure
 
     let getEmbassyResponse (request: Request) storage ct =
