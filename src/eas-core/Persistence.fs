@@ -13,7 +13,7 @@ module private InMemoryRepository =
     let private mapRequests filter =
         let deserialize =
             Option.map <| Json.deserialize<External.Request array>
-            >> Option.defaultValue (Error <| Persistence $"Not found requests.")
+            >> Option.defaultValue (Ok [||])
 
         let map requests =
             match requests with
@@ -36,7 +36,10 @@ module private InMemoryRepository =
                         match ct |> notCanceled with
                         | true ->
                             Persistence.InMemory.get storage key
-                            |> mapRequests (fun x -> x.EmbassyId = embassy.Id)
+                            |> mapRequests (fun x ->
+                                x.Embassy.Name = embassy.Model.Name
+                                && x.Embassy.Country.Name = embassy.Model.Country.Name
+                                && x.Embassy.Country.City.Name = embassy.Model.Country.City.Name)
                         | _ -> Error <| Persistence "Operation canceled initGetUserEmbassyRequests"
                 }
 
@@ -49,29 +52,51 @@ module private InMemoryRepository =
                         match ct |> notCanceled with
                         | true ->
                             Persistence.InMemory.get storage key
-                            |> mapRequests (fun x -> x.EmbassyId = embassy.Id && x.UserId = user.Id)
+                            |> mapRequests (fun x ->
+                                x.User.Name = user.Name
+                                && x.Embassy.Name = embassy.Model.Name
+                                && x.Embassy.Country.Name = embassy.Model.Country.Name
+                                && x.Embassy.Country.City.Name = embassy.Model.Country.City.Name)
                         | _ -> Error <| Persistence "Operation canceled initGetUserRequests"
                 }
 
     module Set =
 
         let initSetUserEmbassyRequest (storage: Persistence.InMemory.Storage) =
-            fun (user: Internal.Core.User) (embassy: Internal.Core.Embassy) (data: string) (ct: CancellationToken) ->
+            fun (user: Internal.Core.User) (request: Internal.Core.Request) (ct: CancellationToken) ->
                 async {
-                    let key = $"request-{embassy}"
+                    let key = $"request-{request.Embassy}"
 
                     return
                         match ct |> notCanceled with
                         | true ->
                             Persistence.InMemory.get storage key
-                            |> mapRequests (fun x -> x.EmbassyId = embassy.Id && x.UserId = user.Id)
+                            |> mapRequests (fun x ->
+                                x.User.Name = user.Name
+                                && x.Embassy.Name = request.Embassy.Model.Name
+                                && x.Embassy.Country.Name = request.Embassy.Model.Country.Name
+                                && x.Embassy.Country.City.Name = request.Embassy.Model.Country.City.Name)
                             |> Result.bind (fun requests ->
 
+                                let userDto = new External.User()
+                                userDto.Name <- userDto.Name
+
+                                let cityDto = new External.City()
+                                cityDto.Name <- request.Embassy.Model.Country.City.Name
+
+                                let countryDto = new External.Country()
+                                countryDto.Name <- request.Embassy.Model.Country.Name
+                                countryDto.City <- cityDto
+
+                                let embassyDto = new External.Embassy()
+                                embassyDto.Name <- request.Embassy.Model.Name
+                                embassyDto.Country <- countryDto
+
+
                                 let request = new External.Request()
-                                request.Id <- 1
-                                request.Data <- data
-                                request.EmbassyId <- embassy.Id
-                                request.UserId <- user.Id
+                                request.Data <- request.Data
+                                request.User <- userDto
+                                request.Embassy <- embassyDto
 
                                 match requests with
                                 | [] ->
@@ -86,6 +111,13 @@ module private InMemoryRepository =
                         | _ -> Error <| Persistence "Operation canceled initSetRequest"
                 }
 
+        let initSetEmbassyResponse (storage: Persistence.InMemory.Storage) =
+            fun (response: Internal.Core.Response) (ct: CancellationToken) ->
+                async {
+                    let key = $"response-{response}"
+
+                    return Error <| Persistence "Not implemented initSetEmbassyResponse"
+                }
 
 module Repository =
 
@@ -94,22 +126,30 @@ module Repository =
         | Some storage -> Ok storage
         | _ -> createStorage InMemory
 
-    module Russian =
+    module Get =
 
-        let initSetCredentials storage =
-            fun user embassy credentials ct ->
-                match storage with
-                | MemoryStorage storage -> InMemoryRepository.Set.initSetUserEmbassyRequest storage user embassy credentials ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
-
-        let initGetUserCredentials storage =
+        let initGetUserEmbassyRequests storage =
             fun user embassy ct ->
                 match storage with
                 | MemoryStorage storage -> InMemoryRepository.Get.initGetUserEmbassyRequests storage user embassy ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let initGetCredentials storage =
+        let initGetEmbassyRequests storage =
             fun embassy ct ->
                 match storage with
                 | MemoryStorage storage -> InMemoryRepository.Get.initGetEmbassyRequests storage embassy ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
+
+    module Set =
+
+        let initSetUserEmbassyRequest storage =
+            fun user request ct ->
+                match storage with
+                | MemoryStorage storage -> InMemoryRepository.Set.initSetUserEmbassyRequest storage user request ct
+                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
+
+        let initSetEmbassyResponse storage =
+            fun response ct ->
+                match storage with
+                | MemoryStorage storage -> InMemoryRepository.Set.initSetEmbassyResponse storage response ct
+                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }

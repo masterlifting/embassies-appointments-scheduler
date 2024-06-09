@@ -14,52 +14,45 @@ module Get =
              Russian <| Montenegro Podgorica
              Russian <| Albania Tirana ]
 
-    let initGetEmbassyUserRequests storage =
+    let initGetUserEmbassyRequests storage =
         fun user embassy ct ->
             Persistence.Repository.createStorage storage
-            |> Result.mapError Infrastructure
-            |> ResultAsync.bind (fun storage ->
-                match embassy with
-                | Russian _ -> Core.Russian.getUserCredentials storage user embassy ct
-                | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initGetEmbassyUserRequests") })
+            |> Result.map Persistence.Repository.Get.initGetUserEmbassyRequests
+            |> ResultAsync.wrap (fun get -> get user embassy ct)
+            |> ResultAsync.mapError Infrastructure
 
-    let initGetEmbassyCountryRequests storageOpt =
+    let initGetEmbassyRequests storageOpt =
         fun embassy ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.mapError Infrastructure
-            |> ResultAsync.bind (fun storage ->
-                match embassy with
-                | Russian country -> Core.Russian.getCountryCredentials storage embassy ct
-                | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initGetEmbassyCountryRequests") })
+            |> Result.map Persistence.Repository.Get.initGetEmbassyRequests
+            |> ResultAsync.wrap (fun get -> get embassy ct)
+            |> ResultAsync.mapError Infrastructure
 
     let initGetEmbassyResponse storageOpt =
         fun (request: Request) ct ->
             storageOpt
             |> Persistence.Repository.createStorage
             |> Result.mapError Infrastructure
-            |> ResultAsync.bind (fun storage ->
+            |> ResultAsync.wrap (fun storage ->
                 match request.Embassy with
                 | Russian _ -> Core.Russian.getEmbassyResponse request storage ct
                 | _ -> async { return Error <| Logical(NotSupported $"{request.Embassy} for initGetEmbassyResponse") })
 
 module Set =
-    let initSetEmbassyUserRequest storageOpt =
-        fun user embassy credentials ct ->
+
+    let initSetUserEmbassyRequest storageOpt =
+        fun user request ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.mapError Infrastructure
-            |> ResultAsync.bind (fun storage ->
-                match embassy with
-                | Russian _ -> Core.Russian.setCredentials storage user embassy credentials ct
-                | _ -> async { return Error <| Logical(NotSupported $"{embassy} for initSetEmbassyUserRequest") })
+            |> Result.map Persistence.Repository.Set.initSetUserEmbassyRequest
+            |> ResultAsync.wrap (fun set -> set user request ct)
+            |> ResultAsync.mapError Infrastructure
 
     let initSetEmbassyResponse storageOpt =
-        fun (response: Response) ct ->
+        fun response ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.mapError Infrastructure
-            |> ResultAsync.bind (fun storage ->
-                match response.Embassy with
-                | Russian _ -> Core.Russian.setEmbassyResponse response storage ct
-                | _ -> async { return Error <| Logical(NotSupported $"{response.Embassy} for initSetEmbassyResponse") })
+            |> Result.map Persistence.Repository.Set.initSetEmbassyResponse
+            |> ResultAsync.wrap (fun set -> set response ct)
+            |> ResultAsync.mapError Infrastructure

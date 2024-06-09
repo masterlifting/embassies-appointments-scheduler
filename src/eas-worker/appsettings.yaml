@@ -26,7 +26,7 @@ Worker:
               Schedule:
                 IsEnabled: true
                 Limit: 2
-                Workdays: mon,tue,wed,thu,fri
+                Workdays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true
             Workdays: mon,tue,wed,thu,fri,sat,sun
@@ -48,7 +48,7 @@ Worker:
               Schedule:
                 IsEnabled: true
                 Limit: 5
-                WorkDays: mon,tue,wed,thu,fri
+                WorkDays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true
             Workdays: mon,tue,wed,thu,fri,sat,sun

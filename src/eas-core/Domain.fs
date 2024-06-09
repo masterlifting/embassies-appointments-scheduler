@@ -6,7 +6,10 @@ module Internal =
 
     module Core =
 
-        type User = { Id: int; Name: string }
+        type User = { Name: string }
+        type CityModel = { Name: string }
+        type CountryModel = { Name: string; City: CityModel }
+        type EmbassyModel = { Name: string; Country: CountryModel }
 
         type City =
             | Belgrade
@@ -17,12 +20,40 @@ module Internal =
             | Paris
             | Rome
 
+            member this.Model =
+                match this with
+                | Belgrade -> { Name = nameof Belgrade }
+                | Budapest -> { Name = nameof Budapest }
+                | Sarajevo -> { Name = nameof Sarajevo }
+                | Podgorica -> { Name = nameof Podgorica }
+                | Tirana -> { Name = nameof Tirana }
+                | Paris -> { Name = nameof Paris }
+                | Rome -> { Name = nameof Rome }
+
         type Country =
             | Serbia of City
             | Bosnia of City
             | Montenegro of City
             | Albania of City
             | Hungary of City
+
+            member this.Model =
+                match this with
+                | Serbia city ->
+                    { Name = nameof Serbia
+                      City = city.Model }
+                | Bosnia city ->
+                    { Name = nameof Bosnia
+                      City = city.Model }
+                | Montenegro city ->
+                    { Name = nameof Montenegro
+                      City = city.Model }
+                | Albania city ->
+                    { Name = nameof Albania
+                      City = city.Model }
+                | Hungary city ->
+                    { Name = nameof Hungary
+                      City = city.Model }
 
         type Embassy =
             | Russian of Country
@@ -31,6 +62,27 @@ module Internal =
             | French of Country
             | German of Country
             | British of Country
+
+            member this.Model =
+                match this with
+                | Russian country ->
+                    { Name = nameof Russian
+                      Country = country.Model }
+                | Spanish country ->
+                    { Name = nameof Spanish
+                      Country = country.Model }
+                | Italian country ->
+                    { Name = nameof Italian
+                      Country = country.Model }
+                | French country ->
+                    { Name = nameof French
+                      Country = country.Model }
+                | German country ->
+                    { Name = nameof German
+                      Country = country.Model }
+                | British country ->
+                    { Name = nameof British
+                      Country = country.Model }
 
         type Appointment =
             { Date: DateOnly
