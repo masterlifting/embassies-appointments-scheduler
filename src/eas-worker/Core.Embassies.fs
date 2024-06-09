@@ -30,7 +30,7 @@ module Russian =
                 let setEmbassyRequest = Eas.Api.Set.initSetUserEmbassyRequest <| Some storage
 
                 let user: User = {Name = "Andrei"}
-                let request = {Embassy = Russian country; Data = "https://belgrad.kdmid.ru/queue/"}
+                let request = {Embassy = Russian country; Data = "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF"}
 
                 let setRequest () =
                     setEmbassyRequest user request ct

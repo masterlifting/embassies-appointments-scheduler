@@ -1,13 +1,10 @@
 module internal Eas.Core
 
-open Infrastructure
 open Infrastructure.Domain.Errors
-open Infrastructure.DSL
-open Eas.Persistence
 open Eas.Domain.Internal.Core
+open Eas.Domain
 
 module Russian =
-    open Eas.Domain.Internal.Russian
 
     let private createBaseUrl city = $"https://kdmid.ru/queue/%s{city}/"
 
@@ -17,23 +14,16 @@ module Russian =
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
     let private getStartPage () =
-        async {
-            match Web.Core.Http.Mapper.toUri "https://kdmid.ru/" with
-            | Ok uri -> return! Web.Core.Http.get uri |> ResultAsync.mapError Infrastructure
-            | Error error -> return error
-        }
+        Web.Core.Http.Mapper.toUri "https://kdmid.ru/"
+        |> Result.map (fun uri -> Web.Core.Http.get uri)
 
     let private getCapchaImage () =
-        async {
-            match Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/" with
-            | Ok uri -> return! Web.Core.Http.get uri |> ResultAsync.mapError Infrastructure
-            | Error error -> return Error error
-        }
+        Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/"
+        |> Result.map (fun uri -> Web.Core.Http.get uri)
 
     let private solveCapcha (image: byte[]) =
         Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/"
-        |> Result.mapError Infrastructure
-        |> Result.bind (fun uri -> Web.Core.Http.post uri image |> ResultAsync.wrap)
+        |> Result.map (fun uri -> Web.Core.Http.post uri image)
 
     let private postStartPage (data: string) =
         async { return Error "postStartPage not implemented." }
@@ -44,7 +34,7 @@ module Russian =
             return response
         }
 
-    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
+    let private getAppointments (credentials: Internal.Russian.Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
@@ -58,7 +48,7 @@ module Russian =
             | Error error -> return Error <| (Logical <| NotImplemented "getAppointments")
         }
 
-    let confirmKdmidOrder (credentials: Credentials) ct =
+    let confirmKdmidOrder (credentials: Internal.Russian.Credentials) ct =
         async {
             let city, id, cd, ems = credentials.Value
             let baseUrl = createBaseUrl city
@@ -67,38 +57,32 @@ module Russian =
             return Error <| Logical(NotImplemented "confirmKdmidOrder")
         }
 
-    let private toCredentials (requests: Async<Result<Domain.External.Request list, InfrastructureError>>) =
-        requests
-        |> ResultAsync.bind (fun requests ->
-            requests
-            |> List.map (fun x -> x.Data |> Domain.Internal.Russian.createCredentials)
-            |> DSL.Seq.resultOrError)
-
-    let getEmbassyResponse (request: Request) storage ct =
-        async {
-            match createCredentials request.Data with
-            | Error error -> return Error <| Infrastructure error
-            | Ok credentials ->
-                match! getAppointments credentials ct with
-                | Error error -> return Error error
-                | Ok appointments ->
-                    match appointments with
-                    | appointments when appointments.Count = 0 -> return Ok None
-                    | appointments ->
-                        return
-                            Ok
-                            <| Some
-                                { Embassy = request.Embassy
-                                  Appointments = appointments
-                                  Data = Map [ "credentials", request.Data ] }
-        }
+    let toGetEmbassyResponse storage =
+        fun (request: Request) ct ->
+            async {
+                match Internal.Russian.createCredentials request.Data with
+                | Error error -> return Error <| Infrastructure error
+                | Ok credentials ->
+                    match! getAppointments credentials ct with
+                    | Error error -> return Error error
+                    | Ok appointments ->
+                        match appointments with
+                        | appointments when appointments.Count = 0 -> return Ok None
+                        | appointments ->
+                            return
+                                Ok
+                                <| Some
+                                    { Embassy = request.Embassy
+                                      Appointments = appointments
+                                      Data = Map [ "credentials", request.Data ] }
+            }
 
     let setEmbassyResponse (response: Response) storage ct =
         async {
             match response.Data |> Map.tryFind "credentials" with
             | None -> return Error <| (Infrastructure <| InvalidRequest "No credentials found in response.")
             | Some credentials ->
-                match createCredentials credentials with
+                match Internal.Russian.createCredentials credentials with
                 | Error error -> return Error <| Infrastructure error
                 | Ok credentials ->
                     match! confirmKdmidOrder credentials ct with

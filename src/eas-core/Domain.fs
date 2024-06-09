@@ -118,41 +118,33 @@ module Internal =
                 | { City = city
                     Id = Id id
                     Cd = Cd cd
-                    Ems = Ems ems } ->
-                    match city with
-                    | Belgrade -> ("belgrad", id, cd, ems)
-                    | Budapest -> ("budapest", id, cd, ems)
-                    | Sarajevo -> ("sarajevo", id, cd, ems)
-                    | Paris -> ("paris", id, cd, ems)
-                    | Rome -> ("rome", id, cd, ems)
-                    | Podgorica -> ("podgorica", id, cd, ems)
-                    | Tirana -> ("tirana", id, cd, ems)
+                    Ems = Ems ems } -> (city.Model.Name, id, cd, ems)
 
         let createCredentials url =
             url
             |> toUri
             |> Result.bind (fun uri ->
                 match uri.Host.Split('.') with
-                | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized in url: {url}."
+                | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized {url}."
                 | hostParts ->
                     let city =
                         match hostParts[0] with
                         | "belgrad" -> Ok Belgrade
                         | "budapest" -> Ok Budapest
                         | "sarajevo" -> Ok Sarajevo
-                        | _ -> Error <| Parsing $"City {hostParts[0]} is not supported for url: {url}."
+                        | _ -> Error <| Parsing $"City {hostParts[0]} is not supported from {url}."
 
                     match toQueryParams uri with
                     | Ok paramsMap when paramsMap.Keys |> Seq.forall (fun key -> key = "id" || key = "cd") ->
                         let id =
                             match paramsMap["id"] with
                             | IsInt id when id > 1000 -> Ok <| Id id
-                            | _ -> Error <| Parsing $"Invalid id parameter in url: {url}."
+                            | _ -> Error <| Parsing $"Invalid id parameter in {url}."
 
                         let cd =
                             match paramsMap["cd"] with
                             | IsLettersOrNumbers cd -> Ok <| Cd cd
-                            | _ -> Error <| Parsing $"Invalid cd parameter in url: {url}."
+                            | _ -> Error <| Parsing $"Invalid cd parameter in {url}."
 
                         let ems =
                             match paramsMap.TryGetValue "ems" with
@@ -160,7 +152,7 @@ module Internal =
                             | true, value ->
                                 match value with
                                 | IsLettersOrNumbers ems -> Ok <| Ems(Some ems)
-                                | _ -> Error <| Parsing $"Invalid ems parameter in url: {url}."
+                                | _ -> Error <| Parsing $"Invalid ems parameter in {url}."
 
                         city
                         |> Result.bind (fun city ->
@@ -174,7 +166,7 @@ module Internal =
                                           Id = id
                                           Cd = cd
                                           Ems = ems }))))
-                    | _ -> Error <| Parsing $"Invalid query parameters in url: {url}.")
+                    | Error error -> Error <| Parsing $"Invalid query parameters in {url}. {error.Message}.")
 
 module External =
 
