@@ -47,7 +47,7 @@ module Russian =
                 let attempts = 3
 
                 async {
-                    let! a = setRequest ()
+                    let! _ = setRequest () //TODO: remove this line after the development
 
                     match! getEmbassyRequests (Russian country) ct with
                     | Error error -> return Error error

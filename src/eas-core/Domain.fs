@@ -102,7 +102,6 @@ module Internal =
         open Infrastructure.DSL.ActivePatterns
         open Infrastructure.Domain.Errors
 
-
         type Id = private Id of int
         type Cd = private Cd of string
         type Ems = private Ems of string option
@@ -118,7 +117,15 @@ module Internal =
                 | { City = city
                     Id = Id id
                     Cd = Cd cd
-                    Ems = Ems ems } -> (city.Model.Name, id, cd, ems)
+                    Ems = Ems ems } ->
+                    match city with
+                    | Belgrade -> ("belgrad", id, cd, ems)
+                    | Budapest -> ("budapest", id, cd, ems)
+                    | Sarajevo -> ("sarajevo", id, cd, ems)
+                    | Podgorica -> ("podgorica", id, cd, ems)
+                    | Tirana -> ("tirana", id, cd, ems)
+                    | Paris -> ("paris", id, cd, ems)
+                    | Rome -> ("rome", id, cd, ems)
 
         let createCredentials url =
             url
@@ -127,24 +134,33 @@ module Internal =
                 match uri.Host.Split('.') with
                 | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized {url}."
                 | hostParts ->
-                    let city =
-                        match hostParts[0] with
-                        | "belgrad" -> Ok Belgrade
-                        | "budapest" -> Ok Budapest
-                        | "sarajevo" -> Ok Sarajevo
-                        | _ -> Error <| Parsing $"City {hostParts[0]} is not supported from {url}."
+                    uri
+                    |> toQueryParams
+                    |> Result.bind (fun paramsMap ->
+                        let city =
+                            match hostParts[0] with
+                            | "belgrad" -> Ok Belgrade
+                            | "budapest" -> Ok Budapest
+                            | "sarajevo" -> Ok Sarajevo
+                            | _ -> Error <| $"City {hostParts[0]} is not supported"
 
-                    match toQueryParams uri with
-                    | Ok paramsMap when paramsMap.Keys |> Seq.forall (fun key -> key = "id" || key = "cd") ->
                         let id =
-                            match paramsMap["id"] with
-                            | IsInt id when id > 1000 -> Ok <| Id id
-                            | _ -> Error <| Parsing $"Invalid id parameter in {url}."
+                            paramsMap
+                            |> Map.tryFind "id"
+                            |> Option.map (fun id ->
+                                match id with
+                                | IsInt id when id > 1000 -> Ok <| Id id
+                                | _ -> Error $"Invalid id parameter ")
+                            |> Option.defaultValue (Error $"Id parameter is missing")
 
                         let cd =
-                            match paramsMap["cd"] with
-                            | IsLettersOrNumbers cd -> Ok <| Cd cd
-                            | _ -> Error <| Parsing $"Invalid cd parameter in {url}."
+                            paramsMap
+                            |> Map.tryFind "cd"
+                            |> Option.map (fun cd ->
+                                match cd with
+                                | IsLettersOrNumbers cd -> Ok <| Cd cd
+                                | _ -> Error $"Invalid cd parameter")
+                            |> Option.defaultValue (Error $"Cd parameter is missing")
 
                         let ems =
                             match paramsMap.TryGetValue "ems" with
@@ -152,21 +168,27 @@ module Internal =
                             | true, value ->
                                 match value with
                                 | IsLettersOrNumbers ems -> Ok <| Ems(Some ems)
-                                | _ -> Error <| Parsing $"Invalid ems parameter in {url}."
+                                | _ -> Error $"Invalid ems parameter in {url}."
 
-                        city
-                        |> Result.bind (fun city ->
-                            id
-                            |> Result.bind (fun id ->
-                                cd
-                                |> Result.bind (fun cd ->
-                                    ems
-                                    |> Result.map (fun ems ->
-                                        { City = city
-                                          Id = id
-                                          Cd = cd
-                                          Ems = ems }))))
-                    | Error error -> Error <| Parsing $"Invalid query parameters in {url}. {error.Message}.")
+                        match city, id, cd, ems with
+                        | Ok city, Ok id, Ok cd, Ok ems ->
+                            Ok
+                                { City = city
+                                  Id = id
+                                  Cd = cd
+                                  Ems = ems }
+                        | _ ->
+                            let errors =
+                                let error =
+                                    function
+                                    | Error error -> error
+                                    | _ -> String.Empty
+
+                                [ error city; error id; error cd; error ems ]
+                                |> Seq.filter (not << String.IsNullOrEmpty)
+                                |> String.concat "."
+
+                            Error <| Parsing $"Invalid parameters in {url}.{errors}."))
 
 module External =
 
