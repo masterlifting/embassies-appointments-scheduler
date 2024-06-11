@@ -13,39 +13,36 @@ module Russian =
         | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage () =
-        Web.Core.Http.Mapper.toUri "https://kdmid.ru/"
-        |> Result.map (fun uri -> Web.Core.Http.get uri)
+    let private getStartPage () = Web.Core.Http.get "https://kdmid.ru/"
 
     let private getCapchaImage () =
-        Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/"
-        |> Result.map (fun uri -> Web.Core.Http.get uri)
+        Web.Core.Http.get "https://kdmid.ru/captcha/"
 
     let private solveCapcha (image: byte[]) =
-        Web.Core.Http.Mapper.toUri "https://kdmid.ru/captcha/"
-        |> Result.map (fun uri -> Web.Core.Http.post uri image)
+        Web.Core.Http.post "https://kdmid.ru/captcha/" image
 
     let private postStartPage (data: string) =
         async { return Error "postStartPage not implemented." }
 
-    let private getCalendarPage uri =
+    let private getCalendarPage url =
         async {
-            let! response = Web.Core.Http.get uri
+            let response = Web.Core.Http.get url
             return response
         }
 
-    let private getAppointments (credentials: Internal.Russian.Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
+    let private getAppointments
+        (credentials: Internal.Russian.Credentials)
+        ct
+        : Async<Result<Set<Appointment>, ApiError>> =
         async {
             let city, id, cd, ems = credentials.Value
 
             let baseUrl = createBaseUrl city
             let urlParams = createUrlParams id cd ems
 
-            match Web.Core.Http.Mapper.toUri <| baseUrl + urlParams with
-            | Ok uri ->
-                let! response = getCalendarPage uri
-                return Error <| Logical(NotImplemented "getAppointments")
-            | Error error -> return Error <| (Logical <| NotImplemented "getAppointments")
+            let! response = getCalendarPage (baseUrl + urlParams)
+
+            return Error <| (Logical <| NotImplemented "getAppointments")
         }
 
     let confirmKdmidOrder (credentials: Internal.Russian.Credentials) ct =

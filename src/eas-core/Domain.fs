@@ -142,13 +142,12 @@ module Internal =
                             | "belgrad" -> Ok Belgrade
                             | "budapest" -> Ok Budapest
                             | "sarajevo" -> Ok Sarajevo
-                            | _ -> Error <| $"City {hostParts[0]} is not supported"
+                            | _ -> Error $"City {hostParts[0]} is not supported"
 
                         let id =
                             paramsMap
                             |> Map.tryFind "id"
-                            |> Option.map (fun id ->
-                                match id with
+                            |> Option.map (function
                                 | IsInt id when id > 1000 -> Ok <| Id id
                                 | _ -> Error $"Invalid id parameter ")
                             |> Option.defaultValue (Error $"Id parameter is missing")
@@ -156,19 +155,18 @@ module Internal =
                         let cd =
                             paramsMap
                             |> Map.tryFind "cd"
-                            |> Option.map (fun cd ->
-                                match cd with
+                            |> Option.map (function
                                 | IsLettersOrNumbers cd -> Ok <| Cd cd
                                 | _ -> Error $"Invalid cd parameter")
                             |> Option.defaultValue (Error $"Cd parameter is missing")
 
                         let ems =
-                            match paramsMap.TryGetValue "ems" with
-                            | false, _ -> Ok <| Ems None
-                            | true, value ->
-                                match value with
+                            paramsMap
+                            |> Map.tryFind "ems"
+                            |> Option.map (function
                                 | IsLettersOrNumbers ems -> Ok <| Ems(Some ems)
-                                | _ -> Error $"Invalid ems parameter in {url}."
+                                | _ -> Error $"Invalid ems parameter")
+                            |> Option.defaultValue (Ok <| Ems None)
 
                         match city, id, cd, ems with
                         | Ok city, Ok id, Ok cd, Ok ems ->
@@ -181,12 +179,12 @@ module Internal =
                             let errors =
                                 let error =
                                     function
-                                    | Error error -> error
-                                    | _ -> String.Empty
+                                    | Error error -> Some error
+                                    | _ -> None
 
                                 [ error city; error id; error cd; error ems ]
-                                |> Seq.filter (not << String.IsNullOrEmpty)
-                                |> String.concat "."
+                                |> List.choose Operators.id
+                                |> List.fold (fun acc error -> $"{acc},{error}") ""
 
                             Error <| Parsing $"Invalid parameters in {url}.{errors}."))
 
