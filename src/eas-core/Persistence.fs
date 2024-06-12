@@ -2,8 +2,8 @@
 
 open System.Threading
 open Infrastructure
-open Infrastructure.DSL.SerDe
-open Infrastructure.DSL.Threading
+open Infrastructure.Dsl.SerDe
+open Infrastructure.Dsl.Threading
 open Infrastructure.Domain.Errors
 open Persistence.Core
 open Domain

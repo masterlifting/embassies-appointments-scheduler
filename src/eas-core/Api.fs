@@ -1,6 +1,6 @@
 module Eas.Api
 
-open Infrastructure.DSL
+open Infrastructure.Dsl
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal.Core
 

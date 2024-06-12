@@ -99,7 +99,7 @@ module Internal =
     module Russian =
         open Core
         open Web.Core.Http.Mapper
-        open Infrastructure.DSL.ActivePatterns
+        open Infrastructure.Dsl.ActivePatterns
         open Infrastructure.Domain.Errors
 
         type Id = private Id of int

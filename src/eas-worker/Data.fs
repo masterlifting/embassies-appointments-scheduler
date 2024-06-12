@@ -23,7 +23,7 @@ let getTaskNode handlersGraph configuration =
             | Error error -> return Error error
             | Ok graph ->
                 return
-                    match DSL.Graph.findNode taskName graph with
+                    match Dsl.Graph.findNode taskName graph with
                     | Some node -> Ok node
                     | None ->
                         Error

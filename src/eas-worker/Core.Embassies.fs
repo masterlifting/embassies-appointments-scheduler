@@ -1,6 +1,6 @@
 ﻿module internal Eas.Worker.Core.Embassies
 
-open Infrastructure.DSL
+open Infrastructure.Dsl
 open Infrastructure.Domain.Graph
 open Infrastructure.Domain.Errors
 open Worker.Domain.Internal
