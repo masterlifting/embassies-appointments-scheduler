@@ -54,7 +54,7 @@ module Russian =
             return Error <| Logical(NotImplemented "confirmKdmidOrder")
         }
 
-    let toGetEmbassyResponse storage =
+    let initGetEmbassyResponse storage =
         fun (request: Request) ct ->
             async {
                 match request.Data |> Map.tryFind "url" with
@@ -64,7 +64,15 @@ module Russian =
                     | Error error -> return Error <| Infrastructure error
                     | Ok credentials ->
                         match! getAppointments credentials ct with
-                        | Error error -> return Error error
+                        | Error error -> 
+                            match error with
+                            | Infrastructure(InvalidRequest _)
+                            | Infrastructure(InvalidResponse _) -> 
+
+                            
+
+                                return Ok None
+                            | _ -> return Error error
                         | Ok appointments ->
                             match appointments with
                             | appointments when appointments.Count = 0 -> return Ok None

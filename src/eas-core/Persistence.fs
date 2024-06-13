@@ -30,7 +30,7 @@ module private InMemoryRepository =
 
     module Get =
 
-        let toGetEmbassyRequests (context: InMemory.Context) =
+        let initGetEmbassyRequests (context: InMemory.Context) =
             fun (embassy: Internal.Embassy) (ct: CancellationToken) ->
                 async {
                     let key = $"request-{embassy}"
@@ -51,7 +51,7 @@ module private InMemoryRepository =
                         | _ -> Error <| Persistence "Operation canceled initGetUserEmbassyRequests"
                 }
 
-        let toGetUserEmbassyRequests (context: InMemory.Context) =
+        let initGetUserEmbassyRequests (context: InMemory.Context) =
             fun (user: Internal.User) (embassy: Internal.Embassy) (ct: CancellationToken) ->
                 async {
                     let key = $"request-{embassy}"
@@ -75,7 +75,69 @@ module private InMemoryRepository =
 
     module Set =
 
-        let toSetUserEmbassyRequest (context: InMemory.Context) =
+        let initAddUserEmbassyRequest (context: InMemory.Context) =
+            fun (user: Internal.User) (request: Internal.Request) (ct: CancellationToken) ->
+                async {
+                    let key = $"request-{request.Embassy}"
+
+                    return
+                        match ct |> notCanceled with
+                        | true ->
+
+                            let request = External.toRequest user request
+
+                            context
+                            |> InMemory.get
+                            |> fun get -> get key
+                            |> getEmbassyRequests (fun x ->
+                                x.User.Name = user.Name
+                                && x.Embassy.Name = request.Embassy.Name
+                                && x.Embassy.Country.Name = request.Embassy.Country.Name
+                                && x.Embassy.Country.City.Name = request.Embassy.Country.City.Name)
+                            |> Result.bind (fun requests ->
+                                match requests |> List.find (fun x -> x.Id = request.Id) with
+                                | true ->
+                                    Error <| Persistence "Data to add already exists."
+                                | _ ->
+                                    [ External.toRequest user request ]
+                                    |> Json.serialize
+                                    |> Result.bind (fun value -> context |> InMemory.add |> (fun add -> add key value)))
+
+                        | _ -> Error <| Persistence "Operation canceled initSetRequest"
+                }
+
+        let initUpdateUserEmbassyRequest (context: InMemory.Context) =
+            fun (user: Internal.User) (request: Internal.Request) (ct: CancellationToken) ->
+                async {
+                    let key = $"request-{request.Embassy}"
+
+                    return
+                        match ct |> notCanceled with
+                        | true ->
+
+                            let requestId =
+                                request.Id
+                                |> function
+                                    | Internal.RequestId id -> id
+
+                            context
+                            |> InMemory.get
+                            |> fun get -> get key
+                            |> getEmbassyRequests (fun x -> x.Id = requestId)
+                            |> Result.bind (fun requests ->
+                                match requests with
+                                | requests when requests.Length <> 1 ->
+                                    Error <| Persistence "Data to update is inconsistent."
+                                | _ ->
+                                    requests
+                                    |> List.append [ External.toRequest user request ]
+                                    |> Json.serialize
+                                    |> Result.bind (fun value ->
+                                        context |> InMemory.update |> (fun update -> update key value)))
+                        | _ -> Error <| Persistence "Operation canceled initSetRequest"
+                }
+
+        let initDeleteUserEmbassyRequest (context: InMemory.Context) =
             fun (user: Internal.User) (request: Internal.Request) (ct: CancellationToken) ->
                 async {
                     let key = $"request-{request.Embassy}"
@@ -99,20 +161,17 @@ module private InMemoryRepository =
                                 | [] ->
                                     [ request ]
                                     |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.add |> (fun add -> add key value))
+                                    |> Result.bind (fun value -> context |> InMemory.add |> (fun add -> add key value))
                                 | _ ->
                                     requests
                                     |> List.append [ request ]
                                     |> Json.serialize
                                     |> Result.bind (fun value ->
-                                        context
-                                        |> InMemory.update
-                                        |> (fun update -> update key value)))
+                                        context |> InMemory.update |> (fun update -> update key value)))
                         | _ -> Error <| Persistence "Operation canceled initSetRequest"
                 }
 
-        let toSetEmbassyResponse (context: InMemory.Context) =
+        let initSetEmbassyResponse (context: InMemory.Context) =
             fun (response: Internal.Response) (ct: CancellationToken) ->
                 async {
                     let key = $"response-{response}"
@@ -133,28 +192,28 @@ module Repository =
 
     module Get =
 
-        let toGetUserEmbassyRequests storage =
+        let initGetUserEmbassyRequests storage =
             fun user embassy ct ->
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.toGetUserEmbassyRequests context user embassy ct
+                | InMemoryContext context -> InMemoryRepository.Get.initGetUserEmbassyRequests context user embassy ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let toGetEmbassyRequests storage =
+        let initGetEmbassyRequests storage =
             fun embassy ct ->
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.toGetEmbassyRequests context embassy ct
+                | InMemoryContext context -> InMemoryRepository.Get.initGetEmbassyRequests context embassy ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
 
     module Set =
 
-        let toSetUserEmbassyRequest storage =
+        let initSetUserEmbassyRequest storage =
             fun user request ct ->
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.toSetUserEmbassyRequest context user request ct
+                | InMemoryContext context -> InMemoryRepository.Set.initSetUserEmbassyRequest context user request ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
 
-        let toSetEmbassyResponse storage =
+        let initSetEmbassyResponse storage =
             fun response ct ->
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.toSetEmbassyResponse context response ct
+                | InMemoryContext context -> InMemoryRepository.Set.initSetEmbassyResponse context response ct
                 | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }

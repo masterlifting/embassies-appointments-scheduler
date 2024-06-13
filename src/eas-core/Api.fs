@@ -17,7 +17,7 @@ module Get =
     let initGetUserEmbassyRequests storage =
         fun user embassy ct ->
             Persistence.Repository.createStorage storage
-            |> Result.map Persistence.Repository.Get.toGetUserEmbassyRequests
+            |> Result.map Persistence.Repository.Get.initGetUserEmbassyRequests
             |> ResultAsync.wrap (fun get -> get user embassy ct)
             |> ResultAsync.mapError Infrastructure
 
@@ -25,7 +25,7 @@ module Get =
         fun embassy ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Get.toGetEmbassyRequests
+            |> Result.map Persistence.Repository.Get.initGetEmbassyRequests
             |> ResultAsync.wrap (fun get -> get embassy ct)
             |> ResultAsync.mapError Infrastructure
 
@@ -36,7 +36,7 @@ module Get =
             |> Result.mapError Infrastructure
             |> ResultAsync.wrap (fun storage ->
                 match request.Embassy with
-                | Russian _ -> storage |> Core.Russian.toGetEmbassyResponse |> (fun get -> get request ct)
+                | Russian _ -> storage |> Core.Russian.initGetEmbassyResponse |> (fun get -> get request ct)
                 | _ -> async { return Error <| Logical(NotSupported $"{request.Embassy} for initGetEmbassyResponse") })
 
 module Set =
@@ -45,7 +45,7 @@ module Set =
         fun user request ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Set.toSetUserEmbassyRequest
+            |> Result.map Persistence.Repository.Set.initSetUserEmbassyRequest
             |> ResultAsync.wrap (fun set -> set user request ct)
             |> ResultAsync.mapError Infrastructure
 
@@ -53,6 +53,6 @@ module Set =
         fun response ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Set.toSetEmbassyResponse
+            |> Result.map Persistence.Repository.Set.initSetEmbassyResponse
             |> ResultAsync.wrap (fun set -> set response ct)
             |> ResultAsync.mapError Infrastructure
