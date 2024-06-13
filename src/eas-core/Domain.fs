@@ -4,7 +4,8 @@ open System
 
 module Internal =
 
-    type User = { Name: string }
+    type UserId = UserId of int
+    type User = { Id: UserId; Name: string }
 
     type City =
         | Belgrade
@@ -30,18 +31,27 @@ module Internal =
         | German of Country
         | British of Country
 
+    type AppointementId = AppointementId of Guid
+
     type Appointment =
-        { Date: DateOnly
+        { Id: AppointementId
+          Date: DateOnly
           Time: TimeOnly
           Description: string }
 
+    type RequestId = RequestId of Guid
+
     type Request =
-        { Embassy: Embassy
+        { Id: RequestId
+          Embassy: Embassy
           Data: Map<string, string>
           Modified: DateTime }
 
+    type ResponseId = ResponseId of Guid
+
     type Response =
-        { Embassy: Embassy
+        { Id: ResponseId
+          Embassy: Embassy
           Appointments: Set<Appointment>
           Data: Map<string, string>
           Modified: DateTime }
@@ -165,7 +175,7 @@ module External =
         member val Country: Country = Country() with get, set
 
     type Request() =
-        member val Id: int = 0 with get, set
+        member val Id: Guid = Guid.Empty with get, set
         member val Data: RequestData array = [||] with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
@@ -177,25 +187,22 @@ module External =
         member val Id: int = 0 with get, set
         member val Key: string = String.Empty with get, set
         member val Value: string = String.Empty with get, set
-        member val RequestId: int = 0 with get, set
 
     type Response() =
-        member val Id: int = 0 with get, set
+        member val Id: Guid = Guid.Empty with get, set
         member val Appointments: Appointment array = [||] with get, set
         member val Data: ResponseData array = [||] with get, set
-        member val RequestId: int = 0 with get, set
+        member val RequestId:  Guid = Guid.Empty with get, set
         member val Request: Request = Request() with get, set
         member val IsConfirmed: bool = false with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
 
     and Appointment() =
-        member val Id: int = 0 with get, set
+        member val Id: Guid = Guid.Empty with get, set
         member val DateTime: DateTime = DateTime.UtcNow with get, set
         member val Description: string = String.Empty with get, set
-        member val ResponseId: int = 0 with get, set
 
     and ResponseData() =
         member val Id: int = 0 with get, set
         member val Key: string = String.Empty with get, set
         member val Value: string = String.Empty with get, set
-        member val ResponseId: int = 0 with get, set

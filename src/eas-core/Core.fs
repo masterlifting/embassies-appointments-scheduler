@@ -1,5 +1,6 @@
 module internal Eas.Core
 
+open System
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
 
@@ -71,10 +72,11 @@ module Russian =
                                 return
                                     Ok
                                     <| Some
-                                        { Embassy = request.Embassy
+                                        { Id = Guid.NewGuid() |> ResponseId
+                                          Embassy = request.Embassy
                                           Appointments = appointments
                                           Data = request.Data
-                                          Modified = System.DateTime.UtcNow }
+                                          Modified = DateTime.UtcNow }
             }
 
     let setEmbassyResponse (response: Response) storage ct =

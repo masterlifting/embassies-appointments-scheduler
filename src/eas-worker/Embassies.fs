@@ -44,10 +44,11 @@ module Russian =
                 async {
 
                     //TODO: remove this block after the development
-                    let user: User = { Name = "Andrei" }
+                    let user: User = { Id = UserId 0; Name = "Andrei" }
 
                     let request =
-                        { Embassy = Russian country
+                        { Id = System.Guid.NewGuid() |> RequestId
+                          Embassy = Russian country
                           Data =
                             Map
                                 [ "url",
