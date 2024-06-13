@@ -4,9 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Data.fs" />
-    <Compile Include="Core.Embassies.fs" />
-    <Compile Include="Core.Countries.fs" />
+    <Compile Include="Persistence.fs" />
+    <Compile Include="Embassies.fs" />
+    <Compile Include="Countries.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

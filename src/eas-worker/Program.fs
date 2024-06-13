@@ -6,27 +6,27 @@ open Worker.Domain.Internal
 let main _ =
     let workerName = "Scheduler"
 
-    let rootHandler =
+    let rootNode =
         { Name = workerName
           Handle =
             Some
-            <| fun _ -> async { return Ok <| Warn "Embassies Appointments Scheduler is running..." } }
+            <| fun _ -> async { return Ok <| Success "Embassies Appointments Scheduler is running..." } }
 
     let handlersGraph =
         Node(
-            rootHandler,
-            [ Eas.Worker.Core.Countries.Serbia.Handler
-              Eas.Worker.Core.Countries.Bosnia.Handler
-              Eas.Worker.Core.Countries.Montenegro.Handler
-              Eas.Worker.Core.Countries.Hungary.Handler
-              Eas.Worker.Core.Countries.Albania.Handler ]
+            rootNode,
+            [ Eas.Worker.Countries.Serbia.Node
+              Eas.Worker.Countries.Bosnia.Node
+              Eas.Worker.Countries.Montenegro.Node
+              Eas.Worker.Countries.Hungary.Node
+              Eas.Worker.Countries.Albania.Node ]
         )
 
     let configuration = Configuration.get <| Configuration.File.Yaml "appsettings"
 
     Logging.useConsole configuration
 
-    let getTaskNode = Eas.Worker.Data.getTaskNode handlersGraph configuration
+    let getTaskNode = Eas.Worker.Persistence.getTaskNode handlersGraph configuration
 
     Worker.Core.start <| workerName <| getTaskNode |> Async.RunSynchronously
 

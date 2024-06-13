@@ -1,8 +1,7 @@
 module internal Eas.Core
 
 open Infrastructure.Domain.Errors
-open Eas.Domain.Internal.Core
-open Eas.Domain
+open Eas.Domain.Internal
 
 module Russian =
 
@@ -31,7 +30,7 @@ module Russian =
         }
 
     let private getAppointments
-        (credentials: Internal.Russian.Credentials)
+        (credentials: Embassies.Russian.Credentials)
         ct
         : Async<Result<Set<Appointment>, ApiError>> =
         async {
@@ -45,7 +44,7 @@ module Russian =
             return Error <| (Logical <| NotImplemented "getAppointments")
         }
 
-    let confirmKdmidOrder (credentials: Internal.Russian.Credentials) ct =
+    let confirmKdmidOrder (credentials: Embassies.Russian.Credentials) ct =
         async {
             let city, id, cd, ems = credentials.Value
             let baseUrl = createBaseUrl city
@@ -57,21 +56,25 @@ module Russian =
     let toGetEmbassyResponse storage =
         fun (request: Request) ct ->
             async {
-                match Internal.Russian.createCredentials request.Data with
-                | Error error -> return Error <| Infrastructure error
-                | Ok credentials ->
-                    match! getAppointments credentials ct with
-                    | Error error -> return Error error
-                    | Ok appointments ->
-                        match appointments with
-                        | appointments when appointments.Count = 0 -> return Ok None
-                        | appointments ->
-                            return
-                                Ok
-                                <| Some
-                                    { Embassy = request.Embassy
-                                      Appointments = appointments
-                                      Data = Map [ "credentials", request.Data ] }
+                match request.Data |> Map.tryFind "url" with
+                | None -> return Error <| (Infrastructure <| InvalidRequest "No url found in request.")
+                | Some url ->
+                    match Embassies.Russian.createCredentials url with
+                    | Error error -> return Error <| Infrastructure error
+                    | Ok credentials ->
+                        match! getAppointments credentials ct with
+                        | Error error -> return Error error
+                        | Ok appointments ->
+                            match appointments with
+                            | appointments when appointments.Count = 0 -> return Ok None
+                            | appointments ->
+                                return
+                                    Ok
+                                    <| Some
+                                        { Embassy = request.Embassy
+                                          Appointments = appointments
+                                          Data = request.Data
+                                          Modified = System.DateTime.UtcNow }
             }
 
     let setEmbassyResponse (response: Response) storage ct =
@@ -79,7 +82,7 @@ module Russian =
             match response.Data |> Map.tryFind "credentials" with
             | None -> return Error <| (Infrastructure <| InvalidRequest "No credentials found in response.")
             | Some credentials ->
-                match Internal.Russian.createCredentials credentials with
+                match Embassies.Russian.createCredentials credentials with
                 | Error error -> return Error <| Infrastructure error
                 | Ok credentials ->
                     match! confirmKdmidOrder credentials ct with

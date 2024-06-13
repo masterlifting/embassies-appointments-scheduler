@@ -2,7 +2,7 @@ module Eas.Api
 
 open Infrastructure.Dsl
 open Infrastructure.Domain.Errors
-open Eas.Domain.Internal.Core
+open Eas.Domain.Internal
 
 module Get =
 

@@ -1,4 +1,4 @@
-module internal Eas.Worker.Data
+module internal Eas.Worker.Persistence
 
 open Infrastructure
 open Infrastructure.Domain.Errors
