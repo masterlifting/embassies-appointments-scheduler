@@ -4,8 +4,33 @@ open System
 
 module Internal =
 
-    type UserId = UserId of int
-    type User = { Id: UserId; Name: string }
+    type UserId =
+        | UserId of int
+
+        member this.Value =
+            match this with
+            | UserId id -> id
+
+    type AppointementId =
+        | AppointementId of Guid
+
+        member this.Value =
+            match this with
+            | AppointementId id -> id
+
+    type RequestId =
+        | RequestId of Guid
+
+        member this.Value =
+            match this with
+            | RequestId id -> id
+
+    type ResponseId =
+        | ResponseId of Guid
+
+        member this.Value =
+            match this with
+            | ResponseId id -> id
 
     type City =
         | Belgrade
@@ -31,7 +56,14 @@ module Internal =
         | German of Country
         | British of Country
 
-    type AppointementId = AppointementId of Guid
+    type User = { Id: UserId; Name: string }
+
+    type Request =
+        { Id: RequestId
+          User: User
+          Embassy: Embassy
+          Data: Map<string, string>
+          Modified: DateTime }
 
     type Appointment =
         { Id: AppointementId
@@ -39,19 +71,9 @@ module Internal =
           Time: TimeOnly
           Description: string }
 
-    type RequestId = RequestId of Guid
-
-    type Request =
-        { Id: RequestId
-          Embassy: Embassy
-          Data: Map<string, string>
-          Modified: DateTime }
-
-    type ResponseId = ResponseId of Guid
-
     type Response =
         { Id: ResponseId
-          Embassy: Embassy
+          Request: Request
           Appointments: Set<Appointment>
           Data: Map<string, string>
           Modified: DateTime }
@@ -176,11 +198,11 @@ module External =
 
     type Request() =
         member val Id: Guid = Guid.Empty with get, set
-        member val Data: RequestData array = [||] with get, set
-        member val EmbassyId: int = 0 with get, set
-        member val Embassy: Embassy = Embassy() with get, set
         member val UserId: int = 0 with get, set
         member val User: User = User() with get, set
+        member val EmbassyId: int = 0 with get, set
+        member val Embassy: Embassy = Embassy() with get, set
+        member val Data: RequestData array = [||] with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
 
     and RequestData() =
@@ -190,11 +212,11 @@ module External =
 
     type Response() =
         member val Id: Guid = Guid.Empty with get, set
+        member val Confirmed: bool = false with get, set
+        member val RequestId: Guid = Guid.Empty with get, set
+        member val Request: Request = Request() with get, set
         member val Appointments: Appointment array = [||] with get, set
         member val Data: ResponseData array = [||] with get, set
-        member val RequestId:  Guid = Guid.Empty with get, set
-        member val Request: Request = Request() with get, set
-        member val IsConfirmed: bool = false with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
 
     and Appointment() =

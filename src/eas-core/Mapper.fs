@@ -1,15 +1,15 @@
 module Eas.Mapper
 
+open System
 open Infrastructure.Domain.Errors
 open Eas.Domain
 
 module Internal =
-    open Eas.Domain.Internal.Embassies.Russian
-    open System
 
     let toUser (user: External.User) : Internal.User =
         { Id = Internal.UserId user.Id
           Name = user.Name }
+
 
     let toCity (city: External.City) : Result<Internal.City, InfrastructureError> =
         match city.Name with
@@ -40,12 +40,12 @@ module Internal =
             | "Russian" -> Ok <| Internal.Russian country
             | _ -> Error <| (Mapping $"Embassy {embassy.Name} not supported."))
 
-
     let toRequest (request: External.Request) : Result<Internal.Request, InfrastructureError> =
         toEmbassy request.Embassy
         |> Result.bind (fun embassy ->
             Ok
                 { Id = Internal.RequestId request.Id
+                  User = toUser request.User
                   Embassy = embassy
                   Data = request.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
                   Modified = request.Modified })
@@ -57,11 +57,11 @@ module Internal =
           Description = appointment.Description }
 
     let toResponse (response: External.Response) : Result<Internal.Response, InfrastructureError> =
-        toEmbassy response.Request.Embassy
-        |> Result.bind (fun embassy ->
+        toRequest response.Request
+        |> Result.bind (fun request ->
             Ok
                 { Id = Internal.ResponseId response.Id
-                  Embassy = embassy
+                  Request = request
                   Appointments = response.Appointments |> Array.map toAppointment |> set
                   Data = response.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
                   Modified = response.Modified })
@@ -70,13 +70,10 @@ module External =
 
     let toUser (user: Internal.User) : External.User =
         let result = new External.User()
-
-        result.Id <-
-            user.Id
-            |> function
-                | Internal.UserId id -> id
-
+        
+        result.Id <- user.Id.Value
         result.Name <- user.Name
+        
         result
 
     let toCity (city: Internal.City) : External.City =
@@ -107,6 +104,7 @@ module External =
 
         result.Name <- countryName
         result.City <- toCity city
+        
         result
 
     let toEmbassy (embassy: Internal.Embassy) : External.Embassy =
@@ -123,22 +121,16 @@ module External =
 
         result.Name <- embassyName
         result.Country <- toCountry country
+        
         result
 
-    let toRequest (user: Internal.User) (request: Internal.Request) : External.Request =
+    let toRequest (request: Internal.Request) : External.Request =
         let result = new External.Request()
 
-        result.Id <-
-            request.Id
-            |> function
-                | Internal.RequestId id -> id
+        result.Id <- request.Id.Value
+        result.UserId <- request.User.Id.Value
 
-        result.UserId <-
-            user.Id
-            |> function
-                | Internal.UserId id -> id
-
-        result.User <- toUser user
+        result.User <- toUser request.User
         result.Embassy <- toEmbassy request.Embassy
 
         result.Data <-
@@ -158,29 +150,18 @@ module External =
     let toAppointment (appointment: Internal.Appointment) : External.Appointment =
         let result = new External.Appointment()
 
-        result.Id <-
-            appointment.Id
-            |> function
-                | Internal.AppointementId id -> id
-
+        result.Id <- appointment.Id.Value
         result.DateTime <- appointment.Date.ToDateTime(appointment.Time)
         result.Description <- appointment.Description
+        
         result
 
-    let toResponse (user: Internal.User) (request: Internal.Request) (response: Internal.Response) : External.Response =
+    let toResponse (response: Internal.Response) : External.Response =
         let result = new External.Response()
 
-        result.Id <-
-            response.Id
-            |> function
-                | Internal.ResponseId id -> id
-
-        result.RequestId <-
-            request.Id
-            |> function
-                | Internal.RequestId id -> id
-
-        result.Request <- toRequest user request
+        result.Id <- response.Id.Value
+        result.RequestId <- response.Request.Id.Value
+        result.Request <- toRequest response.Request
         result.Appointments <- response.Appointments |> Seq.map toAppointment |> Seq.toArray
 
         result.Data <-
