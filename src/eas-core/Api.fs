@@ -17,7 +17,7 @@ module Get =
     let initGetUserEmbassyRequests storage =
         fun user embassy ct ->
             Persistence.Repository.createStorage storage
-            |> Result.map Persistence.Repository.Get.initGetUserEmbassyRequests
+            |> Result.map Persistence.Repository.Query.initGetUserEmbassyRequests
             |> ResultAsync.wrap (fun get -> get user embassy ct)
             |> ResultAsync.mapError Infrastructure
 
@@ -25,7 +25,7 @@ module Get =
         fun embassy ct ->
             storageOpt
             |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Get.initGetEmbassyRequests
+            |> Result.map Persistence.Repository.Query.initGetEmbassyRequests
             |> ResultAsync.wrap (fun get -> get embassy ct)
             |> ResultAsync.mapError Infrastructure
 

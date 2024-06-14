@@ -234,66 +234,76 @@ module Repository =
         | Some storage -> Ok storage
         | _ -> Persistence.Core.createStorage InMemory
 
-    module Get =
+    module Query =
 
-        let initGetUserEmbassyRequests storage =
-            fun user embassy ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.initGetUserEmbassyRequests context user embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
+        module Request =
 
-        let initGetEmbassyRequests storage =
-            fun embassy ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.initGetEmbassyRequests context embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
+            let getByUserEmbassy storage =
+                fun user embassy ct ->
+                    match storage with
+                    | InMemoryContext context ->
+                        InMemoryRepository.Get.initGetUserEmbassyRequests context user embassy ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let initGetUserEmbassyResponses storage =
-            fun user embassy ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.initGetUserEmbassyResponses context user embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
+            let getByEmbassy storage =
+                fun embassy ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Get.initGetEmbassyRequests context embassy ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
 
-        let initGetEmbassyResponses storage =
-            fun embassy ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Get.initGetEmbassyResponses context embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
+        module Response =
 
-    module Set =
+            let getByUserEmbassy storage =
+                fun user embassy ct ->
+                    match storage with
+                    | InMemoryContext context ->
+                        InMemoryRepository.Get.initGetUserEmbassyResponses context user embassy ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
 
-        let initAddEmbassyRequest storage =
-            fun request ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initAddEmbassyRequest context request ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
+            let getByEmbassy storage =
+                fun embassy ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Get.initGetEmbassyResponses context embassy ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
 
-        let initUpdateEmbassyRequest storage =
-            fun response ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initUpdateEmbassyRequest context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+    module Command =
 
-        let initDeleteEmbassyRequest storage =
-            fun request ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initDeleteEmbassyRequest context request ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
+        module Reuest =
 
-        let initAddEmbassyResponse storage =
-            fun response ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initAddEmbassyResponse context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+            let add storage =
+                fun request ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initAddEmbassyRequest context request ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
 
-        let initUpdateEmbassyResponse storage =
-            fun response ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initUpdateEmbassyResponse context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+            let update storage =
+                fun response ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initUpdateEmbassyRequest context response ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
 
-        let initDeleteEmbassyResponse storage =
-            fun response ct ->
-                match storage with
-                | InMemoryContext context -> InMemoryRepository.Set.initDeleteEmbassyResponse context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+            let delete storage =
+                fun request ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initDeleteEmbassyRequest context request ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
+
+        module Response =
+
+            let add storage =
+                fun response ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initAddEmbassyResponse context response ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+
+            let update storage =
+                fun response ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initUpdateEmbassyResponse context response ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+
+            let delete storage =
+                fun response ct ->
+                    match storage with
+                    | InMemoryContext context -> InMemoryRepository.Set.initDeleteEmbassyResponse context response ct
+                    | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
