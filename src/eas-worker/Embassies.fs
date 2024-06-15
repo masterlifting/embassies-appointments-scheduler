@@ -6,6 +6,7 @@ open Infrastructure.Domain.Errors
 open Persistence.Domain
 open Worker.Domain.Internal
 open Eas.Domain.Internal
+open Eas.Persistence.QueryFilter
 
 module Russian =
     let rec private tryGetEmbassyResponse requests attempts ct getResponse =
@@ -30,8 +31,9 @@ module Russian =
 
                 let storage = Some storage
 
-                let getRequests embassy =
-                    Eas.Api.getRequests storage (Eas.Persistence.QueryFilter.Request.ByEmbassy embassy) ct
+                let requestFilter =
+                    { Pagination = { Page = 1; PageSize = 10 }
+                      Embassy = Russian country }
 
                 let getResponse request ct =
                     Eas.Api.Get.initGetEmbassyResponse storage request ct
