@@ -1,4 +1,4 @@
-﻿module internal Eas.Persistence
+﻿module Eas.Persistence
 
 open Infrastructure
 open Infrastructure.Dsl.SerDe
@@ -9,221 +9,173 @@ open Persistence.Storage
 open Domain
 open Mapper
 
+module QueryFilter =
+
+    type User =
+        | All
+        | ByEmbassy
+
+    type Request =
+        | ByEmbassy of Internal.Embassy
+        | ByUserEmbassy of Internal.User * Internal.Embassy
+
+    type Response =
+        | ByEmbassy of Internal.Embassy
+        | ByUserEmbassy of Internal.User * Internal.Embassy
+
+module Command =
+
+    type Request =
+        | Add of Internal.Request
+        | Update of Internal.Request
+        | Delete of Internal.Request
+
+    type Response =
+        | Add of Internal.Response
+        | Update of Internal.Response
+        | Delete of Internal.Response
+
 module private InMemoryRepository =
 
-    let private getExternal<'a> context key =
+    let private getData<'a> context key =
         context
         |> InMemory.get
         |> fun get -> get key
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
 
     module Query =
+        open QueryFilter
 
         module Request =
-
-            let private getRequests context key =
-                getExternal<External.Request> context key
-                |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
-
-            let getByEmbassy context embassy ct =
+            let get context filter ct =
                 async {
-                    let key = $"{embassy}-requests"
-
                     return
                         match ct |> notCanceled with
                         | true ->
-                            getRequests context key
-                            |> Result.map (List.filter (fun x -> x.Embassy = embassy))
-                        | _ -> Error <| Persistence "Operation canceled initGetUserEmbassyRequests"
-                }
+                            let filter (request: Internal.Request) =
+                                match filter with
+                                | Request.ByEmbassy embassy -> request.Embassy = embassy
+                                | Request.ByUserEmbassy(user, embassy) ->
+                                    request.User.Id = user.Id && request.Embassy = embassy
 
-            let getByUserEmbassy context (user: Internal.User) embassy ct =
-                async {
-                    let key = $"{embassy}-requests"
+                            getData<External.Request> context "requests"
+                            |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
+                            |> Result.map (List.filter filter)
+                            |> Result.mapError Infrastructure
 
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-                            getRequests context key
-                            |> Result.map (List.filter (fun x -> x.User.Id = user.Id && x.Embassy = embassy))
-                        | _ -> Error <| Persistence "Operation canceled initGetUserRequests"
+                        | _ -> Error(Logical(Cancelled "Query.Request.get"))
                 }
 
         module Response =
-
-            let private getResponses context key =
-                getExternal<External.Response> context key
-                |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
-
-            let getByEmbassy context embassy ct =
+            let get context filter ct =
                 async {
-                    let key = $"{embassy}-responses"
-
                     return
                         match ct |> notCanceled with
                         | true ->
-                            getResponses context key
-                            |> Result.map (List.filter (fun x -> x.Request.Embassy = embassy))
-                        | _ -> Error <| Persistence "Operation canceled initGetUserEmbassyRequests"
-                }
+                            let filter (response: Internal.Response) =
+                                match filter with
+                                | Response.ByEmbassy embassy -> response.Request.Embassy = embassy
+                                | Response.ByUserEmbassy(user, embassy) ->
+                                    response.Request.User.Id = user.Id && response.Request.Embassy = embassy
 
-            let getByUserEmbassy context (user: Internal.User) embassy ct =
-                async {
-                    let key = $"{embassy}-responses"
+                            getData<External.Response> context "responses"
+                            |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
+                            |> Result.map (List.filter filter)
+                            |> Result.mapError Infrastructure
 
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-                            getResponses context key
-                            |> Result.map (
-                                List.filter (fun x -> x.Request.Embassy = embassy && x.Request.User.Id = user.Id)
-                            )
-                        | _ -> Error <| Persistence "Operation canceled initGetUserRequests"
+                        | _ -> Error(Logical(Cancelled "Query.Response.get"))
                 }
 
     module Command =
 
+        let private save<'a> context key (data: 'a array) =
+            if data.Length = 1 then
+                data
+                |> Json.serialize
+                |> Result.bind (fun value -> InMemory.add context key value)
+            else
+                data
+                |> Json.serialize
+                |> Result.bind (fun value -> InMemory.update context key value)
+
         module Request =
 
-            let add context (request: Internal.Request) ct =
-                async {
-                    let key = $"{request.Embassy}-requests"
+            let private add (requests: External.Request array) (request: Internal.Request) =
+                match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
+                | Some _ -> Error(Persistence $"Request {request.Id} already exists.")
+                | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
+            let private update (requests: External.Request array) (request: Internal.Request) =
+                match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
+                | None -> Error(Persistence $"Request {request.Id} not found to update.")
+                | Some index ->
+                    Ok(
+                        requests
+                        |> Array.mapi (fun i x -> if i = index then External.toRequest request else x)
+                    )
+
+            let private delete (requests: External.Request array) (request: Internal.Request) =
+                match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
+                | None -> Error(Persistence $"Request {request.Id} not found to delete.")
+                | Some index -> Ok(requests |> Array.removeAt index)
+
+            let execute context command ct =
+                async {
                     return
                         match ct |> notCanceled with
                         | true ->
+                            let key = "requests"
 
-                            getExternal<External.Request> context key
+                            getData<External.Request> context key
                             |> Result.bind (fun requests ->
-                                if requests.Length = 0 then
-                                    [ External.toRequest request ]
-                                    |> Json.serialize
-                                    |> Result.bind (fun value -> InMemory.add context key value)
-                                else
-                                    match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
-                                    | Some _ -> Error <| Persistence $"Request {request.Id} already exists."
-                                    | _ ->
-                                        [ External.toRequest request ]
-                                        |> Json.serialize
-                                        |> Result.bind (fun value ->
-                                            context |> InMemory.update |> (fun update -> update key value)))
+                                match command with
+                                | Command.Request.Add request -> add requests request
+                                | Command.Request.Update request -> update requests request
+                                | Command.Request.Delete request -> delete requests request)
+                            |> Result.bind (fun requests -> save context key requests)
+                            |> Result.mapError Infrastructure
 
-                        | _ -> Error <| Persistence "Operation canceled initSetRequest"
-                }
-
-            let update context (request: Internal.Request) ct =
-                async {
-                    let key = $"{request.Embassy}-requests"
-
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-
-                            getExternal<External.Request> context key
-                            |> Result.bind (fun requests ->
-                                match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                                | None -> Error <| Persistence $"Request {request.Id} not found to update."
-                                | Some index ->
-                                    requests
-                                    |> Array.mapi (fun i x -> if i = index then External.toRequest request else x)
-                                    |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.update |> (fun update -> update key value)))
-                        | _ -> Error <| Persistence "Operation canceled initSetRequest"
-                }
-
-            let delete context (request: Internal.Request) ct =
-                async {
-                    let key = $"{request.Embassy}-requests"
-
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-
-                            getExternal<External.Request> context key
-                            |> Result.bind (fun requests ->
-                                match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                                | None -> Error <| Persistence $"Request {request.Id} not found to delete."
-                                | Some index ->
-                                    requests
-                                    |> Array.removeAt index
-                                    |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.update |> (fun update -> update key value)))
-                        | _ -> Error <| Persistence "Operation canceled initSetRequest"
+                        | _ -> Error(Logical(Cancelled "Command.Request.execute"))
                 }
 
         module Response =
 
-            let add context (response: Internal.Response) ct =
-                async {
-                    let key = $"{response.Request.Embassy}-responses"
+            let private add (responses: External.Response array) (response: Internal.Response) =
+                match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
+                | Some _ -> Error(Persistence $"Response {response.Id} already exists.")
+                | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
+            let private update (responses: External.Response array) (response: Internal.Response) =
+                match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
+                | None -> Error(Persistence $"Response {response.Id} not found to update.")
+                | Some index ->
+                    Ok(
+                        responses
+                        |> Array.mapi (fun i x -> if i = index then External.toResponse response else x)
+                    )
+
+            let private delete (responses: External.Response array) (response: Internal.Response) =
+                match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
+                | None -> Error(Persistence $"Response {response.Id} not found to delete.")
+                | Some index -> Ok(responses |> Array.removeAt index)
+
+            let execute context command ct =
+                async {
                     return
                         match ct |> notCanceled with
                         | true ->
+                            let key = "responses"
 
-                            getExternal<External.Response> context key
+                            getData<External.Response> context key
                             |> Result.bind (fun responses ->
-                                match
-                                    responses |> Array.tryFind (fun x -> x.Request.Id = response.Request.Id.Value)
-                                with
-                                | Some _ -> Error <| Persistence $"Response {response.Request.Id} already exists."
-                                | _ ->
-                                    [ External.toResponse response ]
-                                    |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.update |> (fun update -> update key value)))
+                                match command with
+                                | Command.Response.Add response -> add responses response
+                                | Command.Response.Update response -> update responses response
+                                | Command.Response.Delete response -> delete responses response)
+                            |> Result.bind (fun responses -> save context key responses)
+                            |> Result.mapError Infrastructure
 
-                        | _ -> Error <| Persistence "Operation canceled initSetResponse"
-                }
-
-            let update context (response: Internal.Response) ct =
-                async {
-                    let key = $"{response.Request.Embassy}-responses"
-
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-
-                            getExternal<External.Response> context key
-                            |> Result.bind (fun responses ->
-                                match
-                                    responses
-                                    |> Array.tryFindIndex (fun x -> x.Request.Id = response.Request.Id.Value)
-                                with
-                                | None -> Error <| Persistence $"Response {response.Request.Id} not found to update."
-                                | Some index ->
-                                    responses
-                                    |> Array.mapi (fun i x -> if i = index then External.toResponse response else x)
-                                    |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.update |> (fun update -> update key value)))
-                        | _ -> Error <| Persistence "Operation canceled initSetResponse"
-                }
-
-            let delete context (response: Internal.Response) ct =
-                async {
-                    let key = $"{response.Request.Embassy}-responses"
-
-                    return
-                        match ct |> notCanceled with
-                        | true ->
-
-                            getExternal<External.Response> context key
-                            |> Result.bind (fun responses ->
-                                match
-                                    responses
-                                    |> Array.tryFindIndex (fun x -> x.Request.Id = response.Request.Id.Value)
-                                with
-                                | None -> Error <| Persistence $"Response {response.Request.Id} not found to delete."
-                                | Some index ->
-                                    responses
-                                    |> Array.removeAt index
-                                    |> Json.serialize
-                                    |> Result.bind (fun value ->
-                                        context |> InMemory.update |> (fun update -> update key value)))
-                        | _ -> Error <| Persistence "Operation canceled initSetResponse"
+                        | _ -> Error(Logical(Cancelled "Command.Response.execute"))
                 }
 
 module Repository =
@@ -241,60 +193,30 @@ module Repository =
 
         module Request =
 
-            let getByUserEmbassy storage user embassy ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Query.Request.getByUserEmbassy context user embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
-
-            let getByEmbassy storage embassy ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Query.Request.getByEmbassy context embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
+            let get storage filter ct =
+                match storage with
+                | InMemoryContext context -> InMemoryRepository.Query.Request.get context filter ct
+                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
         module Response =
 
-            let getByUserEmbassy storage user embassy ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Query.Response.getByUserEmbassy context user embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetUserCredentials" }
-
-            let getByEmbassy storage embassy ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Query.Response.getByEmbassy context embassy ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initGetCountryCredentials" }
+            let get storage filter ct =
+                match storage with
+                | InMemoryContext context -> InMemoryRepository.Query.Response.get context filter ct
+                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
     module Command =
 
-        module Reuest =
+        module Request =
 
-            let add storage request ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Request.add context request ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
-
-            let update storage response ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Request.update context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
-
-            let delete storage request ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Request.delete context request ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCredentials" }
+            let execute storage command ct =
+                match storage with
+                | InMemoryContext context -> InMemoryRepository.Command.Request.execute context command ct
+                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
         module Response =
 
-            let add storage response ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Response.add context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
-
-            let update storage response ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Response.update context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
-
-            let delete storage response ct =
-                function
-                | InMemoryContext context -> InMemoryRepository.Command.Response.delete context response ct
-                | _ -> async { return Error <| Persistence $"Not supported {storage} initSetCountryResponse" }
+            let execute storage command ct =
+                match storage with
+                | InMemoryContext context -> InMemoryRepository.Command.Response.execute context command ct
+                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }

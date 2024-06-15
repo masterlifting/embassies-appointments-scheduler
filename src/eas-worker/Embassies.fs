@@ -30,13 +30,10 @@ module Russian =
 
                 let storage = Some storage
 
-                let setEmbassyRequest user request =
-                    Eas.Api.Set.initSetUserEmbassyRequest storage user request ct //TODO: remove this line after the development
+                let getRequests embassy =
+                    Eas.Api.getRequests storage (Eas.Persistence.QueryFilter.Request.ByEmbassy embassy) ct
 
-                let getEmbassyRequests embassy =
-                    Eas.Api.Get.initGetEmbassyRequests storage embassy ct
-
-                let getEmbassyResponse request ct =
+                let getResponse request ct =
                     Eas.Api.Get.initGetEmbassyResponse storage request ct
 
                 let attempts = 3
@@ -44,10 +41,9 @@ module Russian =
                 async {
 
                     //TODO: remove this block after the development
-                    let user: User = { Id = UserId 0; Name = "Andrei" }
-
                     let request =
                         { Id = System.Guid.NewGuid() |> RequestId
+                          User = { Id = UserId 0; Name = "Andrei" }
                           Embassy = Russian country
                           Data =
                             Map
@@ -55,17 +51,17 @@ module Russian =
                                   "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF" ]
                           Modified = System.DateTime.UtcNow }
 
-                    let! _ = setEmbassyRequest user request
+                    let! _ = Eas.Api.addRequest storage request ct //TODO: remove this line after the development
                     //
 
-                    match! getEmbassyRequests <| Russian country with
+                    match! getRequests <| Russian country with
                     | Error error -> return Error error
                     | Ok requests ->
-                        match! tryGetEmbassyResponse requests attempts ct getEmbassyResponse with
+                        match! tryGetEmbassyResponse requests attempts ct getResponse with
                         | Error error -> return Error error
                         | Ok None -> return Ok <| Info "No data"
                         | Ok(Some response) ->
-                            let setEmbassyResponse = Eas.Api.Set.initSetEmbassyResponse storage
+                            let setEmbassyResponse = Eas.Api.setEmbassyResponse response
 
                             match! setEmbassyResponse response ct with
                             | Error error -> return Error error

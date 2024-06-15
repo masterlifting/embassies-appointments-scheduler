@@ -1,58 +1,56 @@
 module Eas.Api
 
-open Infrastructure.Dsl
 open Infrastructure.Domain.Errors
+open Infrastructure.Dsl
 open Eas.Domain.Internal
+open Eas.Persistence
 
-module Get =
+let getSupportedEmbassies () =
+    Set
+    <| [ Russian <| Serbia Belgrade
+         Russian <| Bosnia Sarajevo
+         Russian <| Hungary Budapest
+         Russian <| Montenegro Podgorica
+         Russian <| Albania Tirana ]
 
-    let getSupportedEmbassies () =
-        Set
-        <| [ Russian <| Serbia Belgrade
-             Russian <| Bosnia Sarajevo
-             Russian <| Hungary Budapest
-             Russian <| Montenegro Podgorica
-             Russian <| Albania Tirana ]
+let getRequests storage filter ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Query.Request.get storage filter ct)
 
-    let initGetUserEmbassyRequests storage =
-        fun user embassy ct ->
-            Persistence.Repository.createStorage storage
-            |> Result.map Persistence.Repository.Query.initGetUserEmbassyRequests
-            |> ResultAsync.wrap (fun get -> get user embassy ct)
-            |> ResultAsync.mapError Infrastructure
+let getResponses storage filter ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Query.Response.get storage filter ct)
 
-    let initGetEmbassyRequests storageOpt =
-        fun embassy ct ->
-            storageOpt
-            |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Query.initGetEmbassyRequests
-            |> ResultAsync.wrap (fun get -> get embassy ct)
-            |> ResultAsync.mapError Infrastructure
+let addRequest storage request ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Command.Request.execute storage (Command.Request.Add request) ct)
 
-    let initGetEmbassyResponse storageOpt =
-        fun (request: Request) ct ->
-            storageOpt
-            |> Persistence.Repository.createStorage
-            |> Result.mapError Infrastructure
-            |> ResultAsync.wrap (fun storage ->
-                match request.Embassy with
-                | Russian _ -> storage |> Core.Russian.initGetEmbassyResponse |> (fun get -> get request ct)
-                | _ -> async { return Error <| Logical(NotSupported $"{request.Embassy} for initGetEmbassyResponse") })
+let updateRequest storage request ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Command.Request.execute storage (Command.Request.Update request) ct)
 
-module Set =
+let deleteRequest storage request ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Command.Request.execute storage (Command.Request.Delete request) ct)
 
-    let initSetUserEmbassyRequest storageOpt =
-        fun user request ct ->
-            storageOpt
-            |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Set.initSetUserEmbassyRequest
-            |> ResultAsync.wrap (fun set -> set user request ct)
-            |> ResultAsync.mapError Infrastructure
+let addResponse storage response ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage -> Repository.Command.Response.execute storage (Command.Response.Add response) ct)
 
-    let initSetEmbassyResponse storageOpt =
-        fun response ct ->
-            storageOpt
-            |> Persistence.Repository.createStorage
-            |> Result.map Persistence.Repository.Set.initSetEmbassyResponse
-            |> ResultAsync.wrap (fun set -> set response ct)
-            |> ResultAsync.mapError Infrastructure
+let updateResponse storage response ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage ->
+        Repository.Command.Response.execute storage (Command.Response.Update response) ct)
+
+let deleteResponse storage response ct =
+    Repository.createStorage storage
+    |> Result.mapError Infrastructure
+    |> ResultAsync.wrap (fun storage ->
+        Repository.Command.Response.execute storage (Command.Response.Delete response) ct)

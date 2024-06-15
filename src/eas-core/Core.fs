@@ -64,14 +64,10 @@ module Russian =
                     | Error error -> return Error <| Infrastructure error
                     | Ok credentials ->
                         match! getAppointments credentials ct with
-                        | Error error -> 
+                        | Error error ->
                             match error with
                             | Infrastructure(InvalidRequest _)
-                            | Infrastructure(InvalidResponse _) -> 
-
-                            
-
-                                return Ok None
+                            | Infrastructure(InvalidResponse _) -> return Ok None
                             | _ -> return Error error
                         | Ok appointments ->
                             match appointments with
@@ -81,7 +77,7 @@ module Russian =
                                     Ok
                                     <| Some
                                         { Id = Guid.NewGuid() |> ResponseId
-                                          Embassy = request.Embassy
+                                          Request = request
                                           Appointments = appointments
                                           Data = request.Data
                                           Modified = DateTime.UtcNow }
