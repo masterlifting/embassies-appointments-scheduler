@@ -5,15 +5,18 @@ open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
 
 module Russian =
+    open Embassies.Russian
 
-    let private createBaseUrl city = $"https://kdmid.ru/queue/%s{city}/"
+    let private createBaseUrl city = $"https://%s{city}.kdmid.ru/queue/"
 
     let private createUrlParams id cd ems =
         match ems with
         | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage () = Web.Core.Http.get "https://kdmid.ru/"
+    let private getStartPage baseUrl urlParams : string =
+        let requestUrl = baseUrl + "OrderInfo.aspx" + urlParams
+        Web.Core.Http.get requestUrl
 
     let private getCapchaImage () =
         Web.Core.Http.get "https://kdmid.ru/captcha/"
@@ -24,28 +27,21 @@ module Russian =
     let private postStartPage (data: string) =
         async { return Error "postStartPage not implemented." }
 
-    let private getCalendarPage url =
+    let private getCalendarPage baseUrl urlParams =
+        //getStartPage baseUrl urlParams
+        async { return Error(Logical(NotImplemented "getCalendarPage")) }
+
+    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
+        let city, id, cd, ems = credentials.Value
+        let baseUrl = createBaseUrl city
+        let urlParams = createUrlParams id cd ems
+
         async {
-            let response = Web.Core.Http.get url
-            return response
+            let! startPage = getStartPage baseUrl urlParams
+            return Error(Logical(NotImplemented "getAppointments"))
         }
 
-    let private getAppointments
-        (credentials: Embassies.Russian.Credentials)
-        ct
-        : Async<Result<Set<Appointment>, ApiError>> =
-        async {
-            let city, id, cd, ems = credentials.Value
-
-            let baseUrl = createBaseUrl city
-            let urlParams = createUrlParams id cd ems
-
-            let! response = getCalendarPage (baseUrl + urlParams)
-
-            return Error <| (Logical <| NotImplemented "getAppointments")
-        }
-
-    let confirmKdmidOrder (credentials: Embassies.Russian.Credentials) ct =
+    let confirmKdmidOrder (credentials: Credentials) ct =
         async {
             let city, id, cd, ems = credentials.Value
             let baseUrl = createBaseUrl city
@@ -55,31 +51,31 @@ module Russian =
         }
 
     let getResponse storage (request: Request) ct =
+
         let updateRequest request =
             Persistence.Repository.Command.Request.update storage request ct
 
         async {
             match request.Data |> Map.tryFind "url" with
-            | None -> return Error <| (Infrastructure <| InvalidRequest "No url found in request.")
-            | Some url ->
-                match Embassies.Russian.createCredentials url with
-                | Error error -> return Error <| Infrastructure error
+            | None -> return Error(Infrastructure(InvalidRequest "No url found in requests data."))
+            | Some requestUrl ->
+                match createCredentials requestUrl with
+                | Error error -> return Error(Infrastructure error)
                 | Ok credentials ->
                     match! getAppointments credentials ct with
-                    | Error error ->
-                        match error with
-                        | Infrastructure(InvalidRequest _)
-                        | Infrastructure(InvalidResponse _) ->
+                    | Error(Infrastructure(InvalidRequest msg))
+                    | Error(Infrastructure(InvalidResponse msg)) ->
 
-                            let! updateRes =
-                                updateRequest
-                                    { request with
-                                        Modified = DateTime.UtcNow }
+                        let! updateRes =
+                            updateRequest
+                                { request with
+                                    Modified = DateTime.UtcNow }
 
-                            match updateRes with
-                            | Ok _ -> return Ok None
-                            | Error error -> return Error error
-                        | _ -> return Error error
+                        match updateRes with
+                        | Ok _ -> return Error(Infrastructure(InvalidRequest msg))
+                        | Error error -> return Error error
+
+                    | Error error -> return Error error
                     | Ok appointments ->
                         match appointments with
                         | appointments when appointments.Count = 0 -> return Ok None
@@ -94,16 +90,23 @@ module Russian =
                                       Modified = DateTime.UtcNow }
         }
 
-    let reec tryGetResponse requests ct getResponse =
+    let tryGetResponse requests ct getResponse =
 
-        async {
-            match requests with
-            | [] -> return Ok None
-            | request :: requestsTail ->
-                match! getResponse request ct with
-                | Error error -> return! tryGetResponse requestsTail ct getResponse
-                | response -> return response
-        }
+        let rec innerLoop requests error =
+            async {
+                match requests with
+                | [] ->
+                    return
+                        match error with
+                        | Some error -> Error error
+                        | None -> Ok None
+                | request :: requestsTail ->
+                    match! getResponse request ct with
+                    | Error error -> return! innerLoop requestsTail (Some error)
+                    | response -> return response
+            }
+
+        innerLoop requests None
 
     let setResponse storage (response: Response) ct =
         async {
