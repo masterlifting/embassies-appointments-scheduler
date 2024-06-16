@@ -55,6 +55,9 @@ module Russian =
         }
 
     let getResponse storage (request: Request) ct =
+        let updateRequest request =
+            Persistence.Repository.Command.Request.update storage request ct
+
         async {
             match request.Data |> Map.tryFind "url" with
             | None -> return Error <| (Infrastructure <| InvalidRequest "No url found in request.")
@@ -66,7 +69,16 @@ module Russian =
                     | Error error ->
                         match error with
                         | Infrastructure(InvalidRequest _)
-                        | Infrastructure(InvalidResponse _) -> return Ok None
+                        | Infrastructure(InvalidResponse _) ->
+
+                            let! updateRes =
+                                updateRequest
+                                    { request with
+                                        Modified = DateTime.UtcNow }
+
+                            match updateRes with
+                            | Ok _ -> return Ok None
+                            | Error error -> return Error error
                         | _ -> return Error error
                     | Ok appointments ->
                         match appointments with
@@ -82,15 +94,14 @@ module Russian =
                                       Modified = DateTime.UtcNow }
         }
 
-    let rec tryGetResponse requests ct getResponse =
+    let reec tryGetResponse requests ct getResponse =
+
         async {
             match requests with
             | [] -> return Ok None
             | request :: requestsTail ->
                 match! getResponse request ct with
-                | Error(Infrastructure(InvalidRequest _))
-                | Error(Infrastructure(InvalidResponse _)) -> return! tryGetResponse requestsTail ct getResponse
-                | Error error -> return Error error
+                | Error error -> return! tryGetResponse requestsTail ct getResponse
                 | response -> return response
         }
 

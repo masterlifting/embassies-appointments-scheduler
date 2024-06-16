@@ -9,22 +9,24 @@ open Persistence.Storage
 open Domain
 open Mapper
 
-module QueryFilter =
+module Filter =
     open System
 
-    type Sort<'a, 'key> =
-        | Asc of ('a -> 'key)
-        | Desc of ('a -> 'key)
+    type OrderBy<'a> =
+        | Date of ('a -> DateTime)
+        | String of ('a -> string)
+        | Int of ('a -> int)
+        | Bool of ('a -> bool)
+        | Guid of ('a -> Guid)
 
     type SortBy<'a> =
-        | Date of Sort<'a, DateTime>
-        | Int of Sort<'a, int>
-        | String of Sort<'a, string>
+        | Asc of OrderBy<'a>
+        | Desc of OrderBy<'a>
 
     type Pagination<'a> =
         { Page: int
           PageSize: int
-          Sort: SortBy<'a> }
+          SortBy: SortBy<'a> }
 
     type EmbassyFilter<'a> =
         { Pagination: Pagination<'a>
@@ -47,7 +49,7 @@ module QueryFilter =
         | ByEmbassy of EmbassyFilter<Internal.Response>
         | ByUserEmbassy of UserEmbassyFilter<Internal.Response>
 
-module Command =
+module private Command =
 
     type Request =
         | Create of Internal.Request
@@ -68,17 +70,25 @@ module private InMemoryRepository =
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
 
     module Query =
-        open QueryFilter
+        open Filter
 
         let paginate<'a> (data: 'a list) (pagination: Pagination<'a>) =
-
-            match pagination.Sort with
-            | Date(Asc sort) -> data |> List.sortBy sort
-            | Date(Desc sort) -> data |> List.sortByDescending sort
-            | Int(Asc sort) -> data |> List.sortBy sort
-            | Int(Desc sort) -> data |> List.sortByDescending sort
-            | String(Asc sort) -> data |> List.sortBy sort
-            | String(Desc sort) -> data |> List.sortByDescending sort
+            data
+            |> match pagination.SortBy with
+               | Asc sortBy ->
+                   match sortBy with
+                   | Date sortBy -> List.sortBy (sortBy)
+                   | String sortBy -> List.sortBy (sortBy)
+                   | Int sortBy -> List.sortBy (sortBy)
+                   | Bool sortBy -> List.sortBy (sortBy)
+                   | Guid sortBy -> List.sortBy (sortBy)
+               | Desc sortBy ->
+                   match sortBy with
+                   | Date sortBy -> List.sortByDescending (sortBy)
+                   | String sortBy -> List.sortByDescending (sortBy)
+                   | Int sortBy -> List.sortByDescending (sortBy)
+                   | Bool sortBy -> List.sortByDescending (sortBy)
+                   | Guid sortBy -> List.sortByDescending (sortBy)
             |> List.skip (pagination.PageSize * (pagination.Page - 1))
             |> List.truncate pagination.PageSize
 

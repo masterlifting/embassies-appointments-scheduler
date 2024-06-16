@@ -6,7 +6,7 @@ open Infrastructure.Domain.Errors
 open Persistence.Domain
 open Worker.Domain.Internal
 open Eas.Domain.Internal
-open Eas.Persistence.QueryFilter
+open Eas.Persistence.Filter
 
 module Russian =
     let private getAvailableDates country =
@@ -16,11 +16,13 @@ module Russian =
             |> ResultAsync.wrap (fun storage ->
 
                 let requestsFilter =
-                    { Pagination =
-                        { Page = 1
-                          PageSize = 5
-                          Sort = Date(Desc(fun x -> x.Modified)) }
-                      Embassy = Russian country }
+                    Request.ByEmbassy(
+                        { Pagination =
+                            { Page = 1
+                              PageSize = 5
+                              SortBy = Desc(Date(fun x -> x.Modified)) }
+                          Embassy = Russian country }
+                    )
 
                 let getRequests filter =
                     Eas.Persistence.Repository.Query.Request.get storage filter ct
