@@ -9,7 +9,6 @@
     <Compile Include="Mapper.fs" />
     <Compile Include="Persistence.fs" />
     <Compile Include="Core.fs" />
-    <Compile Include="Api.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj" />

@@ -9,41 +9,38 @@ open Eas.Domain.Internal
 open Eas.Persistence.QueryFilter
 
 module Russian =
-    let rec private tryGetEmbassyResponse requests attempts ct getResponse =
-        async {
-            match requests with
-            | [] -> return Ok None
-            | request :: requestsTail ->
-                match! getResponse request ct with
-                | Error(Infrastructure(InvalidRequest error)) ->
-                    match attempts with
-                    | 0 -> return Error(Logical(Cancelled error))
-                    | _ -> return! tryGetEmbassyResponse requestsTail (attempts - 1) ct getResponse
-                | Error error -> return Error error
-                | response -> return response
-        }
-
     let private getAvailableDates country =
         fun ct ->
             Persistence.Core.createStorage InMemory
             |> Result.mapError Infrastructure
             |> ResultAsync.wrap (fun storage ->
 
-                let storage = Some storage
-
-                let requestFilter =
-                    { Pagination = { Page = 1; PageSize = 10 }
+                let requestsFilter =
+                    { Pagination =
+                        { Page = 1
+                          PageSize = 5
+                          Sort = Date(Desc(fun x -> x.Modified)) }
                       Embassy = Russian country }
 
-                let getResponse request ct =
-                    Eas.Api.Get.initGetEmbassyResponse storage request ct
+                let getRequests filter =
+                    Eas.Persistence.Repository.Query.Request.get storage filter ct
 
-                let attempts = 3
+                let getResponse request ct =
+                    Eas.Core.Russian.getResponse storage request ct
+
+                let tryGetResponse requests =
+                    Eas.Core.Russian.tryGetResponse requests ct getResponse
+
+                let setResponse response =
+                    Eas.Core.Russian.setResponse storage response ct
 
                 async {
 
                     //TODO: remove this block after the development
-                    let request =
+                    let createRequest request =
+                        Eas.Persistence.Repository.Command.Request.create storage request ct
+
+                    let testRequest =
                         { Id = System.Guid.NewGuid() |> RequestId
                           User = { Id = UserId 0; Name = "Andrei" }
                           Embassy = Russian country
@@ -53,19 +50,17 @@ module Russian =
                                   "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF" ]
                           Modified = System.DateTime.UtcNow }
 
-                    let! _ = Eas.Api.addRequest storage request ct //TODO: remove this line after the development
+                    let! _ = createRequest testRequest
                     //
 
-                    match! getRequests <| Russian country with
+                    match! getRequests requestsFilter with
                     | Error error -> return Error error
                     | Ok requests ->
-                        match! tryGetEmbassyResponse requests attempts ct getResponse with
+                        match! tryGetResponse requests with
                         | Error error -> return Error error
-                        | Ok None -> return Ok <| Info "No data"
+                        | Ok None -> return Ok <| Info "No data."
                         | Ok(Some response) ->
-                            let setEmbassyResponse = Eas.Api.setEmbassyResponse response
-
-                            match! setEmbassyResponse response ct with
+                            match! setResponse response with
                             | Error error -> return Error error
                             | _ -> return Ok <| Success response.Appointments
                 })

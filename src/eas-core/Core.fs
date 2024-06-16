@@ -1,4 +1,4 @@
-module internal Eas.Core
+module Eas.Core
 
 open System
 open Infrastructure.Domain.Errors
@@ -54,36 +54,47 @@ module Russian =
             return Error <| Logical(NotImplemented "confirmKdmidOrder")
         }
 
-    let initGetEmbassyResponse storage =
-        fun (request: Request) ct ->
-            async {
-                match request.Data |> Map.tryFind "url" with
-                | None -> return Error <| (Infrastructure <| InvalidRequest "No url found in request.")
-                | Some url ->
-                    match Embassies.Russian.createCredentials url with
-                    | Error error -> return Error <| Infrastructure error
-                    | Ok credentials ->
-                        match! getAppointments credentials ct with
-                        | Error error ->
-                            match error with
-                            | Infrastructure(InvalidRequest _)
-                            | Infrastructure(InvalidResponse _) -> return Ok None
-                            | _ -> return Error error
-                        | Ok appointments ->
-                            match appointments with
-                            | appointments when appointments.Count = 0 -> return Ok None
-                            | appointments ->
-                                return
-                                    Ok
-                                    <| Some
-                                        { Id = Guid.NewGuid() |> ResponseId
-                                          Request = request
-                                          Appointments = appointments
-                                          Data = request.Data
-                                          Modified = DateTime.UtcNow }
-            }
+    let getResponse storage (request: Request) ct =
+        async {
+            match request.Data |> Map.tryFind "url" with
+            | None -> return Error <| (Infrastructure <| InvalidRequest "No url found in request.")
+            | Some url ->
+                match Embassies.Russian.createCredentials url with
+                | Error error -> return Error <| Infrastructure error
+                | Ok credentials ->
+                    match! getAppointments credentials ct with
+                    | Error error ->
+                        match error with
+                        | Infrastructure(InvalidRequest _)
+                        | Infrastructure(InvalidResponse _) -> return Ok None
+                        | _ -> return Error error
+                    | Ok appointments ->
+                        match appointments with
+                        | appointments when appointments.Count = 0 -> return Ok None
+                        | appointments ->
+                            return
+                                Ok
+                                <| Some
+                                    { Id = Guid.NewGuid() |> ResponseId
+                                      Request = request
+                                      Appointments = appointments
+                                      Data = request.Data
+                                      Modified = DateTime.UtcNow }
+        }
 
-    let setEmbassyResponse (response: Response) storage ct =
+    let rec tryGetResponse requests ct getResponse =
+        async {
+            match requests with
+            | [] -> return Ok None
+            | request :: requestsTail ->
+                match! getResponse request ct with
+                | Error(Infrastructure(InvalidRequest _))
+                | Error(Infrastructure(InvalidResponse _)) -> return! tryGetResponse requestsTail ct getResponse
+                | Error error -> return Error error
+                | response -> return response
+        }
+
+    let setResponse storage (response: Response) ct =
         async {
             match response.Data |> Map.tryFind "credentials" with
             | None -> return Error <| (Infrastructure <| InvalidRequest "No credentials found in response.")

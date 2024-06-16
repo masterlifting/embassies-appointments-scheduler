@@ -10,15 +10,28 @@ open Domain
 open Mapper
 
 module QueryFilter =
+    open System
 
-    type Pagination = { Page: int; PageSize: int }
+    type Sort<'a, 'key> =
+        | Asc of ('a -> 'key)
+        | Desc of ('a -> 'key)
 
-    type EmbassyFilter =
-        { Pagination: Pagination
+    type SortBy<'a> =
+        | Date of Sort<'a, DateTime>
+        | Int of Sort<'a, int>
+        | String of Sort<'a, string>
+
+    type Pagination<'a> =
+        { Page: int
+          PageSize: int
+          Sort: SortBy<'a> }
+
+    type EmbassyFilter<'a> =
+        { Pagination: Pagination<'a>
           Embassy: Internal.Embassy }
 
-    type UserEmbassyFilter =
-        { Pagination: Pagination
+    type UserEmbassyFilter<'a> =
+        { Pagination: Pagination<'a>
           User: Internal.User
           Embassy: Internal.Embassy }
 
@@ -27,22 +40,22 @@ module QueryFilter =
         | ByEmbassy
 
     type Request =
-        | ByEmbassy of EmbassyFilter
-        | ByUserEmbassy of UserEmbassyFilter
+        | ByEmbassy of EmbassyFilter<Internal.Request>
+        | ByUserEmbassy of UserEmbassyFilter<Internal.Request>
 
     type Response =
-        | ByEmbassy of EmbassyFilter
-        | ByUserEmbassy of UserEmbassyFilter
+        | ByEmbassy of EmbassyFilter<Internal.Response>
+        | ByUserEmbassy of UserEmbassyFilter<Internal.Response>
 
 module Command =
 
     type Request =
-        | Add of Internal.Request
+        | Create of Internal.Request
         | Update of Internal.Request
         | Delete of Internal.Request
 
     type Response =
-        | Add of Internal.Response
+        | Create of Internal.Response
         | Update of Internal.Response
         | Delete of Internal.Response
 
@@ -57,10 +70,17 @@ module private InMemoryRepository =
     module Query =
         open QueryFilter
 
-        let paginate<'a> (data: 'a list) (pagination: Pagination) =
-            data
-            |> List.skip (pagination.Page * pagination.PageSize)
-            |> List.take pagination.PageSize
+        let paginate<'a> (data: 'a list) (pagination: Pagination<'a>) =
+
+            match pagination.Sort with
+            | Date(Asc sort) -> data |> List.sortBy sort
+            | Date(Desc sort) -> data |> List.sortByDescending sort
+            | Int(Asc sort) -> data |> List.sortBy sort
+            | Int(Desc sort) -> data |> List.sortByDescending sort
+            | String(Asc sort) -> data |> List.sortBy sort
+            | String(Desc sort) -> data |> List.sortByDescending sort
+            |> List.skip (pagination.PageSize * (pagination.Page - 1))
+            |> List.truncate pagination.PageSize
 
         module Request =
 
@@ -165,7 +185,7 @@ module private InMemoryRepository =
 
         module Request =
 
-            let private add (requests: External.Request array) (request: Internal.Request) =
+            let private create (requests: External.Request array) (request: Internal.Request) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
                 | Some _ -> Error(Persistence $"Request {request.Id} already exists.")
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
@@ -194,7 +214,7 @@ module private InMemoryRepository =
                             getData<External.Request> context key
                             |> Result.bind (fun requests ->
                                 match command with
-                                | Command.Request.Add request -> add requests request
+                                | Command.Request.Create request -> create requests request
                                 | Command.Request.Update request -> update requests request
                                 | Command.Request.Delete request -> delete requests request)
                             |> Result.bind (fun requests -> save context key requests)
@@ -205,7 +225,7 @@ module private InMemoryRepository =
 
         module Response =
 
-            let private add (responses: External.Response array) (response: Internal.Response) =
+            let private create (responses: External.Response array) (response: Internal.Response) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
                 | Some _ -> Error(Persistence $"Response {response.Id} already exists.")
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
@@ -234,7 +254,7 @@ module private InMemoryRepository =
                             getData<External.Response> context key
                             |> Result.bind (fun responses ->
                                 match command with
-                                | Command.Response.Add response -> add responses response
+                                | Command.Response.Create response -> create responses response
                                 | Command.Response.Update response -> update responses response
                                 | Command.Response.Delete response -> delete responses response)
                             |> Result.bind (fun responses -> save context key responses)
@@ -259,24 +279,24 @@ module Repository =
         module Request =
 
             let get storage filter ct =
-                function
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Request.get context filter ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
             let get' storage requestId ct =
-                function
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Request.get' context requestId ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
         module Response =
 
             let get storage filter ct =
-                function
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Response.get context filter ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
             let get' storage responseId ct =
-                function
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Response.get' context responseId ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
@@ -284,13 +304,13 @@ module Repository =
 
         module Request =
 
-            let execute storage command ct =
-                function
+            let private execute storage command ct =
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Command.Request.execute context command ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
-            let add storage request ct =
-                execute storage (Command.Request.Add request) ct
+            let create storage request ct =
+                execute storage (Command.Request.Create request) ct
 
             let update storage request ct =
                 execute storage (Command.Request.Update request) ct
@@ -300,13 +320,13 @@ module Repository =
 
         module Response =
 
-            let execute storage command ct =
-                function
+            let private execute storage command ct =
+                match storage with
                 | InMemoryContext context -> InMemoryRepository.Command.Response.execute context command ct
                 | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
 
-            let add storage response ct =
-                execute storage (Command.Response.Add response) ct
+            let create storage response ct =
+                execute storage (Command.Response.Create response) ct
 
             let update storage response ct =
                 execute storage (Command.Response.Update response) ct
