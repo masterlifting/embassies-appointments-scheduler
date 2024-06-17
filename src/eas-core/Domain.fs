@@ -81,7 +81,7 @@ module Internal =
     module Embassies =
 
         module Russian =
-            open Web.Core.Http.Mapper
+            open Web.Http
             open Infrastructure.Dsl.ActivePatterns
             open Infrastructure.Domain.Errors
 

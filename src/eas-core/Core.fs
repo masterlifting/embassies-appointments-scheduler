@@ -1,28 +1,30 @@
 module Eas.Core
 
 open System
+open Infrastructure.Dsl
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
 
 module Russian =
     open Embassies.Russian
+    open Web.Domain
 
-    let private createBaseUrl city = $"https://%s{city}.kdmid.ru/queue/"
+    let private createBaseUrl city = $"https://%s{city}.kdmid.ru"
 
-    let private createUrlParams id cd ems =
+    let private createQueryParams id cd ems =
         match ems with
         | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage baseUrl urlParams : string =
-        let requestUrl = baseUrl + "OrderInfo.aspx" + urlParams
-        Web.Core.Http.get requestUrl
+    let private getStartPage client urlParams =
+        let requestUrl = "/queue/orderisnfo.aspx" + urlParams
+        Web.Http.get client requestUrl
 
     let private getCapchaImage () =
-        Web.Core.Http.get "https://kdmid.ru/captcha/"
+        async { return Error "getCapchaImage not implemented." }
 
     let private solveCapcha (image: byte[]) =
-        Web.Core.Http.post "https://kdmid.ru/captcha/" image
+        async { return Error "solveCapcha not implemented." }
 
     let private postStartPage (data: string) =
         async { return Error "postStartPage not implemented." }
@@ -34,20 +36,23 @@ module Russian =
     let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
         let city, id, cd, ems = credentials.Value
         let baseUrl = createBaseUrl city
-        let urlParams = createUrlParams id cd ems
+        let queryParams = createQueryParams id cd ems
 
-        async {
-            let! startPage = getStartPage baseUrl urlParams
-            return Error(Logical(NotImplemented "getAppointments"))
-        }
+        Web.Core.createClient <| Http baseUrl
+        |> ResultAsync.wrap (fun client ->
+            match client with
+            | HttpClient client ->
+                getStartPage client queryParams
+                |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
+            | _ -> async { return Error(Logical(NotSupported $"{client}")) })
 
     let confirmKdmidOrder (credentials: Credentials) ct =
         async {
             let city, id, cd, ems = credentials.Value
             let baseUrl = createBaseUrl city
-            let urlParams = createUrlParams id cd ems
+            let urlParams = createQueryParams id cd ems
             //let! response = getCalendarPage url
-            return Error <| Logical(NotImplemented "confirmKdmidOrder")
+            return Error(Logical(NotImplemented "confirmKdmidOrder"))
         }
 
     let getResponse storage (request: Request) ct =
