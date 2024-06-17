@@ -10,7 +10,6 @@ module Internal =
         { Id = Internal.UserId user.Id
           Name = user.Name }
 
-
     let toCity (city: External.City) : Result<Internal.City, InfrastructureError> =
         match city.Name with
         | "Belgrade" -> Ok <| Internal.Belgrade
