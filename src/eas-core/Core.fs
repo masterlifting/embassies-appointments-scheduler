@@ -16,24 +16,36 @@ module Russian =
         | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage client urlParams =
-        let requestUrl = "/queue/orderisnfo.aspx" + urlParams
-        Web.Http.get client requestUrl
+    let private getStartPage client queryParams : Async<Result<(Map<string, string> * string), ApiError>> =
+        let requestUrl = "/queue/orderisnfo.aspx" + queryParams
+        //Web.Http.get client requestUrl
+        async { return Error(Logical(NotImplemented "getStartPage")) }
 
-    let private getCapchaImage () =
-        async { return Error "getCapchaImage not implemented." }
+    let private getCaptcha (code: string) queryParams : Async<Result<byte array, ApiError>> =
+        async { return Error(Logical(NotImplemented "getCapcha")) }
 
-    let private solveCapcha (image: byte[]) =
-        async { return Error "solveCapcha not implemented." }
+    let private solveCaptcha (image: byte[]) : Async<Result<string, ApiError>> =
+        async { return Error(Logical(NotImplemented "solveCaptcha")) }
 
-    let private postStartPage (data: string) =
-        async { return Error "postStartPage not implemented." }
+    let postStartPage
+        (data: Map<string, string>)
+        (captcha: string)
+        queryParams
+        : Async<Result<Map<string, string>, ApiError>> =
+        async { return Error(Logical(NotImplemented "postStartPage")) }
 
-    let private getCalendarPage baseUrl urlParams =
+    let private postCalendarPage
+        (data: Map<string, string>)
+        queryParams
+        : Async<Result<(Map<string, string> * Set<Appointment>), ApiError>> =
         //getStartPage baseUrl urlParams
         async { return Error(Logical(NotImplemented "getCalendarPage")) }
 
-    let private getAppointments (credentials: Credentials) ct : Async<Result<Set<Appointment>, ApiError>> =
+    let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, ApiError>> =
+        async { return Error(Logical(NotImplemented "postConfirmation")) }
+
+
+    let private getKdmidResponse (credentials: Credentials) ct : Async<Result<Response, ApiError>> =
         let city, id, cd, ems = credentials.Value
         let baseUrl = createBaseUrl city
         let queryParams = createQueryParams id cd ems
@@ -46,54 +58,18 @@ module Russian =
                 |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
             | _ -> async { return Error(Logical(NotSupported $"{client}")) })
 
-    let confirmKdmidOrder (credentials: Credentials) ct =
-        async {
-            let city, id, cd, ems = credentials.Value
-            let baseUrl = createBaseUrl city
-            let urlParams = createQueryParams id cd ems
-            //let! response = getCalendarPage url
-            return Error(Logical(NotImplemented "confirmKdmidOrder"))
-        }
-
     let getResponse storage (request: Request) ct =
-
-        let updateRequest request =
-            Persistence.Repository.Command.Request.update storage request ct
-
-        async {
-            match request.Data |> Map.tryFind "url" with
-            | None -> return Error(Infrastructure(InvalidRequest "No url found in requests data."))
-            | Some requestUrl ->
-                match createCredentials requestUrl with
-                | Error error -> return Error(Infrastructure error)
-                | Ok credentials ->
-                    match! getAppointments credentials ct with
-                    | Error(Infrastructure(InvalidRequest msg))
-                    | Error(Infrastructure(InvalidResponse msg)) ->
-
-                        let! updateRes =
-                            updateRequest
-                                { request with
-                                    Modified = DateTime.UtcNow }
-
-                        match updateRes with
-                        | Ok _ -> return Error(Infrastructure(InvalidRequest msg))
-                        | Error error -> return Error error
-
-                    | Error error -> return Error error
-                    | Ok appointments ->
-                        match appointments with
-                        | appointments when appointments.Count = 0 -> return Ok None
-                        | appointments ->
-                            return
-                                Ok
-                                <| Some
-                                    { Id = Guid.NewGuid() |> ResponseId
-                                      Request = request
-                                      Appointments = appointments
-                                      Data = request.Data
-                                      Modified = DateTime.UtcNow }
-        }
+        match request.Data |> Map.tryFind "url" with
+        | None -> async { return Error(Infrastructure(InvalidRequest "No url found in requests data.")) }
+        | Some requestUrl ->
+            createCredentials requestUrl
+            |> Result.mapError Infrastructure
+            |> ResultAsync.wrap (fun credentials ->
+                getKdmidResponse credentials ct
+                |> ResultAsync.map (fun response ->
+                    match response with
+                    | response when response.Appointments.IsEmpty -> None
+                    | response -> Some response))
 
     let tryGetResponse requests ct getResponse =
 

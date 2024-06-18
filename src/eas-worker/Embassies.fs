@@ -40,6 +40,9 @@ module Russian =
                 let getRequests filter =
                     Eas.Persistence.Repository.Query.Request.get storage filter ct
 
+                let updateRequest request =
+                    Eas.Persistence.Repository.Command.Request.update storage request ct
+
                 let getResponse request ct =
                     Eas.Core.Russian.getResponse storage request ct
 
