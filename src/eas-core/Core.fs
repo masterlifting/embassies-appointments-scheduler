@@ -71,7 +71,7 @@ module Russian =
                     | response when response.Appointments.IsEmpty -> None
                     | response -> Some response))
 
-    let tryGetResponse requests ct getResponse =
+    let tryGetResponse requests updateRequest getResponse =
 
         let rec innerLoop requests error =
             async {
@@ -82,9 +82,17 @@ module Russian =
                         | Some error -> Error error
                         | None -> Ok None
                 | request :: requestsTail ->
-                    match! getResponse request ct with
-                    | Error error -> return! innerLoop requestsTail (Some error)
-                    | response -> return response
+
+                    let request: Request =
+                        { request with
+                            Modified = DateTime.UtcNow }
+
+                    match! updateRequest request with
+                    | Error error -> return Error error
+                    | Ok _ ->
+                        match! getResponse request with
+                        | Error error -> return! innerLoop requestsTail (Some error)
+                        | response -> return response
             }
 
         innerLoop requests None
@@ -96,8 +104,9 @@ module Russian =
             | Some credentials ->
                 match Embassies.Russian.createCredentials credentials with
                 | Error error -> return Error <| Infrastructure error
-                | Ok credentials ->
-                    match! confirmKdmidOrder credentials ct with
-                    | Error error -> return Error error
-                    | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
+                | Ok credentials -> return Error(Logical(NotImplemented "setResponse"))
+
+        // match! confirmKdmidOrder credentials ct with
+        // | Error error -> return Error error
+        // | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
         }

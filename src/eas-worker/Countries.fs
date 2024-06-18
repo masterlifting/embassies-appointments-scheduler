@@ -3,10 +3,35 @@
 open Infrastructure.Domain.Graph
 open Worker.Domain.Internal
 open Eas.Domain.Internal
+open Eas.Persistence
+open Infrastructure.Dsl
+open Infrastructure.Domain.Errors
+open Persistence.Domain
 
 module Serbia =
+    let private createTestRequest =
+        fun ct ->
+            Persistence.Core.createStorage InMemory
+            |> Result.mapError Infrastructure
+            |> ResultAsync.wrap (fun storage ->
+                let request =
+                    { Id = System.Guid.NewGuid() |> RequestId
+                      User = { Id = UserId 1; Name = "Andrei" }
+                      Embassy = Russian <| Serbia Belgrade
+                      Data =
+                        Map
+                            [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF" ]
+                      Modified = System.DateTime.UtcNow }
+
+                Repository.Command.Request.create storage request ct
+                |> ResultAsync.map (fun _ -> Info $"Test request was created \n{request}"))
+
     let private Belgrade =
-        Node({ Name = "Belgrade"; Handle = None }, [ Embassies.Russian.createNode <| Serbia Belgrade ])
+        Node(
+            { Name = "Belgrade"
+              Handle = Some <| createTestRequest },
+            [ Embassies.Russian.createNode <| Serbia Belgrade ]
+        )
 
     let Node = Node({ Name = "Serbia"; Handle = None }, [ Belgrade ])
 

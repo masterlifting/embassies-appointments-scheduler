@@ -9,18 +9,6 @@ open Eas.Domain.Internal
 open Eas.Persistence.Filter
 
 module Russian =
-    let private createTestRequest storage country ct =
-        async {
-            let request =
-                { Id = System.Guid.NewGuid() |> RequestId
-                  User = { Id = UserId 1; Name = "Andrei" }
-                  Embassy = Russian country
-                  Data =
-                    Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF" ]
-                  Modified = System.DateTime.UtcNow }
-
-            return! Eas.Persistence.Repository.Command.Request.create storage request ct
-        }
 
     let private getAvailableDates country =
         fun ct ->
@@ -43,16 +31,14 @@ module Russian =
                 let updateRequest request =
                     Eas.Persistence.Repository.Command.Request.update storage request ct
 
-                let getResponse request ct =
+                let getResponse request =
                     Eas.Core.Russian.getResponse storage request ct
 
                 let tryGetResponse requests =
-                    Eas.Core.Russian.tryGetResponse requests ct getResponse
+                    Eas.Core.Russian.tryGetResponse requests updateRequest getResponse
 
                 let setResponse response =
                     Eas.Core.Russian.setResponse storage response ct
-
-                let _ = createTestRequest storage country ct |> Async.RunSynchronously
 
                 getRequests filter
                 |> ResultAsync.bind' (
