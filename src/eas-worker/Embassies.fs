@@ -27,6 +27,9 @@ module Russian =
                 let getRequests filter =
                     Eas.Persistence.Repository.Query.Request.get storage filter ct
 
+                let updateRequest request =
+                    Eas.Persistence.Repository.Command.Request.update storage request ct
+
                 let getResponse request ct =
                     Eas.Core.Russian.getResponse storage request ct
 
@@ -54,7 +57,9 @@ module Russian =
 
                     let! _ = createRequest testRequest
                     //
-
+                    let! requests = getRequests requestsFilter
+                    let! responses = ResultAsync.bind tryGetResponse requests
+                    
                     match! getRequests requestsFilter with
                     | Error error -> return Error error
                     | Ok requests ->

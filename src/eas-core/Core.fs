@@ -58,37 +58,18 @@ module Russian =
                 |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
             | _ -> async { return Error(Logical(NotSupported $"{client}")) })
 
-
-
     let getResponse storage (request: Request) ct =
-
-        let updatedRequest =
-            { request with
-                Modified = DateTime.UtcNow }
-
-        let updateRequest () =
-            Persistence.Repository.Command.Request.update storage updatedRequest ct
-
-        async {
-            match request.Data |> Map.tryFind "url" with
-            | None -> return Error(Infrastructure(InvalidRequest "No url found in requests data."))
-            | Some requestUrl ->
-                match createCredentials requestUrl with
-                | Error error -> return Error(Infrastructure error)
-                | Ok credentials ->
-                    match! getKdmidResponse credentials ct with
-                    | Error(Infrastructure(InvalidRequest msg))
-                    | Error(Infrastructure(InvalidResponse msg)) ->
-                        match! updateRequest () with
-                        | Ok _ -> return Error(Infrastructure(InvalidRequest msg))
-                        | Error error -> return Error error
-
-                    | Error error -> return Error error
-                    | Ok response ->
-                        match response with
-                        | response when response.Appointments.Count = 0 -> return Ok None
-                        | response -> return Ok <| Some response
-        }
+        match request.Data |> Map.tryFind "url" with
+        | None -> async { return Error(Infrastructure(InvalidRequest "No url found in requests data.")) }
+        | Some requestUrl ->
+            createCredentials requestUrl
+            |> Result.mapError Infrastructure
+            |> ResultAsync.wrap (fun credentials ->
+                getKdmidResponse credentials ct
+                |> ResultAsync.map (fun response ->
+                    match response with
+                    | response when response.Appointments.IsEmpty -> None
+                    | response -> Some response))
 
     let tryGetResponse requests ct getResponse =
 
