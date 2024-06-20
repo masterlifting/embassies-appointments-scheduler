@@ -1,11 +1,11 @@
 ﻿module internal Eas.Worker.Countries
 
 open Infrastructure.Domain.Graph
+open Infrastructure.Dsl
+open Infrastructure.Domain.Errors
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence
-open Infrastructure.Dsl
-open Infrastructure.Domain.Errors
 open Persistence.Domain
 
 module Serbia =

@@ -3,10 +3,10 @@
 open Infrastructure.Dsl
 open Infrastructure.Domain.Graph
 open Infrastructure.Domain.Errors
-open Persistence.Domain
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence.Filter
+open Persistence.Domain
 
 module Russian =
 
@@ -37,25 +37,26 @@ module Russian =
                 let tryGetResponse requests =
                     Eas.Core.Russian.tryGetResponse requests updateRequest getResponse
 
-                let setResponse response =
-                    Eas.Core.Russian.setResponse storage response ct
+                let saveResponse response =
+                    Eas.Persistence.Repository.Command.Response.create storage response ct
+
+                let handleResponse response =
+                    match response with
+                    | None -> async { return Ok <| Info "No data." }
+                    | Some response ->
+                        response
+                        |> saveResponse
+                        |> ResultAsync.map (fun _ -> Success response.Appointments)
 
                 getRequests filter
-                |> ResultAsync.bind' (
-                    tryGetResponse
-                    >> ResultAsync.bind' (fun response ->
-                        match response with
-                        | None -> async { return Ok <| Info "No data." }
-                        | Some response ->
-                            setResponse response |> ResultAsync.map (fun _ -> Success response.Appointments))
-                ))
+                |> ResultAsync.bind' (tryGetResponse >> ResultAsync.bind' handleResponse))
 
     let createNode country =
         Node(
-            { Name = "RussianEmbassy"
+            { Name = "Russian"
               Handle = None },
             [ Node(
-                  { Name = "GetAvailableDates"
+                  { Name = "Look for appointments"
                     Handle = Some <| getAvailableDates country },
                   []
               ) ]

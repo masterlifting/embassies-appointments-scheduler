@@ -16,9 +16,10 @@ module Russian =
         | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"?id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage client queryParams : Async<Result<(Map<string, string> * string), ApiError>> =
-        let requestUrl = "/queue/orderisnfo.aspx" + queryParams
-        //Web.Http.get client requestUrl
+    let private getStartPage client queryParams ct : Async<Result<(Map<string, string> * string), ApiError>> =
+        let urlPath = "/queue/orderisnfo.aspx" + queryParams
+        let request = Web.Http.Domain.Request.Get(urlPath, None)
+        let response = WebClient.Http.send client request ct
         async { return Error(Logical(NotImplemented "getStartPage")) }
 
     let private getCaptcha (code: string) queryParams : Async<Result<byte array, ApiError>> =
@@ -45,24 +46,23 @@ module Russian =
         async { return Error(Logical(NotImplemented "postConfirmation")) }
 
 
-    let private getKdmidResponse (credentials: Credentials) ct : Async<Result<Response, ApiError>> =
+    let private getKdmidResponse (credentials: Credentials) ct : Async<Result<Domain.Internal.Response, ApiError>> =
         let city, id, cd, ems = credentials.Value
         let baseUrl = createBaseUrl city
         let queryParams = createQueryParams id cd ems
 
-        Web.Core.createClient <| Http baseUrl
+        Web.Core.createClient <| Type.Http baseUrl
         |> ResultAsync.wrap (fun client ->
             match client with
-            | HttpClient client ->
-                getStartPage client queryParams
-                |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
+            | HttpClient client -> getStartPage client queryParams ct
             | _ -> async { return Error(Logical(NotSupported $"{client}")) })
+        |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
 
-    let getResponse storage (request: Request) ct =
+    let getResponse storage request ct =
         match request.Data |> Map.tryFind "url" with
         | None -> async { return Error(Infrastructure(InvalidRequest "No url found in requests data.")) }
-        | Some requestUrl ->
-            createCredentials requestUrl
+        | Some url ->
+            createCredentials url
             |> Result.mapError Infrastructure
             |> ResultAsync.wrap (fun credentials ->
                 getKdmidResponse credentials ct
@@ -83,7 +83,7 @@ module Russian =
                         | None -> Ok None
                 | request :: requestsTail ->
 
-                    let request: Request =
+                    let request: Domain.Internal.Request =
                         { request with
                             Modified = DateTime.UtcNow }
 
@@ -96,17 +96,3 @@ module Russian =
             }
 
         innerLoop requests None
-
-    let setResponse storage (response: Response) ct =
-        async {
-            match response.Data |> Map.tryFind "credentials" with
-            | None -> return Error <| (Infrastructure <| InvalidRequest "No credentials found in response.")
-            | Some credentials ->
-                match Embassies.Russian.createCredentials credentials with
-                | Error error -> return Error <| Infrastructure error
-                | Ok credentials -> return Error(Logical(NotImplemented "setResponse"))
-
-        // match! confirmKdmidOrder credentials ct with
-        // | Error error -> return Error error
-        // | Ok _ -> return Ok $"Credentials for {credentials.City} are set."
-        }
