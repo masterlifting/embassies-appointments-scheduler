@@ -18,9 +18,9 @@ module Russian =
 
     let private getStartPage client queryParams ct : Async<Result<(Map<string, string> * string), ApiError>> =
         let urlPath = "/queue/orderisnfo.aspx" + queryParams
-        let request = Web.Http.Domain.Request.Get(urlPath, None)
-        let response = WebClient.Http.send client request ct
-        async { return Error(Logical(NotImplemented "getStartPage")) }
+
+        Web.Http.get client urlPath None ct
+        |> ResultAsync.bind (fun (content, _) -> WebClient.Parser.Html.parseStartPage content)
 
     let private getCaptcha (code: string) queryParams : Async<Result<byte array, ApiError>> =
         async { return Error(Logical(NotImplemented "getCapcha")) }
@@ -51,12 +51,12 @@ module Russian =
         let baseUrl = createBaseUrl city
         let queryParams = createQueryParams id cd ems
 
-        Web.Core.createClient <| Type.Http baseUrl
+        Web.Http.create baseUrl
         |> ResultAsync.wrap (fun client ->
-            match client with
-            | HttpClient client -> getStartPage client queryParams ct
-            | _ -> async { return Error(Logical(NotSupported $"{client}")) })
-        |> ResultAsync.bind (fun startpage -> Error(Logical(NotImplemented "getAppointments")))
+            async {
+                let! startPageRes = getStartPage client queryParams ct
+                return Error(Logical(NotImplemented "getAppointments"))
+            })
 
     let getResponse storage request ct =
         match request.Data |> Map.tryFind "url" with

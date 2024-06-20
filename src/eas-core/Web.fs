@@ -42,3 +42,11 @@ module Repository =
     let receive client request ct =
         match client with
         | _ -> async { return Error(Logical(NotSupported $"{client}")) }
+
+module Parser =
+    module Html =
+        open HtmlAgilityPack
+        
+        let parseStartPage (html: string) : Result<Map<string, string> * string, ApiError> =
+            let document = Web.Parser.Html.load html
+            Error(Logical(NotImplemented "parseStartPage"))
