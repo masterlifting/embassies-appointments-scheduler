@@ -13,14 +13,18 @@ module Russian =
 
     let private createQueryParams id cd ems =
         match ems with
-        | Some ems -> $"?id=%i{id}&cd=%s{cd}&ems=%s{ems}"
-        | None -> $"?id=%i{id}&cd=%s{cd}"
+        | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
+        | None -> $"id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage client queryParams ct : Async<Result<(Map<string, string> * string), ApiError>> =
-        let urlPath = "/queue/orderisnfo.aspx" + queryParams
+    let private getStartPage (client: Web.Http.Client) queryParams (ct: Threading.CancellationToken) =
+        let urlPath = "/queue/orderinfo.aspx?" + queryParams
 
-        Web.Http.get client urlPath None ct
-        |> ResultAsync.bind (fun (content, _) -> WebClient.Parser.Html.parseStartPage content)
+        // Web.Http.get client urlPath None ct
+        // |> ResultAsync.bind (fun (content, _) -> WebClient.Parser.Html.parseStartPage content)
+        async {
+            return WebClient.Parser.Html.parseStartPage WebClient.Parser.Html.test
+
+        }
 
     let private getCaptcha (code: string) queryParams : Async<Result<byte array, ApiError>> =
         async { return Error(Logical(NotImplemented "getCapcha")) }
@@ -58,7 +62,7 @@ module Russian =
                 return Error(Logical(NotImplemented "getAppointments"))
             })
 
-    let getResponse storage request ct =
+    let getResponse storage (request: Eas.Domain.Internal.Request) ct =
         match request.Data |> Map.tryFind "url" with
         | None -> async { return Error(Infrastructure(InvalidRequest "No url found in requests data.")) }
         | Some url ->
