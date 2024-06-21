@@ -48,7 +48,7 @@ module Parser =
         open HtmlAgilityPack
         open Infrastructure.Dsl.ActivePatterns
 
-        let private hasError (html: HtmlDocument) =
+        let private pageHasError (html: HtmlDocument) =
             try
                 match html.DocumentNode.SelectSingleNode("//div[@class='error_msg']") with
                 | null -> Ok html
@@ -62,28 +62,29 @@ module Parser =
         let private getNode (xpath: string) (html: HtmlDocument) =
             try
                 match html.DocumentNode.SelectSingleNode(xpath) with
-                | null -> Error(Logical(Business "Node not found"))
-                | node -> Ok node
+                | null -> Ok None
+                | node -> Ok <| Some node
             with ex ->
                 Error(Infrastructure(Parsing ex.Message))
 
         let private getNodes (xpath: string) (html: HtmlDocument) =
             try
                 match html.DocumentNode.SelectNodes(xpath) with
-                | null -> Error(Logical(Business "Nodes not found"))
-                | nodes -> Ok nodes
+                | null -> Ok None
+                | nodes -> Ok <| Some nodes
             with ex ->
                 Error(Infrastructure(Parsing ex.Message))
 
         let private getAttributeValue (attribute: string) (node: HtmlNode) =
             try
                 match node.GetAttributeValue(attribute, "") with
-                | "" -> Error(Logical(Business "Attribute not found"))
-                | value -> Ok value
+                | "" -> Ok None
+                | value -> Ok <| Some value
             with ex ->
                 Error(Infrastructure(Parsing ex.Message))
-        
-        let test = """
+
+        let test =
+            """
             <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
             <html xmlns="http://www.w3.org/1999/xhtml" >
@@ -238,31 +239,30 @@ module Parser =
             </html>
         """
 
-        let parseStartPage (page: string) =
-            page
-            |> Web.Parser.Html.load
+        let parseStartPage page =
+            Web.Parser.Html.load page
             |> Result.mapError Infrastructure
-            |> Result.bind (hasError)
+            |> Result.bind (pageHasError)
             |> Result.bind (getNodes "//input | //img")
             |> Result.bind (fun nodes ->
-                nodes
-                |> Seq.map (fun node ->
-                    match node.Name with
-                    | "img" ->
-                        let captchaCode = node |> getAttributeValue "src"
-
-                        match captchaCode with
-                        | Ok captchaCode when captchaCode.Contains("CodeImage") -> Ok <| Some("captcha", captchaCode)
-                        | _ -> Error(Logical(Business "Required attribute was not recognized"))
-                    | "input" ->
-                        let name = node |> getAttributeValue "name"
-                        let value = node |> getAttributeValue "value"
-
-                        match name, value with
-                        | Ok name, Ok value -> Ok <| Some(name, value)
-                        | _ -> Error(Logical(Business "Required attribute was not recognized"))
-                    | _ -> Ok None
-
-                )
-                |> Seq.roe
-                |> Result.map (Seq.choose id >> Map.ofSeq))
+                match nodes with
+                | None -> Error(Logical(Business "No nodes found on the start page."))
+                | Some nodes ->
+                    nodes
+                    |> Seq.choose (fun node ->
+                        match node.Name with
+                        | "input" ->
+                            match node |> getAttributeValue "name", node |> getAttributeValue "value" with
+                            | Ok(Some name), Ok(Some value) -> Some(name, value)
+                            | _ -> None
+                        | "img" ->
+                            match node |> getAttributeValue "src" with
+                            | Ok(Some code) when code.Contains("CodeImage") -> Some("CodeImage", code)
+                            | _ -> None
+                        | _ -> None)
+                    |> Map.ofSeq
+                    |> Ok)
+            |> Result.bind (fun result ->
+                match result.IsEmpty with
+                | true -> Error(Logical(Business "No data found on the start page."))
+                | false -> Ok result)

@@ -59,7 +59,11 @@ module Russian =
         |> ResultAsync.wrap (fun client ->
             async {
                 let! startPageRes = getStartPage client queryParams ct
-                return Error(Logical(NotImplemented "getAppointments"))
+
+                return
+                    match startPageRes with
+                    | Error error -> Error error
+                    | Ok data -> Error(Logical(NotImplemented $"{data}"))
             })
 
     let getResponse storage (request: Eas.Domain.Internal.Request) ct =
