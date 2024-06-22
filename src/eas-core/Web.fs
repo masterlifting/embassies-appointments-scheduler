@@ -48,7 +48,7 @@ module Parser =
         open HtmlAgilityPack
         open Infrastructure.Dsl.ActivePatterns
 
-        let private pageHasError (html: HtmlDocument) =
+        let private hasError (html: HtmlDocument) =
             try
                 match html.DocumentNode.SelectSingleNode("//div[@class='error_msg']") with
                 | null -> Ok html
@@ -242,7 +242,7 @@ module Parser =
         let parseStartPage page =
             Web.Parser.Html.load page
             |> Result.mapError Infrastructure
-            |> Result.bind (pageHasError)
+            |> Result.bind (hasError)
             |> Result.bind (getNodes "//input | //img")
             |> Result.bind (fun nodes ->
                 match nodes with
@@ -257,12 +257,12 @@ module Parser =
                             | _ -> None
                         | "img" ->
                             match node |> getAttributeValue "src" with
-                            | Ok(Some code) when code.Contains("CodeImage") -> Some("CodeImage", code)
+                            | Ok(Some code) when code.Contains("CodeImage") -> Some("captcha", code)
                             | _ -> None
                         | _ -> None)
                     |> Map.ofSeq
                     |> Ok)
             |> Result.bind (fun result ->
-                match result.IsEmpty with
-                | true -> Error(Logical(Business "No data found on the start page."))
+                match result.Count < 4 with
+                | true -> Error(Logical(Business "No required data found on the start page."))
                 | false -> Ok result)

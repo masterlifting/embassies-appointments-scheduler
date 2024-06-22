@@ -26,7 +26,8 @@ module Russian =
 
         }
 
-    let private getCaptcha (code: string) queryParams : Async<Result<byte array, ApiError>> =
+    let private getCaptcha captchaUrlPath ct =
+        let urlPath = "/queue/" + captchaUrlPath
         async { return Error(Logical(NotImplemented "getCapcha")) }
 
     let private solveCaptcha (image: byte[]) : Async<Result<string, ApiError>> =
@@ -58,12 +59,13 @@ module Russian =
         Web.Http.create baseUrl
         |> ResultAsync.wrap (fun client ->
             async {
-                let! startPageRes = getStartPage client queryParams ct
-
-                return
-                    match startPageRes with
-                    | Error error -> Error error
-                    | Ok data -> Error(Logical(NotImplemented $"{data}"))
+                match! getStartPage client queryParams ct with
+                | Error error -> return Error error
+                | Ok startPageData ->
+                    match startPageData |> Map.tryFind "captcha" with
+                    | None -> return Error(Infrastructure(InvalidResponse "No captcha found in start page data."))
+                    | Some captchaUrlPath ->
+                        match! getCaptcha captchaUrlPath ct with
             })
 
     let getResponse storage (request: Eas.Domain.Internal.Request) ct =
