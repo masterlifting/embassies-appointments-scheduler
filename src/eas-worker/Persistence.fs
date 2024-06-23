@@ -1,13 +1,14 @@
 module internal Eas.Worker.Persistence
 
 open Infrastructure
+open Infrastructure.Configuration
 open Infrastructure.Domain.Errors
 
 [<Literal>]
 let private sectionName = "Worker"
 
 let private getTasksGraph handlersGraph configuration =
-    Configuration.getSection<Worker.Domain.External.Task> configuration sectionName
+    configuration |> getSection<Worker.Domain.External.Task> sectionName
     |> Option.map (fun graph -> Worker.Mapper.buildCoreGraph graph handlersGraph |> Result.mapError Persistence)
     |> Option.defaultValue (Error(Persistence $"Section '%s{sectionName}' was not found in the configuration."))
 

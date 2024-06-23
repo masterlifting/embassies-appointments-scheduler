@@ -16,22 +16,44 @@ module Russian =
         | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"id=%i{id}&cd=%s{cd}"
 
-    let private getStartPage (client: Web.Http.Client) queryParams (ct: Threading.CancellationToken) =
-        let urlPath = "/queue/orderinfo.aspx?" + queryParams
+    let private solveCaptcha (image: byte[]) ct : Async<Result<string, ApiError>> =
+        Web.Http.create "https://api.anti-captcha.com"
+        |> ResultAsync.wrap (fun client ->
+            async {
+                let body = System.Convert.ToBase64String image
+                let apiKey = Infrastructure.Configuration.getSection<string> "AntiCaptcha"
+                return Error(Logical(NotImplemented "solveCaptcha"))
+            })
 
+    let private getCaptcha captchaUrlPath ct client =
+        let urlPath = "/queue/" + captchaUrlPath
+
+        client
+        |> Web.Http.getBytes urlPath None ct
+        |> ResultAsync.bind' (fun (image, _) -> solveCaptcha image ct)
+
+
+    let private getStartPage queryParams (ct: Threading.CancellationToken) (client: Web.Http.Client) =
+        let urlPath = "/queue/orderinfo.aspx?" + queryParams
         // Web.Http.get client urlPath None ct
         // |> ResultAsync.bind (fun (content, _) -> WebClient.Parser.Html.parseStartPage content)
         async {
-            return WebClient.Parser.Html.parseStartPage WebClient.Parser.Html.test
-
+            match WebClient.Parser.Html.parseStartPage WebClient.Parser.Html.test with
+            | Error error -> return Error error
+            | Ok startPageData ->
+                match startPageData |> Map.tryFind "captcha" with
+                | None -> return Error(Infrastructure(InvalidResponse "No captcha found in start page data."))
+                | Some captchaUrlPath ->
+                    match! client |> getCaptcha captchaUrlPath ct with
+                    | Error error -> return Error error
+                    | Ok captcha ->
+                        return
+                            Ok(
+                                startPageData
+                                |> Map.filter (fun key _ -> key <> "captcha")
+                                |> Map.add "ctl00%24MainContent%24txtCode" captcha
+                            )
         }
-
-    let private getCaptcha captchaUrlPath ct =
-        let urlPath = "/queue/" + captchaUrlPath
-        async { return Error(Logical(NotImplemented "getCapcha")) }
-
-    let private solveCaptcha (image: byte[]) : Async<Result<string, ApiError>> =
-        async { return Error(Logical(NotImplemented "solveCaptcha")) }
 
     let postStartPage
         (data: Map<string, string>)
@@ -53,19 +75,14 @@ module Russian =
 
     let private getKdmidResponse (credentials: Credentials) ct : Async<Result<Domain.Internal.Response, ApiError>> =
         let city, id, cd, ems = credentials.Value
-        let baseUrl = createBaseUrl city
         let queryParams = createQueryParams id cd ems
 
-        Web.Http.create baseUrl
+        Web.Http.create $"https://%s{city}.kdmid.ru"
         |> ResultAsync.wrap (fun client ->
             async {
-                match! getStartPage client queryParams ct with
+                match! client |> getStartPage queryParams ct with
                 | Error error -> return Error error
-                | Ok startPageData ->
-                    match startPageData |> Map.tryFind "captcha" with
-                    | None -> return Error(Infrastructure(InvalidResponse "No captcha found in start page data."))
-                    | Some captchaUrlPath ->
-                        match! getCaptcha captchaUrlPath ct with
+                | Ok startPageData -> return Error(Logical(NotImplemented $"{startPageData}"))
             })
 
     let getResponse storage (request: Eas.Domain.Internal.Request) ct =

@@ -10,7 +10,7 @@ let main _ =
         { Name = workerName
           Handle =
             Some
-            <| fun _ -> async { return Ok <| Success "Embassies Appointments Scheduler is running..." } }
+            <| fun _ _ -> async { return Ok <| Success "Embassies Appointments Scheduler is running..." } }
 
     let handlersGraph =
         Node(
@@ -28,6 +28,7 @@ let main _ =
 
     let getTaskNode = Eas.Worker.Persistence.getTaskNode handlersGraph configuration
 
-    Worker.Core.start <| workerName <| getTaskNode |> Async.RunSynchronously
+    Worker.Core.start <| workerName <| getTaskNode <| configuration
+    |> Async.RunSynchronously
 
     0

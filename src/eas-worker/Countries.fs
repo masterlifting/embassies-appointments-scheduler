@@ -10,7 +10,7 @@ open Persistence.Domain
 
 module Serbia =
     let private createTestRequest =
-        fun ct ->
+        fun _ ct ->
             Persistence.Core.createStorage InMemory
             |> Result.mapError Infrastructure
             |> ResultAsync.wrap (fun storage ->

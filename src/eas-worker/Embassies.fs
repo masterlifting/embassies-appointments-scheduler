@@ -11,7 +11,7 @@ open Persistence.Domain
 module Russian =
 
     let private getAvailableDates country =
-        fun ct ->
+        fun configuration ct ->
             Persistence.Core.createStorage InMemory
             |> Result.mapError Infrastructure
             |> ResultAsync.wrap (fun storage ->
