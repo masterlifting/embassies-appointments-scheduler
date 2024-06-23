@@ -19,7 +19,7 @@ module Internal =
         | "Tirana" -> Ok <| Internal.Tirana
         | "Paris" -> Ok <| Internal.Paris
         | "Rome" -> Ok <| Internal.Rome
-        | _ -> Error <| (Mapping $"City {city.Name} not supported.")
+        | _ -> Error <| (MappingError $"City {city.Name} not supported.")
 
     let toCountry (country: External.Country) : Result<Internal.Country, InfrastructureError> =
         toCity country.City
@@ -30,14 +30,14 @@ module Internal =
             | "Hungary" -> Ok <| Internal.Hungary city
             | "Montenegro" -> Ok <| Internal.Montenegro city
             | "Albania" -> Ok <| Internal.Albania city
-            | _ -> Error <| (Mapping $"Country {country.Name} not supported."))
+            | _ -> Error <| (MappingError $"Country {country.Name} not supported."))
 
     let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, InfrastructureError> =
         toCountry embassy.Country
         |> Result.bind (fun country ->
             match embassy.Name with
             | "Russian" -> Ok <| Internal.Russian country
-            | _ -> Error <| (Mapping $"Embassy {embassy.Name} not supported."))
+            | _ -> Error <| (MappingError $"Embassy {embassy.Name} not supported."))
 
     let toRequest (request: External.Request) : Result<Internal.Request, InfrastructureError> =
         toEmbassy request.Embassy

@@ -12,7 +12,7 @@ module Serbia =
     let private createTestRequest =
         fun _ ct ->
             Persistence.Core.createStorage InMemory
-            |> Result.mapError Infrastructure
+            |> Result.mapError InfrastructureError
             |> ResultAsync.wrap (fun storage ->
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId

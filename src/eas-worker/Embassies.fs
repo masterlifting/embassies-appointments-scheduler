@@ -13,7 +13,7 @@ module Russian =
     let private getAvailableDates country =
         fun configuration ct ->
             Persistence.Core.createStorage InMemory
-            |> Result.mapError Infrastructure
+            |> Result.mapError InfrastructureError
             |> ResultAsync.wrap (fun storage ->
 
                 let filter =
@@ -32,7 +32,7 @@ module Russian =
                     Eas.Persistence.Repository.Command.Request.update storage request ct
 
                 let getResponse request =
-                    Eas.Core.Russian.getResponse storage request ct
+                    Eas.Core.Russian.getResponse configuration request ct
 
                 let tryGetResponse requests =
                     Eas.Core.Russian.tryGetResponse requests updateRequest getResponse

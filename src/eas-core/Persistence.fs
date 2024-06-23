@@ -116,9 +116,9 @@ module private InMemoryRepository =
                             getData<External.Request> context key
                             |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
                             |> Result.map filter
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Query.Request.get"))
+                        | _ -> Error(LogicalError(CancelledError "Query.Request.get"))
                 }
 
             let get' context requestId ct =
@@ -130,9 +130,9 @@ module private InMemoryRepository =
                             getData<External.Request> context key
                             |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
                             |> Result.map (fun requests -> requests |> List.tryFind (fun x -> x.Id = requestId))
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Query.Request.get'"))
+                        | _ -> Error(LogicalError(CancelledError "Query.Request.get'"))
                 }
 
         module Response =
@@ -162,9 +162,9 @@ module private InMemoryRepository =
                             getData<External.Response> context key
                             |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
                             |> Result.map filter
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Query.Response.get"))
+                        | _ -> Error(LogicalError(CancelledError "Query.Response.get"))
                 }
 
             let get' context responseId ct =
@@ -176,9 +176,9 @@ module private InMemoryRepository =
                             getData<External.Response> context key
                             |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
                             |> Result.map (fun responses -> responses |> List.tryFind (fun x -> x.Id = responseId))
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Query.Response.get'"))
+                        | _ -> Error(LogicalError(CancelledError "Query.Response.get'"))
                 }
 
     module Command =
@@ -197,12 +197,12 @@ module private InMemoryRepository =
 
             let private create (requests: External.Request array) (request: Internal.Request) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
-                | Some _ -> Error(Persistence $"Request {request.Id} already exists.")
+                | Some _ -> Error(PersistenceError $"Request {request.Id} already exists.")
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
             let private update (requests: External.Request array) (request: Internal.Request) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error(Persistence $"Request {request.Id} not found to update.")
+                | None -> Error(PersistenceError $"Request {request.Id} not found to update.")
                 | Some index ->
                     Ok(
                         requests
@@ -211,7 +211,7 @@ module private InMemoryRepository =
 
             let private delete (requests: External.Request array) (request: Internal.Request) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error(Persistence $"Request {request.Id} not found to delete.")
+                | None -> Error(PersistenceError $"Request {request.Id} not found to delete.")
                 | Some index -> Ok(requests |> Array.removeAt index)
 
             let execute context command ct =
@@ -228,21 +228,21 @@ module private InMemoryRepository =
                                 | Command.Request.Update request -> update requests request
                                 | Command.Request.Delete request -> delete requests request)
                             |> Result.bind (fun requests -> save context key requests)
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Command.Request.execute"))
+                        | _ -> Error(LogicalError(CancelledError "Command.Request.execute"))
                 }
 
         module Response =
 
             let private create (responses: External.Response array) (response: Internal.Response) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
-                | Some _ -> Error(Persistence $"Response {response.Id} already exists.")
+                | Some _ -> Error(PersistenceError $"Response {response.Id} already exists.")
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
             let private update (responses: External.Response array) (response: Internal.Response) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error(Persistence $"Response {response.Id} not found to update.")
+                | None -> Error(PersistenceError $"Response {response.Id} not found to update.")
                 | Some index ->
                     Ok(
                         responses
@@ -251,7 +251,7 @@ module private InMemoryRepository =
 
             let private delete (responses: External.Response array) (response: Internal.Response) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error(Persistence $"Response {response.Id} not found to delete.")
+                | None -> Error(PersistenceError $"Response {response.Id} not found to delete.")
                 | Some index -> Ok(responses |> Array.removeAt index)
 
             let execute context command ct =
@@ -268,9 +268,9 @@ module private InMemoryRepository =
                                 | Command.Response.Update response -> update responses response
                                 | Command.Response.Delete response -> delete responses response)
                             |> Result.bind (fun responses -> save context key responses)
-                            |> Result.mapError Infrastructure
+                            |> Result.mapError InfrastructureError
 
-                        | _ -> Error(Logical(Cancelled "Command.Response.execute"))
+                        | _ -> Error(LogicalError(CancelledError "Command.Response.execute"))
                 }
 
 module Repository =
@@ -291,24 +291,24 @@ module Repository =
             let get storage filter ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Request.get context filter ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
             let get' storage requestId ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Request.get' context requestId ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
         module Response =
 
             let get storage filter ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Response.get context filter ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
             let get' storage responseId ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Query.Response.get' context responseId ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
     module Command =
 
@@ -317,7 +317,7 @@ module Repository =
             let private execute storage command ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Command.Request.execute context command ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
             let create storage request ct =
                 execute storage (Command.Request.Create request) ct
@@ -333,7 +333,7 @@ module Repository =
             let private execute storage command ct =
                 match storage with
                 | InMemoryContext context -> InMemoryRepository.Command.Response.execute context command ct
-                | _ -> async { return Error(Logical(NotSupported $"Storage {storage}")) }
+                | _ -> async { return Error(LogicalError(NotSupportedError $"Storage {storage}")) }
 
             let create storage response ct =
                 execute storage (Command.Response.Create response) ct

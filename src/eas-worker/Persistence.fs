@@ -9,8 +9,8 @@ let private sectionName = "Worker"
 
 let private getTasksGraph handlersGraph configuration =
     configuration |> getSection<Worker.Domain.External.Task> sectionName
-    |> Option.map (fun graph -> Worker.Mapper.buildCoreGraph graph handlersGraph |> Result.mapError Persistence)
-    |> Option.defaultValue (Error(Persistence $"Section '%s{sectionName}' was not found in the configuration."))
+    |> Option.map (fun graph -> Worker.Mapper.buildCoreGraph graph handlersGraph |> Result.mapError PersistenceError)
+    |> Option.defaultValue (Error(PersistenceError $"Section '%s{sectionName}' was not found in the configuration."))
 
 let getTaskNode handlersGraph configuration =
     fun taskName ->
@@ -22,7 +22,7 @@ let getTaskNode handlersGraph configuration =
                     |> Option.map Ok
                     |> Option.defaultValue (
                         Error(
-                            Persistence
+                            PersistenceError
                                 $"Task '%s{taskName}' was not found in the section '%s{sectionName}' of the configuration."
                         )
                     ))

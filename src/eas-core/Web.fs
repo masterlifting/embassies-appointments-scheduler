@@ -13,10 +13,10 @@ module Parser =
                 | null -> Ok html
                 | error ->
                     match error.InnerText with
-                    | IsString msg -> Error(Logical(Business msg))
+                    | IsString msg -> Error(LogicalError(BusinessError msg))
                     | _ -> Ok html
             with ex ->
-                Error(Infrastructure(Parsing ex.Message))
+                Error(InfrastructureError(ParsingError ex.Message))
 
         let private getNode (xpath: string) (html: HtmlDocument) =
             try
@@ -24,7 +24,7 @@ module Parser =
                 | null -> Ok None
                 | node -> Ok <| Some node
             with ex ->
-                Error(Infrastructure(Parsing ex.Message))
+                Error(InfrastructureError(ParsingError ex.Message))
 
         let private getNodes (xpath: string) (html: HtmlDocument) =
             try
@@ -32,7 +32,7 @@ module Parser =
                 | null -> Ok None
                 | nodes -> Ok <| Some nodes
             with ex ->
-                Error(Infrastructure(Parsing ex.Message))
+                Error(InfrastructureError(ParsingError ex.Message))
 
         let private getAttributeValue (attribute: string) (node: HtmlNode) =
             try
@@ -40,7 +40,7 @@ module Parser =
                 | "" -> Ok None
                 | value -> Ok <| Some value
             with ex ->
-                Error(Infrastructure(Parsing ex.Message))
+                Error(InfrastructureError(ParsingError ex.Message))
 
         let test =
             """
@@ -200,12 +200,12 @@ module Parser =
 
         let parseStartPage page =
             Web.Parser.Html.load page
-            |> Result.mapError Infrastructure
+            |> Result.mapError InfrastructureError
             |> Result.bind (hasError)
             |> Result.bind (getNodes "//input | //img")
             |> Result.bind (fun nodes ->
                 match nodes with
-                | None -> Error(Logical(Business "No nodes found on the start page."))
+                | None -> Error(LogicalError(BusinessError "No nodes found on the start page."))
                 | Some nodes ->
                     nodes
                     |> Seq.choose (fun node ->
@@ -223,5 +223,5 @@ module Parser =
                     |> Ok)
             |> Result.bind (fun result ->
                 match result.Count < 4 with
-                | true -> Error(Logical(Business "No required data found on the start page."))
+                | true -> Error(LogicalError(BusinessError "No required data found on the start page."))
                 | false -> Ok result)
