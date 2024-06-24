@@ -2,7 +2,6 @@
 
 open Infrastructure.Dsl
 open Infrastructure.Domain.Graph
-open Infrastructure.Domain.Errors
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence.Filter
@@ -13,7 +12,6 @@ module Russian =
     let private getAvailableDates country =
         fun configuration ct ->
             Persistence.Core.createStorage InMemory
-            |> Result.mapError InfrastructureError
             |> ResultAsync.wrap (fun storage ->
 
                 let filter =
@@ -53,8 +51,7 @@ module Russian =
 
     let createNode country =
         Node(
-            { Name = "Russian"
-              Handle = None },
+            { Name = "Russian"; Handle = None },
             [ Node(
                   { Name = "Look for appointments"
                     Handle = Some <| getAvailableDates country },

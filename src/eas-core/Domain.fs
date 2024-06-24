@@ -81,7 +81,7 @@ module Internal =
     module Embassies =
 
         module Russian =
-            open Web.Http
+            open Web.Client.Http
             open Infrastructure.Dsl.ActivePatterns
             open Infrastructure.Domain.Errors
 
@@ -115,7 +115,7 @@ module Internal =
                 |> toUri
                 |> Result.bind (fun uri ->
                     match uri.Host.Split('.') with
-                    | hostParts when hostParts.Length < 3 -> Error(ParsingError $"City is not recognized {url}.")
+                    | hostParts when hostParts.Length < 3 -> Error(Parsing $"City is not recognized {url}.")
                     | hostParts ->
                         uri
                         |> toQueryParams
@@ -171,7 +171,7 @@ module Internal =
                                     |> List.choose Operators.id
                                     |> List.fold (fun acc error -> $"{acc},{error}") ""
 
-                                Error(ParsingError $"Invalid parameters in {url}.{errors}.")))
+                                Error(Parsing $"Invalid parameters in {url}.{errors}.")))
 
 module External =
 

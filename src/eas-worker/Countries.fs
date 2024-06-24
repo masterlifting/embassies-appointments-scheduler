@@ -2,7 +2,6 @@
 
 open Infrastructure.Domain.Graph
 open Infrastructure.Dsl
-open Infrastructure.Domain.Errors
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence
@@ -12,7 +11,6 @@ module Serbia =
     let private createTestRequest =
         fun _ ct ->
             Persistence.Core.createStorage InMemory
-            |> Result.mapError InfrastructureError
             |> ResultAsync.wrap (fun storage ->
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId

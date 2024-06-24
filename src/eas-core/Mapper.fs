@@ -10,7 +10,7 @@ module Internal =
         { Id = Internal.UserId user.Id
           Name = user.Name }
 
-    let toCity (city: External.City) : Result<Internal.City, InfrastructureError> =
+    let toCity (city: External.City) : Result<Internal.City, ErrorType> =
         match city.Name with
         | "Belgrade" -> Ok <| Internal.Belgrade
         | "Sarajevo" -> Ok <| Internal.Sarajevo
@@ -19,9 +19,9 @@ module Internal =
         | "Tirana" -> Ok <| Internal.Tirana
         | "Paris" -> Ok <| Internal.Paris
         | "Rome" -> Ok <| Internal.Rome
-        | _ -> Error <| (MappingError $"City {city.Name} not supported.")
+        | _ -> Error <| (Mapping $"City {city.Name} not supported.")
 
-    let toCountry (country: External.Country) : Result<Internal.Country, InfrastructureError> =
+    let toCountry (country: External.Country) : Result<Internal.Country, ErrorType> =
         toCity country.City
         |> Result.bind (fun city ->
             match country.Name with
@@ -30,16 +30,16 @@ module Internal =
             | "Hungary" -> Ok <| Internal.Hungary city
             | "Montenegro" -> Ok <| Internal.Montenegro city
             | "Albania" -> Ok <| Internal.Albania city
-            | _ -> Error <| (MappingError $"Country {country.Name} not supported."))
+            | _ -> Error <| (Mapping $"Country {country.Name} not supported."))
 
-    let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, InfrastructureError> =
+    let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, ErrorType> =
         toCountry embassy.Country
         |> Result.bind (fun country ->
             match embassy.Name with
             | "Russian" -> Ok <| Internal.Russian country
-            | _ -> Error <| (MappingError $"Embassy {embassy.Name} not supported."))
+            | _ -> Error <| (Mapping $"Embassy {embassy.Name} not supported."))
 
-    let toRequest (request: External.Request) : Result<Internal.Request, InfrastructureError> =
+    let toRequest (request: External.Request) : Result<Internal.Request, ErrorType> =
         toEmbassy request.Embassy
         |> Result.bind (fun embassy ->
             Ok
@@ -55,7 +55,7 @@ module Internal =
           Time = TimeOnly.FromDateTime(appointment.DateTime)
           Description = appointment.Description }
 
-    let toResponse (response: External.Response) : Result<Internal.Response, InfrastructureError> =
+    let toResponse (response: External.Response) : Result<Internal.Response, ErrorType> =
         toRequest response.Request
         |> Result.bind (fun request ->
             Ok
