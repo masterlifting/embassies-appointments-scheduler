@@ -10,7 +10,7 @@ module Internal =
         { Id = Internal.UserId user.Id
           Name = user.Name }
 
-    let toCity (city: External.City) : Result<Internal.City, ErrorType> =
+    let toCity (city: External.City) : Result<Internal.City, Error'> =
         match city.Name with
         | "Belgrade" -> Ok <| Internal.Belgrade
         | "Sarajevo" -> Ok <| Internal.Sarajevo
@@ -19,9 +19,9 @@ module Internal =
         | "Tirana" -> Ok <| Internal.Tirana
         | "Paris" -> Ok <| Internal.Paris
         | "Rome" -> Ok <| Internal.Rome
-        | _ -> Error <| (Mapping $"City {city.Name} not supported.")
+        | _ -> Error <| Mapping $"City {city.Name} not supported."
 
-    let toCountry (country: External.Country) : Result<Internal.Country, ErrorType> =
+    let toCountry (country: External.Country) : Result<Internal.Country, Error'> =
         toCity country.City
         |> Result.bind (fun city ->
             match country.Name with
@@ -30,24 +30,23 @@ module Internal =
             | "Hungary" -> Ok <| Internal.Hungary city
             | "Montenegro" -> Ok <| Internal.Montenegro city
             | "Albania" -> Ok <| Internal.Albania city
-            | _ -> Error <| (Mapping $"Country {country.Name} not supported."))
+            | _ -> Error <| Mapping $"Country {country.Name} not supported.")
 
-    let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, ErrorType> =
+    let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, Error'> =
         toCountry embassy.Country
         |> Result.bind (fun country ->
             match embassy.Name with
             | "Russian" -> Ok <| Internal.Russian country
-            | _ -> Error <| (Mapping $"Embassy {embassy.Name} not supported."))
+            | _ -> Error <| Mapping $"Embassy {embassy.Name} not supported.")
 
-    let toRequest (request: External.Request) : Result<Internal.Request, ErrorType> =
+    let toRequest (request: External.Request) : Result<Internal.Request, Error'> =
         toEmbassy request.Embassy
-        |> Result.bind (fun embassy ->
-            Ok
-                { Id = Internal.RequestId request.Id
-                  User = toUser request.User
-                  Embassy = embassy
-                  Data = request.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
-                  Modified = request.Modified })
+        |> Result.map (fun embassy ->
+            { Id = Internal.RequestId request.Id
+              User = toUser request.User
+              Embassy = embassy
+              Data = request.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
+              Modified = request.Modified })
 
     let toAppointment (appointment: External.Appointment) : Internal.Appointment =
         { Id = Internal.AppointementId appointment.Id
@@ -55,24 +54,23 @@ module Internal =
           Time = TimeOnly.FromDateTime(appointment.DateTime)
           Description = appointment.Description }
 
-    let toResponse (response: External.Response) : Result<Internal.Response, ErrorType> =
+    let toResponse (response: External.Response) : Result<Internal.Response, Error'> =
         toRequest response.Request
-        |> Result.bind (fun request ->
-            Ok
-                { Id = Internal.ResponseId response.Id
-                  Request = request
-                  Appointments = response.Appointments |> Array.map toAppointment |> set
-                  Data = response.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
-                  Modified = response.Modified })
+        |> Result.map (fun request ->
+            { Id = Internal.ResponseId response.Id
+              Request = request
+              Appointments = response.Appointments |> Array.map toAppointment |> set
+              Data = response.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
+              Modified = response.Modified })
 
 module External =
 
     let toUser (user: Internal.User) : External.User =
         let result = new External.User()
-        
+
         result.Id <- user.Id.Value
         result.Name <- user.Name
-        
+
         result
 
     let toCity (city: Internal.City) : External.City =
@@ -103,7 +101,7 @@ module External =
 
         result.Name <- countryName
         result.City <- toCity city
-        
+
         result
 
     let toEmbassy (embassy: Internal.Embassy) : External.Embassy =
@@ -120,7 +118,7 @@ module External =
 
         result.Name <- embassyName
         result.Country <- toCountry country
-        
+
         result
 
     let toRequest (request: Internal.Request) : External.Request =
@@ -152,7 +150,7 @@ module External =
         result.Id <- appointment.Id.Value
         result.DateTime <- appointment.Date.ToDateTime(appointment.Time)
         result.Description <- appointment.Description
-        
+
         result
 
     let toResponse (response: Internal.Response) : External.Response =

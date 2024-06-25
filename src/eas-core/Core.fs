@@ -83,17 +83,17 @@ module Russian =
         (data: Map<string, string>)
         (captcha: string)
         queryParams
-        : Async<Result<Map<string, string>, ErrorType>> =
+        : Async<Result<Map<string, string>, Error'>> =
         async { return Error <| NotImplemented "postStartPage" }
 
     let private postCalendarPage
         (data: Map<string, string>)
         queryParams
-        : Async<Result<(Map<string, string> * Set<Appointment>), ErrorType>> =
+        : Async<Result<(Map<string, string> * Set<Appointment>), Error'>> =
         //getStartPage baseUrl urlParams
         async { return Error <| NotImplemented "getCalendarPage" }
 
-    let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, ErrorType>> =
+    let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
 
