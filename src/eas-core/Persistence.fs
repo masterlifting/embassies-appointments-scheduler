@@ -77,18 +77,18 @@ module private InMemoryRepository =
             |> match pagination.SortBy with
                | Asc sortBy ->
                    match sortBy with
-                   | Date sortBy -> List.sortBy (sortBy)
-                   | String sortBy -> List.sortBy (sortBy)
-                   | Int sortBy -> List.sortBy (sortBy)
-                   | Bool sortBy -> List.sortBy (sortBy)
-                   | Guid sortBy -> List.sortBy (sortBy)
+                   | Date sort -> List.sortBy <| sort
+                   | String sort -> List.sortBy <| sort
+                   | Int sort -> List.sortBy <| sort
+                   | Bool sort -> List.sortBy <| sort
+                   | Guid sort -> List.sortBy <| sort
                | Desc sortBy ->
                    match sortBy with
-                   | Date sortBy -> List.sortByDescending (sortBy)
-                   | String sortBy -> List.sortByDescending (sortBy)
-                   | Int sortBy -> List.sortByDescending (sortBy)
-                   | Bool sortBy -> List.sortByDescending (sortBy)
-                   | Guid sortBy -> List.sortByDescending (sortBy)
+                   | Date sort -> List.sortByDescending <| sort
+                   | String sort -> List.sortByDescending <| sort
+                   | Int sort -> List.sortByDescending <| sort
+                   | Bool sort -> List.sortByDescending <| sort
+                   | Guid sort -> List.sortByDescending <| sort
             |> List.skip (pagination.PageSize * (pagination.Page - 1))
             |> List.truncate pagination.PageSize
 
@@ -127,7 +127,7 @@ module private InMemoryRepository =
 
                             getData<External.Request> context key
                             |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
-                            |> Result.map (fun requests -> requests |> List.tryFind (fun x -> x.Id = requestId))
+                            |> Result.map (List.tryFind (fun x -> x.Id = requestId))
                         | _ -> Error <| Cancelled "Query.Request.get'"
                 }
 
@@ -170,7 +170,7 @@ module private InMemoryRepository =
 
                             getData<External.Response> context key
                             |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
-                            |> Result.map (fun responses -> responses |> List.tryFind (fun x -> x.Id = responseId))
+                            |> Result.map (List.tryFind (fun x -> x.Id = responseId))
                         | _ -> Error <| Cancelled "Query.Response.get'"
                 }
 
@@ -178,13 +178,9 @@ module private InMemoryRepository =
 
         let private save<'a> context key (data: 'a array) =
             if data.Length = 1 then
-                data
-                |> Json.serialize
-                |> Result.bind (fun value -> InMemory.add context key value)
+                data |> Json.serialize |> Result.bind (InMemory.add context key)
             else
-                data
-                |> Json.serialize
-                |> Result.bind (fun value -> InMemory.update context key value)
+                data |> Json.serialize |> Result.bind (InMemory.update context key)
 
         module Request =
 
@@ -220,7 +216,7 @@ module private InMemoryRepository =
                                 | Command.Request.Create request -> create requests request
                                 | Command.Request.Update request -> update requests request
                                 | Command.Request.Delete request -> delete requests request)
-                            |> Result.bind (fun requests -> save context key requests)
+                            |> Result.bind (save context key)
                         | _ -> Error <| Cancelled "Command.Request.execute"
                 }
 

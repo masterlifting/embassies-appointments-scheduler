@@ -9,7 +9,8 @@ open Eas.Domain.Internal
 module Russian =
     open Embassies.Russian
 
-    let private createBaseUrl city = $"https://%s{city}.kdmid.ru"
+    let private createKdmidHttpClient city =
+        Web.Client.Http.create $"https://%s{city}.kdmid.ru" None
 
     let private createQueryParams id cd ems =
         match ems with
@@ -102,7 +103,7 @@ module Russian =
             let city, id, cd, ems = credentials.Value
             let queryParams = createQueryParams id cd ems
 
-            Web.Client.Http.create $"https://%s{city}.kdmid.ru" None
+            createKdmidHttpClient city
             |> ResultAsync.wrap (fun client ->
                 async {
                     let getStartPage = client |> getStartPage configuration
