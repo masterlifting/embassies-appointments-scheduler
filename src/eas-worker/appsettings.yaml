@@ -15,10 +15,9 @@ Worker:
             - Name: Russian
               Parallel: true
               Recursively: true
-              Duration: 00:00:10
               Steps:
                 - Name: Look for appointments
-                  Duration: 00:00:05
+                  Duration: 00:03:00
                 - Name: Notify users
                   Schedule:
                     IsEnabled: true
