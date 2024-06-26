@@ -1,7 +1,7 @@
 module Eas.Core
 
 open System
-open Infrastructure.Configuration
+open Infrastructure
 open Infrastructure.Dsl
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
@@ -22,22 +22,23 @@ module Russian =
             Web.Client.Http.create "https://api.anti-captcha.com" None
             |> ResultAsync.wrap (fun client ->
                 async {
-                    match configuration |> getSection<string> "AntiCaptchaKey" with
-                    | None -> return Error <| Configuration "No AntiCaptchaKey found."
-                    | Some key ->
+                    match Configuration.getEnvVar "AntiCaptchaKey" with
+                    | Error error -> return Error error
+                    | Ok None -> return Error <| Configuration "No AntiCaptcha key found in environment variables."
+                    | Ok(Some key) ->
                         let body = System.Convert.ToBase64String image
 
                         let data =
-                            {| clientKey = key
-                               task =
-                                {| type' = "ImageToTextTask"
-                                   body = $"%s{body}"
-                                   phrase = false
-                                   case = false
-                                   numeric = 0
-                                   math = 0
-                                   minLength = 0
-                                   maxLength = 0 |} |}
+                            {| ClientKey = key
+                               Task =
+                                {| Type = "ImageToTextTask"
+                                   Body = body
+                                   Phrase = false
+                                   Case = false
+                                   Numeric = 0
+                                   Math = 0
+                                   MinLength = 0
+                                   MaxLength = 0 |} |}
 
                         let data =
                             Map.ofList
