@@ -366,9 +366,9 @@ module Parser =
                     )
             }
 
-        let parseStartPage page =
+        let parseStartPageRequest page =
             Web.Parser.Html.load page
-            |> Result.bind (hasError)
+            |> Result.bind hasError
             |> Result.bind (getNodes "//input | //img")
             |> Result.bind (fun nodes ->
                 match nodes with
@@ -390,5 +390,25 @@ module Parser =
                     |> Ok)
             |> Result.bind (fun result ->
                 match result.Count < 4 with
-                | true -> Error <| Business "No required data found on the start page."
+                | true -> Error <| Business "No required data found on the start page request."
+                | false -> Ok result)
+            
+        let parseStartPageResponse page =
+            Web.Parser.Html.load page
+            |> Result.bind hasError
+            |> Result.bind (getNodes "//input")
+            |> Result.bind (fun nodes ->
+                match nodes with
+                | None -> Error <| Business "No nodes found on the start page."
+                | Some nodes ->
+                    nodes
+                    |> Seq.choose (fun node ->
+                        match node |> getAttributeValue "name", node |> getAttributeValue "value" with
+                        | Ok(Some name), Ok(Some value) -> Some(name, value)
+                        | _ -> None)
+                    |> Map.ofSeq
+                    |> Ok)
+            |> Result.bind (fun result ->
+                match result.Count < 4 with
+                | true -> Error <| Business "No required data found on the start page response."
                 | false -> Ok result)

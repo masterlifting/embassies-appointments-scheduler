@@ -33,7 +33,7 @@ module Russian =
     let private buildFormData (data: Map<string, string>) =
         data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
 
-    let private getStartPageFormData queryParams ct client =
+    let private getStartPageRequestFormData queryParams ct client =
         let request =
             { Path = "/queue/OrderInfo.aspx?" + queryParams
               Headers = None }
@@ -43,12 +43,15 @@ module Russian =
         WebClient.Parser.Html.fakeStartPageRequest ()
         |> ResultAsync.bind' (fun (content, _) ->
             async {
-                match WebClient.Parser.Html.parseStartPage content with
+                match WebClient.Parser.Html.parseStartPageRequest content with
                 | Error error -> return Error error
                 | Ok pageData ->
                     match pageData |> Map.tryFind "captcha" with
                     | None -> return Error <| Web "No captcha data found in start page data."
                     | Some urlPath ->
+                        Logging.Log.warning $"Captcha found: %s{urlPath}"
+                        do! Async.Sleep 10000
+                        Logging.Log.warning "Captcha solved"
                         match! client |> getCaptcha urlPath ct with
                         | Error error -> return Error error
                         | Ok captcha ->
@@ -61,22 +64,23 @@ module Russian =
                                 )
             })
 
-    let postStartPage formData queryParams ct client : Async<Result<Map<string, string>, Error'>> =
-        async {
-            let request =
-                { Path = "/queue/OrderInfo.aspx?" + queryParams
-                  Headers = None }
+    let getStartPageResponseFormData formData queryParams ct client =
+        let request =
+            { Path = "/queue/OrderInfo.aspx?" + queryParams
+              Headers = None }
 
-            let content =
-                String
-                    {| Content = formData
-                       Encoding = Text.Encoding.ASCII
-                       MediaType = "application/x-www-form-urlencoded" |}
+        let content =
+            String
+                {| Content = formData
+                   Encoding = Text.Encoding.ASCII
+                   MediaType = "application/x-www-form-urlencoded" |}
 
-            let! response = client |> Http.post request content ct
-
-            return Error <| NotImplemented "postStartPage"
-        }
+        //client |> Http.post request content ct
+        WebClient.Parser.Html.fakeStartPageResponse ()
+        |> ResultAsync.bind (fun (content, _) ->
+            match WebClient.Parser.Html.parseStartPageResponse content with
+            | Error error -> Error error
+            | Ok pageData -> Ok(pageData |> buildFormData))
 
     let private postCalendarPage
         (data: Map<string, string>)
@@ -96,11 +100,12 @@ module Russian =
             createKdmidHttpClient city
             |> ResultAsync.wrap (fun client ->
                 async {
-                    match! client |> getStartPageFormData queryParams ct with
+                    match! client |> getStartPageRequestFormData queryParams ct with
                     | Error error -> return Error error
                     | Ok startPageFormData ->
-                        let! postStartPage = postStartPage startPageFormData queryParams ct client
-                        return Error <| NotImplemented $"{startPageFormData}"
+                        match!  client |> getStartPageResponseFormData startPageFormData queryParams ct with
+                        | Error error -> return Error error
+                        | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
                 })
 
     let getResponse configuration =
