@@ -1,10 +1,7 @@
 module Eas.Core
 
 open System
-open Infrastructure
 open Infrastructure.Dsl
-open Infrastructure.Dsl.ActivePatterns
-open Infrastructure.Dsl.SerDe
 open Infrastructure.Domain.Errors
 open Web.Domain.Http
 open Web.Client
@@ -12,6 +9,7 @@ open Eas.Domain.Internal
 
 module Russian =
     open Embassies.Russian
+    open Web.Client.Http.Captcha
 
     let private createKdmidHttpClient city =
         Http.create $"https://%s{city}.kdmid.ru" None
@@ -28,7 +26,7 @@ module Russian =
 
         client
         |> Http.get' request ct
-        |> ResultAsync.bind' (fun (image, _) -> Http.Captcha.AntiCaptcha.solveInt image ct)
+        |> ResultAsync.bind' (fun (image, _) -> image |> AntiCaptcha.solveToInt ct)
 
     let private buildFormData (data: Map<string, string>) =
         data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
@@ -68,7 +66,7 @@ module Russian =
 
         let content =
             String
-                {| Content = formData
+                {| Data = formData
                    Encoding = Text.Encoding.ASCII
                    MediaType = "application/x-www-form-urlencoded" |}
 
@@ -90,7 +88,7 @@ module Russian =
         async { return Error <| NotImplemented "postConfirmation" }
 
     let private getKdmidResponse configuration =
-        fun (credentials: Credentials) ct ->
+        fun ct (credentials: Credentials) ->
             let city, id, cd, ems = credentials.Value
             let queryParams = createQueryParams id cd ems
 
@@ -106,17 +104,18 @@ module Russian =
                 })
 
     let getResponse configuration =
+        let inline toResponseResult response =
+            match response with
+            | response when response.Appointments.IsEmpty -> None
+            | response -> Some response
+
         fun (request: Request) ct ->
             match request.Data |> Map.tryFind "url" with
             | None -> async { return Error <| Web "No url found in requests data." }
             | Some url ->
                 createCredentials url
-                |> ResultAsync.wrap (fun credentials ->
-                    getKdmidResponse configuration credentials ct
-                    |> ResultAsync.map (fun response ->
-                        match response with
-                        | response when response.Appointments.IsEmpty -> None
-                        | response -> Some response))
+                |> ResultAsync.wrap (getKdmidResponse configuration ct)
+                |> ResultAsync.map toResponseResult
 
     let tryGetResponse requests updateRequest getResponse =
 
