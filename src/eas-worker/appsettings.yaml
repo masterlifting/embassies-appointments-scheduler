@@ -2,7 +2,7 @@
 
 Logging:
   LogLevel:
-    Default: Debug
+    Default: Information
 
 Worker:
   Name: Scheduler
@@ -24,7 +24,7 @@ Worker:
                     Delay: 00:00:05
               Schedule:
                 IsEnabled: true
-                Limit: 2
+                Limit: 5
                 Workdays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true

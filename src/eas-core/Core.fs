@@ -49,9 +49,6 @@ module Russian =
                     match pageData |> Map.tryFind "captcha" with
                     | None -> return Error <| Web "No captcha data found in start page data."
                     | Some urlPath ->
-                        Logging.Log.warning $"Captcha found: %s{urlPath}"
-                        do! Async.Sleep 10000
-                        Logging.Log.warning "Captcha solved"
                         match! client |> getCaptcha urlPath ct with
                         | Error error -> return Error error
                         | Ok captcha ->
@@ -103,7 +100,7 @@ module Russian =
                     match! client |> getStartPageRequestFormData queryParams ct with
                     | Error error -> return Error error
                     | Ok startPageFormData ->
-                        match!  client |> getStartPageResponseFormData startPageFormData queryParams ct with
+                        match! client |> getStartPageResponseFormData startPageFormData queryParams ct with
                         | Error error -> return Error error
                         | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
                 })
