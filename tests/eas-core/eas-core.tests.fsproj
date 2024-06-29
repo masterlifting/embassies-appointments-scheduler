@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\eas-core\eas-core.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="Core.fs" />
+      <Compile Include="Program.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Expecto" Version="10.2.1" />
+    </ItemGroup>
+
+</Project>
