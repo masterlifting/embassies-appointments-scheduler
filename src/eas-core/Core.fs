@@ -19,47 +19,39 @@ module Russian =
         | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"id=%i{id}&cd=%s{cd}"
 
-    let private getCaptcha urlPath ct client =
+    let private solveCaptcha urlPath ct httpClient =
         let request =
             { Path = $"/queue/{urlPath}"
               Headers = None }
 
-        client
-        |> Http.get' request ct
-        |> ResultAsync.bind' (fun (image, _) -> image |> AntiCaptcha.solveToInt ct)
+        httpClient
+        |> Http.Request.Get.bytes request ct
+        |> ResultAsync.bind' (AntiCaptcha.solveToInt ct)
 
     let private buildFormData (data: Map<string, string>) =
         data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
 
-    let private getStartPageRequestFormData queryParams ct client =
+    let private getStartPageData queryParams ct httpClient =
         let request =
             { Path = "/queue/OrderInfo.aspx?" + queryParams
               Headers = None }
 
+        //httpClient |> Http.Request.Get.string request ct
+        WebClient.Parser.Html.fakeStartPageResponse ()
+        |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
+        |> ResultAsync.bind' (fun startPage ->
+            match startPage |> Map.tryFind "captcha" with
+            | None -> async { return Error <| NotFound "Captcha data for Kdmid request." }
+            | Some urlPath ->
+                httpClient
+                |> solveCaptcha urlPath ct
+                |> ResultAsync.map' (fun captcha ->
+                    startPage
+                    |> Map.filter (fun key _ -> key <> "captcha")
+                    |> Map.add "ctl00%24MainContent%24txtCode" (captcha |> string)
+                    |> buildFormData))
 
-        //client |> Http.get request ct
-        WebClient.Parser.Html.fakeStartPageRequest ()
-        |> ResultAsync.bind' (fun (content, _) ->
-            async {
-                match WebClient.Parser.Html.parseStartPageRequest content with
-                | Error error -> return Error error
-                | Ok pageData ->
-                    match pageData |> Map.tryFind "captcha" with
-                    | None -> return Error <| Web "No captcha data found in start page data."
-                    | Some urlPath ->
-                        match! client |> getCaptcha urlPath ct with
-                        | Error error -> return Error error
-                        | Ok captcha ->
-                            return
-                                Ok(
-                                    pageData
-                                    |> Map.filter (fun key _ -> key <> "captcha")
-                                    |> Map.add "ctl00%24MainContent%24txtCode" (captcha |> string)
-                                    |> buildFormData
-                                )
-            })
-
-    let getStartPageResponseFormData formData queryParams ct client =
+    let private getValidationPageData formData queryParams ct httpClient =
         let request =
             { Path = "/queue/OrderInfo.aspx?" + queryParams
               Headers = None }
@@ -70,12 +62,10 @@ module Russian =
                    Encoding = Text.Encoding.ASCII
                    MediaType = "application/x-www-form-urlencoded" |}
 
-        //client |> Http.post request content ct
-        WebClient.Parser.Html.fakeStartPageResponse ()
-        |> ResultAsync.bind (fun (content, _) ->
-            match WebClient.Parser.Html.parseStartPageResponse content with
-            | Error error -> Error error
-            | Ok pageData -> Ok(pageData |> buildFormData))
+        //httpClient |> Http.Request.Post.waitString request content ct
+        WebClient.Parser.Html.fakeValidationPageValidResponse ()
+        |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
+        |> ResultAsync.map' buildFormData
 
     let private postCalendarPage
         (data: Map<string, string>)
@@ -93,12 +83,12 @@ module Russian =
             let queryParams = createQueryParams id cd ems
 
             createKdmidHttpClient city
-            |> ResultAsync.wrap (fun client ->
+            |> ResultAsync.wrap (fun httpClient ->
                 async {
-                    match! client |> getStartPageRequestFormData queryParams ct with
+                    match! httpClient |> getStartPageData queryParams ct with
                     | Error error -> return Error error
-                    | Ok startPageFormData ->
-                        match! client |> getStartPageResponseFormData startPageFormData queryParams ct with
+                    | Ok startPageData ->
+                        match! httpClient |> getValidationPageData startPageData queryParams ct with
                         | Error error -> return Error error
                         | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
                 })
@@ -111,7 +101,7 @@ module Russian =
 
         fun (request: Request) ct ->
             match request.Data |> Map.tryFind "url" with
-            | None -> async { return Error <| Web "No url found in requests data." }
+            | None -> async { return Error <| NotFound "Url for Kdmid request." }
             | Some url ->
                 createCredentials url
                 |> ResultAsync.wrap (getKdmidResponse configuration ct)
@@ -135,7 +125,7 @@ module Russian =
 
                     match! updateRequest request with
                     | Error error -> return Error error
-                    | Ok _ ->
+                    | _ ->
                         match! getResponse request with
                         | Error error -> return! innerLoop requestsTail (Some error)
                         | response -> return response
