@@ -11,6 +11,28 @@ module Russian =
     open Web.Client
     open Eas.Persistence
 
+    let private getRequest country ct storage =
+        let filter =
+            Request.ByEmbassy(
+                { Pagination =
+                    { Page = 1
+                      PageSize = 5
+                      SortBy = Desc(Date(_.Modified)) }
+                  Embassy = Russian country }
+            )
+
+        storage |> Repository.Query.Request.get filter ct
+
+    let private getResponse request ct =
+        let get props =
+            Eas.Core.Russian.getResponse props request ct
+
+        get
+            { getStartPage = Http.Request.Get.string
+              postValidationPage = Http.Request.Post.waitString
+              getCaptchaImage = Http.Request.Get.bytes
+              solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
+
     let private getAvailableDates country =
         fun _ ct ->
             Persistence.Core.createStorage InMemory
@@ -19,15 +41,15 @@ module Russian =
                 let updateRequest request =
                     storage |> Repository.Command.Request.update request ct
 
-                let getResponse request =
-                    let get props =
-                        Eas.Core.Russian.getResponse props request ct
+                // let getResponse request =
+                //     let get props =
+                //         Eas.Core.Russian.getResponse props request ct
 
-                    get
-                        { getStartPage = Http.Request.Get.string
-                          postValidationPage = Http.Request.Post.waitString
-                          getCaptchaImage = Http.Request.Get.bytes
-                          solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
+                //     get
+                //         { getStartPage = Http.Request.Get.string
+                //           postValidationPage = Http.Request.Post.waitString
+                //           getCaptchaImage = Http.Request.Get.bytes
+                //           solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
 
                 let tryGetResponse requests =
                     Eas.Core.Russian.tryGetResponse requests updateRequest getResponse
@@ -43,17 +65,8 @@ module Russian =
                         |> saveResponse
                         |> ResultAsync.map (fun _ -> Success response.Appointments)
 
-                let filter =
-                    Request.ByEmbassy(
-                        { Pagination =
-                            { Page = 1
-                              PageSize = 5
-                              SortBy = Desc(Date(_.Modified)) }
-                          Embassy = Russian country }
-                    )
-
                 storage
-                |> Repository.Query.Request.get filter ct
+                |> getRequest country ct
                 |> ResultAsync.bind' tryGetResponse
                 |> ResultAsync.bind' handleResponse)
 
