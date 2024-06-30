@@ -30,10 +30,10 @@ module Russian =
                 Eas.Core.Russian.getResponse props request ct
 
             getResponse'
-                { getStartPage = Http.Request.Get.string
-                  postValidationPage = Http.Request.Post.waitString
-                  getCaptchaImage = Http.Request.Get.bytes
-                  solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
+                { getStartPage = Http.Request.Get.string ct
+                  postValidationPage = Http.Request.Post.waitString ct
+                  getCaptchaImage = Http.Request.Get.bytes ct
+                  solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt ct}
 
         let updateRequest request =
             storage |> Repository.Command.Request.update request ct

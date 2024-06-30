@@ -81,27 +81,21 @@ module Internal =
     module Embassies =
 
         module Russian =
-            open System.Threading
             open Web.Domain
             open Web.Client.Http
             open Infrastructure.Dsl.ActivePatterns
             open Infrastructure.Domain.Errors
 
             type GetResponseProps =
-                { getStartPage: Http.Request -> CancellationToken -> Http.Client -> Async<Result<string, Error'>>
+                { getStartPage: Http.Request -> Http.Client -> Async<Result<string, Error'>>
                   postValidationPage:
-                      Http.Request
-                          -> Http.RequestContent
-                          -> CancellationToken
-                          -> Http.Client
-                          -> Async<Result<string, Error'>>
-                  getCaptchaImage: Http.Request -> CancellationToken -> Http.Client -> Async<Result<byte[], Error'>>
-                  solveCaptchaImage: CancellationToken -> byte[] -> Async<Result<int, Error'>> }
+                      Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
+                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte[], Error'>>
+                  solveCaptchaImage: byte[] -> Async<Result<int, Error'>> }
 
-            type TryGetResponseProps = {
-                updateRequest: Request -> Async<Result<unit, Error'>>
-                getResponse: Request -> Async<Result<Response option, Error'>>
-            }
+            type TryGetResponseProps =
+                { updateRequest: Request -> Async<Result<unit, Error'>>
+                  getResponse: Request -> Async<Result<Response option, Error'>> }
 
             type Id = private Id of int
             type Cd = private Cd of string
