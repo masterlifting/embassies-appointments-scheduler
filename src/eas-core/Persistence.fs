@@ -97,7 +97,7 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "requests"
 
-            let get context filter ct =
+            let get filter ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -119,7 +119,7 @@ module private InMemoryRepository =
                         | _ -> Error <| Cancelled "Query.Request.get"
                 }
 
-            let get' context requestId ct =
+            let get' requestId ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -136,7 +136,7 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "responses"
 
-            let get context filter ct =
+            let get filter ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -162,7 +162,7 @@ module private InMemoryRepository =
 
                 }
 
-            let get' context responseId ct =
+            let get' responseId ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -203,7 +203,7 @@ module private InMemoryRepository =
                 | None -> Error(Persistence $"Request {request.Id} not found to delete.")
                 | Some index -> Ok(requests |> Array.removeAt index)
 
-            let execute context command ct =
+            let execute command ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -241,7 +241,7 @@ module private InMemoryRepository =
                 | None -> Error(Persistence $"Response {response.Id} not found to delete.")
                 | Some index -> Ok(responses |> Array.removeAt index)
 
-            let execute context command ct =
+            let execute command ct context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -273,58 +273,58 @@ module Repository =
 
         module Request =
 
-            let get storage filter ct =
+            let get filter ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Query.Request.get context filter ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get filter ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let get' storage requestId ct =
+            let get' requestId ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Query.Request.get' context requestId ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get' requestId ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module Response =
 
-            let get storage filter ct =
+            let get filter ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Query.Response.get context filter ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get filter ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let get' storage responseId ct =
+            let get' responseId ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Query.Response.get' context responseId ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' responseId ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
     module Command =
 
         module Request =
 
-            let private execute storage command ct =
+            let private execute command ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Command.Request.execute context command ct
+                | InMemoryContext context -> context |> InMemoryRepository.Command.Request.execute command ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let create storage request ct =
-                execute storage (Command.Request.Create request) ct
+            let create request ct =
+                execute (Command.Request.Create request) ct
 
-            let update storage request ct =
-                execute storage (Command.Request.Update request) ct
+            let update request ct =
+                execute (Command.Request.Update request) ct
 
-            let delete storage request ct =
-                execute storage (Command.Request.Delete request) ct
+            let delete request ct =
+                execute (Command.Request.Delete request) ct
 
         module Response =
 
-            let private execute storage command ct =
+            let private execute command ct storage =
                 match storage with
-                | InMemoryContext context -> InMemoryRepository.Command.Response.execute context command ct
+                | InMemoryContext context -> context |> InMemoryRepository.Command.Response.execute command ct
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let create storage response ct =
-                execute storage (Command.Response.Create response) ct
+            let create response ct =
+                execute (Command.Response.Create response) ct
 
-            let update storage response ct =
-                execute storage (Command.Response.Update response) ct
+            let update response ct =
+                execute (Command.Response.Update response) ct
 
-            let delete storage response ct =
-                execute storage (Command.Response.Delete response) ct
+            let delete response ct =
+                execute (Command.Response.Delete response) ct

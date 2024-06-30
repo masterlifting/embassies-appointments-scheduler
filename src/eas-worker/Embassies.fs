@@ -8,35 +8,32 @@ open Eas.Persistence.Filter
 open Persistence.Domain
 
 module Russian =
+    open Web.Client
+    open Eas.Persistence
 
     let private getAvailableDates country =
-        fun configuration ct ->
+        fun _ ct ->
             Persistence.Core.createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
 
-                let filter =
-                    Request.ByEmbassy(
-                        { Pagination =
-                            { Page = 1
-                              PageSize = 5
-                              SortBy = Desc(Date(fun x -> x.Modified)) }
-                          Embassy = Russian country }
-                    )
-
-                let getRequests filter =
-                    Eas.Persistence.Repository.Query.Request.get storage filter ct
-
                 let updateRequest request =
-                    Eas.Persistence.Repository.Command.Request.update storage request ct
+                    storage |> Repository.Command.Request.update request ct
 
                 let getResponse request =
-                    Eas.Core.Russian.getResponse configuration request ct
+                    let get props =
+                        Eas.Core.Russian.getResponse props request ct
+
+                    get
+                        { getStartPage = Http.Request.Get.string
+                          postValidationPage = Http.Request.Post.waitString
+                          getCaptchaImage = Http.Request.Get.bytes
+                          solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
 
                 let tryGetResponse requests =
                     Eas.Core.Russian.tryGetResponse requests updateRequest getResponse
 
                 let saveResponse response =
-                    Eas.Persistence.Repository.Command.Response.create storage response ct
+                    storage |> Repository.Command.Response.create response ct
 
                 let handleResponse response =
                     match response with
@@ -46,8 +43,19 @@ module Russian =
                         |> saveResponse
                         |> ResultAsync.map (fun _ -> Success response.Appointments)
 
-                getRequests filter
-                |> ResultAsync.bind' (tryGetResponse >> ResultAsync.bind' handleResponse))
+                let filter =
+                    Request.ByEmbassy(
+                        { Pagination =
+                            { Page = 1
+                              PageSize = 5
+                              SortBy = Desc(Date(_.Modified)) }
+                          Embassy = Russian country }
+                    )
+
+                storage
+                |> Repository.Query.Request.get filter ct
+                |> ResultAsync.bind' tryGetResponse
+                |> ResultAsync.bind' handleResponse)
 
     let createNode country =
         Node(

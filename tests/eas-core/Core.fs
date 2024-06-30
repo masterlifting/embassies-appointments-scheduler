@@ -1,15 +1,14 @@
 ﻿module Eas.Core.Tests
+
 open Expecto
 
 module Russian =
-    
-    let private getResponse =
-        let name = "Test"
-        testTask name {
-            Expect.equal "Test" name "Values should be equal"
-        }
+    open Eas.Core.Russian
 
-    let tests =
-        testList "Russian" [
-            getResponse
-        ]
+    let private ``get kdmid response`` =
+        let name = "Get kdmid response"
+        testAsync name { 
+            //let! response = getResponse
+            Expect.equal "Get kdmid response" name "Values should be equal" }
+
+    let tests = testList "Russian.Kdmid" [ ``get kdmid response`` ]

@@ -9,7 +9,6 @@ open Eas.Domain.Internal
 
 module Russian =
     open Embassies.Russian
-    open Web.Client.Http.Captcha
 
     let private createKdmidHttpClient city =
         Http.create $"https://%s{city}.kdmid.ru" None
@@ -19,53 +18,51 @@ module Russian =
         | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"id=%i{id}&cd=%s{cd}"
 
-    let private solveCaptcha urlPath ct httpClient =
-        let request =
-            { Path = $"/queue/{urlPath}"
-              Headers = None }
-
-        httpClient
-        |> Http.Request.Get.bytes request ct
-        |> ResultAsync.bind' (AntiCaptcha.solveToInt ct)
-
     let private buildFormData (data: Map<string, string>) =
         data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
 
-    let private getStartPageData queryParams ct httpClient =
-        let request =
-            { Path = "/queue/OrderInfo.aspx?" + queryParams
-              Headers = None }
+    let private getStartPageData getStartPage getCaptchaImage solveCaptchaImage httpClient =
+        fun queryParams ct ->
+            let request =
+                { Path = "/queue/OrderInfo.aspx?" + queryParams
+                  Headers = None }
 
-        //httpClient |> Http.Request.Get.string request ct
-        WebClient.Parser.Html.fakeStartPageResponse ()
-        |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
-        |> ResultAsync.bind' (fun startPage ->
-            match startPage |> Map.tryFind "captcha" with
-            | None -> async { return Error <| NotFound "Captcha data for Kdmid request." }
-            | Some urlPath ->
-                httpClient
-                |> solveCaptcha urlPath ct
-                |> ResultAsync.map' (fun captcha ->
-                    startPage
-                    |> Map.filter (fun key _ -> key <> "captcha")
-                    |> Map.add "ctl00%24MainContent%24txtCode" (captcha |> string)
-                    |> buildFormData))
+            httpClient
+            |> getStartPage request ct
+            |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
+            |> ResultAsync.bind' (fun startPage ->
+                match startPage |> Map.tryFind "captcha" with
+                | None -> async { return Error <| NotFound "Captcha data for Kdmid request." }
+                | Some urlPath ->
+                    let request =
+                        { Path = $"/queue/{urlPath}"
+                          Headers = None }
 
-    let private getValidationPageData formData queryParams ct httpClient =
-        let request =
-            { Path = "/queue/OrderInfo.aspx?" + queryParams
-              Headers = None }
+                    httpClient
+                    |> getCaptchaImage request ct
+                    |> ResultAsync.bind' (solveCaptchaImage ct)
+                    |> ResultAsync.map' (fun captcha ->
+                        startPage
+                        |> Map.filter (fun key _ -> key <> "captcha")
+                        |> Map.add "ctl00%24MainContent%24txtCode" (captcha |> string)
+                        |> buildFormData))
 
-        let content =
-            String
-                {| Data = formData
-                   Encoding = Text.Encoding.ASCII
-                   MediaType = "application/x-www-form-urlencoded" |}
+    let private getValidationPageData postValidationPage httpClient =
+        fun formData queryParams ct ->
+            let request =
+                { Path = "/queue/OrderInfo.aspx?" + queryParams
+                  Headers = None }
 
-        //httpClient |> Http.Request.Post.waitString request content ct
-        WebClient.Parser.Html.fakeValidationPageValidResponse ()
-        |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
-        |> ResultAsync.map' buildFormData
+            let content =
+                String
+                    {| Data = formData
+                       Encoding = Text.Encoding.ASCII
+                       MediaType = "application/x-www-form-urlencoded" |}
+
+            httpClient
+            |> postValidationPage request content ct
+            |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
+            |> ResultAsync.map' buildFormData
 
     let private postCalendarPage
         (data: Map<string, string>)
@@ -77,7 +74,7 @@ module Russian =
     let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
-    let private getKdmidResponse configuration =
+    let private getKdmidResponse props =
         fun ct (credentials: Credentials) ->
             let city, id, cd, ems = credentials.Value
             let queryParams = createQueryParams id cd ems
@@ -85,15 +82,22 @@ module Russian =
             createKdmidHttpClient city
             |> ResultAsync.wrap (fun httpClient ->
                 async {
-                    match! httpClient |> getStartPageData queryParams ct with
+                    let getStartPageData =
+                        httpClient
+                        |> getStartPageData props.getStartPage props.getCaptchaImage props.solveCaptchaImage
+
+                    match! getStartPageData queryParams ct with
                     | Error error -> return Error error
                     | Ok startPageData ->
-                        match! httpClient |> getValidationPageData startPageData queryParams ct with
+                        let getValidationPageData =
+                            httpClient |> getValidationPageData props.postValidationPage
+
+                        match! getValidationPageData startPageData queryParams ct with
                         | Error error -> return Error error
                         | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
                 })
 
-    let getResponse configuration =
+    let getResponse props =
         let inline toResponseResult response =
             match response with
             | response when response.Appointments.IsEmpty -> None
@@ -104,7 +108,7 @@ module Russian =
             | None -> async { return Error <| NotFound "Url for Kdmid request." }
             | Some url ->
                 createCredentials url
-                |> ResultAsync.wrap (getKdmidResponse configuration ct)
+                |> ResultAsync.wrap (getKdmidResponse props ct)
                 |> ResultAsync.map toResponseResult
 
     let tryGetResponse requests updateRequest getResponse =

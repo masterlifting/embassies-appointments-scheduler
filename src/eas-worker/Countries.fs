@@ -21,7 +21,8 @@ module Serbia =
                             [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=f23cb539&ems=143F4DDF" ]
                       Modified = System.DateTime.UtcNow }
 
-                Repository.Command.Request.create storage request ct
+                storage
+                |> Repository.Command.Request.create request ct
                 |> ResultAsync.map (fun _ -> Info $"Test request was created \n{request}"))
 
     let private Belgrade =

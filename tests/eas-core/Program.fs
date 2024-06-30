@@ -3,10 +3,7 @@
 open Expecto
 open Eas.Core.Tests
 
-[<Tests>]
-let tests =
-    testList "all"
-    [ Russian.tests ]
+let private tests = testList "Tests" [ Russian.tests ]
 
 [<EntryPoint>]
 let main args = runTestsWithCLIArgs [] args tests
