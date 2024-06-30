@@ -11,7 +11,7 @@ module Russian =
     open Web.Client
     open Eas.Persistence
 
-    let private getRequest country ct storage =
+    let private getRequests country ct storage =
         let filter =
             Request.ByEmbassy(
                 { Pagination =
@@ -23,59 +23,54 @@ module Russian =
 
         storage |> Repository.Query.Request.get filter ct
 
-    let private getResponse request ct =
-        let get props =
-            Eas.Core.Russian.getResponse props request ct
+    let private tryGetResponse storage ct requests =
 
-        get
-            { getStartPage = Http.Request.Get.string
-              postValidationPage = Http.Request.Post.waitString
-              getCaptchaImage = Http.Request.Get.bytes
-              solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
+        let getResponse request =
+            let getResponse' props =
+                Eas.Core.Russian.getResponse props request ct
 
-    let private getAvailableDates country =
+            getResponse'
+                { getStartPage = Http.Request.Get.string
+                  postValidationPage = Http.Request.Post.waitString
+                  getCaptchaImage = Http.Request.Get.bytes
+                  solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
+
+        let updateRequest request =
+            storage |> Repository.Command.Request.update request ct
+
+        requests
+        |> Eas.Core.Russian.tryGetResponse
+            { updateRequest = updateRequest
+              getResponse = getResponse }
+
+    let private handleResponse storage ct response =
+
+        let saveResponse response =
+            storage |> Repository.Command.Response.create response ct
+
+        match response with
+        | None -> async { return Ok <| Info "No data." }
+        | Some response ->
+            response
+            |> saveResponse
+            |> ResultAsync.map (fun _ -> Success response.Appointments)
+
+
+    let private lookForApointments country =
         fun _ ct ->
             Persistence.Core.createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
-
-                let updateRequest request =
-                    storage |> Repository.Command.Request.update request ct
-
-                // let getResponse request =
-                //     let get props =
-                //         Eas.Core.Russian.getResponse props request ct
-
-                //     get
-                //         { getStartPage = Http.Request.Get.string
-                //           postValidationPage = Http.Request.Post.waitString
-                //           getCaptchaImage = Http.Request.Get.bytes
-                //           solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt }
-
-                let tryGetResponse requests =
-                    Eas.Core.Russian.tryGetResponse requests updateRequest getResponse
-
-                let saveResponse response =
-                    storage |> Repository.Command.Response.create response ct
-
-                let handleResponse response =
-                    match response with
-                    | None -> async { return Ok <| Info "No data." }
-                    | Some response ->
-                        response
-                        |> saveResponse
-                        |> ResultAsync.map (fun _ -> Success response.Appointments)
-
                 storage
-                |> getRequest country ct
-                |> ResultAsync.bind' tryGetResponse
-                |> ResultAsync.bind' handleResponse)
+                |> getRequests country ct
+                |> ResultAsync.bind' (tryGetResponse storage ct)
+                |> ResultAsync.bind' (handleResponse storage ct))
 
     let createNode country =
         Node(
             { Name = "Russian"; Handle = None },
             [ Node(
                   { Name = "Look for appointments"
-                    Handle = Some <| getAvailableDates country },
+                    Handle = Some <| lookForApointments country },
                   []
               ) ]
         )

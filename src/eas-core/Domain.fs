@@ -98,6 +98,11 @@ module Internal =
                   getCaptchaImage: Http.Request -> CancellationToken -> Http.Client -> Async<Result<byte[], Error'>>
                   solveCaptchaImage: CancellationToken -> byte[] -> Async<Result<int, Error'>> }
 
+            type TryGetResponseProps = {
+                updateRequest: Request -> Async<Result<unit, Error'>>
+                getResponse: Request -> Async<Result<Response option, Error'>>
+            }
+
             type Id = private Id of int
             type Cd = private Cd of string
             type Ems = private Ems of string option

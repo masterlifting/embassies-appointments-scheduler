@@ -103,7 +103,7 @@ module Russian =
             | response when response.Appointments.IsEmpty -> None
             | response -> Some response
 
-        fun (request: Request) ct ->
+        fun ct (request: Request) ->
             match request.Data |> Map.tryFind "url" with
             | None -> async { return Error <| NotFound "Url for Kdmid request." }
             | Some url ->
@@ -111,7 +111,7 @@ module Russian =
                 |> ResultAsync.wrap (getKdmidResponse props ct)
                 |> ResultAsync.map toResponseResult
 
-    let tryGetResponse requests updateRequest getResponse =
+    let tryGetResponse props requests =
 
         let rec innerLoop requests error =
             async {
@@ -127,10 +127,10 @@ module Russian =
                         { request with
                             Modified = DateTime.UtcNow }
 
-                    match! updateRequest request with
+                    match! props.updateRequest request with
                     | Error error -> return Error error
                     | _ ->
-                        match! getResponse request with
+                        match! props.getResponse request with
                         | Error error -> return! innerLoop requestsTail (Some error)
                         | response -> return response
             }
