@@ -22,7 +22,7 @@ module Serbia =
                       Modified = System.DateTime.UtcNow }
 
                 storage
-                |> Repository.Command.Request.create request ct
+                |> Repository.Command.Request.create ct request
                 |> ResultAsync.map (fun _ -> Info $"Test request was created \n{request}"))
 
     let private Belgrade =

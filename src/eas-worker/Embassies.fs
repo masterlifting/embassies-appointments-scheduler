@@ -11,7 +11,7 @@ module Russian =
     open Web.Client
     open Eas.Persistence
 
-    let private getRequests country ct storage =
+    let private getRequests ct country storage =
         let filter =
             Request.ByEmbassy(
                 { Pagination =
@@ -21,32 +21,29 @@ module Russian =
                   Embassy = Russian country }
             )
 
-        storage |> Repository.Query.Request.get filter ct
+        storage |> Repository.Query.Request.get ct filter
 
-    let private tryGetResponse storage ct requests =
+    let private tryGetResponse ct storage requests =
 
-        let getResponse request =
-            let getResponse' props =
-                Eas.Core.Russian.getResponse props request ct
-
-            getResponse'
+        let getResponse =
+            Eas.Core.Russian.getResponse
                 { getStartPage = Http.Request.Get.string ct
                   postValidationPage = Http.Request.Post.waitString ct
                   getCaptchaImage = Http.Request.Get.bytes ct
-                  solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt ct}
+                  solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt ct }
 
         let updateRequest request =
-            storage |> Repository.Command.Request.update request ct
+            storage |> Repository.Command.Request.update ct request
 
         requests
         |> Eas.Core.Russian.tryGetResponse
             { updateRequest = updateRequest
               getResponse = getResponse }
 
-    let private handleResponse storage ct response =
+    let private handleResponse ct storage response =
 
         let saveResponse response =
-            storage |> Repository.Command.Response.create response ct
+            storage |> Repository.Command.Response.create ct response
 
         match response with
         | None -> async { return Ok <| Info "No data." }
@@ -56,21 +53,21 @@ module Russian =
             |> ResultAsync.map (fun _ -> Success response.Appointments)
 
 
-    let private lookForApointments country =
+    let private searchAppointments country =
         fun _ ct ->
             Persistence.Core.createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
                 storage
-                |> getRequests country ct
-                |> ResultAsync.bind' (tryGetResponse storage ct)
-                |> ResultAsync.bind' (handleResponse storage ct))
+                |> getRequests ct country
+                |> ResultAsync.bind' (tryGetResponse ct storage)
+                |> ResultAsync.bind' (handleResponse ct storage))
 
     let createNode country =
         Node(
             { Name = "Russian"; Handle = None },
             [ Node(
-                  { Name = "Look for appointments"
-                    Handle = Some <| lookForApointments country },
+                  { Name = "Search Appointments"
+                    Handle = Some <| searchAppointments country },
                   []
               ) ]
         )

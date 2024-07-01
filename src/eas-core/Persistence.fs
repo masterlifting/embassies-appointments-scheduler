@@ -63,11 +63,11 @@ module private Command =
 
 module private InMemoryRepository =
 
-    let private getData<'a> context key =
+    let private getEntities<'a> key context =
         context
-        |> InMemory.get
-        |> fun get -> get key
+        |> InMemory.get key
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
+
 
     module Query =
         open Filter
@@ -77,18 +77,18 @@ module private InMemoryRepository =
             |> match pagination.SortBy with
                | Asc sortBy ->
                    match sortBy with
-                   | Date sort -> List.sortBy <| sort
-                   | String sort -> List.sortBy <| sort
-                   | Int sort -> List.sortBy <| sort
-                   | Bool sort -> List.sortBy <| sort
-                   | Guid sort -> List.sortBy <| sort
+                   | Date getValue -> List.sortBy <| getValue
+                   | String getValue -> List.sortBy <| getValue
+                   | Int getValue -> List.sortBy <| getValue
+                   | Bool getValue -> List.sortBy <| getValue
+                   | Guid getValue -> List.sortBy <| getValue
                | Desc sortBy ->
                    match sortBy with
-                   | Date sort -> List.sortByDescending <| sort
-                   | String sort -> List.sortByDescending <| sort
-                   | Int sort -> List.sortByDescending <| sort
-                   | Bool sort -> List.sortByDescending <| sort
-                   | Guid sort -> List.sortByDescending <| sort
+                   | Date getValue -> List.sortByDescending <| getValue
+                   | String getValue -> List.sortByDescending <| getValue
+                   | Int getValue -> List.sortByDescending <| getValue
+                   | Bool getValue -> List.sortByDescending <| getValue
+                   | Guid getValue -> List.sortByDescending <| getValue
             |> List.skip (pagination.PageSize * (pagination.Page - 1))
             |> List.truncate pagination.PageSize
 
@@ -97,7 +97,7 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "requests"
 
-            let get filter ct context =
+            let get ct filter context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -113,19 +113,20 @@ module private InMemoryRepository =
                                     |> paginate
                                     <| filter.Pagination
 
-                            getData<External.Request> context key
+                            context
+                            |> getEntities<External.Request> key
                             |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Request.get"
                 }
 
-            let get' requestId ct context =
+            let get' ct requestId context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
-
-                            getData<External.Request> context key
+                            context
+                            |> getEntities<External.Request> key
                             |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = requestId))
                         | _ -> Error <| Cancelled "Query.Request.get'"
@@ -136,7 +137,7 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "responses"
 
-            let get filter ct context =
+            let get ct filter context =
                 async {
                     return
                         match ct |> notCanceled with
@@ -155,20 +156,21 @@ module private InMemoryRepository =
                                     |> paginate
                                     <| filter.Pagination
 
-                            getData<External.Response> context key
+                            context
+                            |> getEntities<External.Response> key
                             |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Response.get"
 
                 }
 
-            let get' responseId ct context =
+            let get' ct responseId context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
-
-                            getData<External.Response> context key
+                            context
+                            |> getEntities<External.Response> key
                             |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = responseId))
                         | _ -> Error <| Cancelled "Query.Response.get'"
@@ -176,85 +178,91 @@ module private InMemoryRepository =
 
     module Command =
 
-        let private save<'a> context key (data: 'a array) =
+        let private save<'a> key context (data: 'a array) =
             if data.Length = 1 then
-                data |> Json.serialize |> Result.bind (InMemory.add context key)
+                data
+                |> Json.serialize
+                |> Result.bind (fun value -> context |> InMemory.add key value)
             else
-                data |> Json.serialize |> Result.bind (InMemory.update context key)
+                data
+                |> Json.serialize
+                |> Result.bind (fun value -> context |> InMemory.update key value)
 
         module Request =
 
-            let private create (requests: External.Request array) (request: Internal.Request) =
+            let private add (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
                 | Some _ -> Error(Persistence $"Request {request.Id} already exists.")
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
-            let private update (requests: External.Request array) (request: Internal.Request) =
+            let private update (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error(Persistence $"Request {request.Id} not found to update.")
+                | None -> Error <| Persistence $"Request {request.Id} not found to update."
                 | Some index ->
                     Ok(
                         requests
                         |> Array.mapi (fun i x -> if i = index then External.toRequest request else x)
                     )
 
-            let private delete (requests: External.Request array) (request: Internal.Request) =
+            let private delete (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error(Persistence $"Request {request.Id} not found to delete.")
+                | None -> Error <| Persistence $"Request {request.Id} not found to delete."
                 | Some index -> Ok(requests |> Array.removeAt index)
 
-            let execute command ct context =
+            let execute ct command context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
                             let key = "requests"
 
-                            getData<External.Request> context key
+                            context
+                            |> getEntities<External.Request> key
                             |> Result.bind (fun requests ->
                                 match command with
-                                | Command.Request.Create request -> create requests request
-                                | Command.Request.Update request -> update requests request
-                                | Command.Request.Delete request -> delete requests request)
-                            |> Result.bind (save context key)
+                                | Command.Request.Create request -> requests |> add request
+                                | Command.Request.Update request -> requests |> update request
+                                | Command.Request.Delete request -> requests |> delete request)
+                            |> Result.bind (context |> save key)
                         | _ -> Error <| Cancelled "Command.Request.execute"
                 }
 
         module Response =
 
-            let private create (responses: External.Response array) (response: Internal.Response) =
+            let private add (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
-                | Some _ -> Error(Persistence $"Response {response.Id} already exists.")
+                | Some _ -> Error <| Persistence $"Response {response.Id} already exists."
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
-            let private update (responses: External.Response array) (response: Internal.Response) =
+            let private update (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error(Persistence $"Response {response.Id} not found to update.")
+                | None -> Error <| Persistence $"Response {response.Id} not found to update."
                 | Some index ->
                     Ok(
                         responses
                         |> Array.mapi (fun i x -> if i = index then External.toResponse response else x)
                     )
 
-            let private delete (responses: External.Response array) (response: Internal.Response) =
+            let private delete (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error(Persistence $"Response {response.Id} not found to delete.")
+                | None -> Error <| Persistence $"Response {response.Id} not found to delete."
                 | Some index -> Ok(responses |> Array.removeAt index)
 
-            let execute command ct context =
+            let execute ct command context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
                             let key = "responses"
 
-                            getData<External.Response> context key
+                            context
+                            |> getEntities<External.Response> key
                             |> Result.bind (fun responses ->
                                 match command with
-                                | Command.Response.Create response -> create responses response
-                                | Command.Response.Update response -> update responses response
-                                | Command.Response.Delete response -> delete responses response)
-                            |> Result.bind (fun responses -> save context key responses)
+                                | Command.Response.Create response -> responses |> add response
+                                | Command.Response.Update response -> responses |> update response
+                                | Command.Response.Delete response -> responses |> delete response)
+                            |> Result.bind (context |> save key)
                         | _ -> Error <| Cancelled "Command.Response.execute"
                 }
 
@@ -273,58 +281,58 @@ module Repository =
 
         module Request =
 
-            let get filter ct storage =
+            let get ct filter storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get filter ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let get' requestId ct storage =
+            let get' ct requestId storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get' requestId ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get' ct requestId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module Response =
 
-            let get filter ct storage =
+            let get ct filter storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get filter ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let get' responseId ct storage =
+            let get' ct responseId storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' responseId ct
+                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
     module Command =
 
         module Request =
 
-            let private execute command ct storage =
+            let private execute ct command storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Command.Request.execute command ct
+                | InMemoryContext context -> context |> InMemoryRepository.Command.Request.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let create request ct =
-                execute (Command.Request.Create request) ct
+            let create ct request =
+                Command.Request.Create request |> execute ct
 
-            let update request ct =
-                execute (Command.Request.Update request) ct
+            let update ct request =
+                Command.Request.Update request |> execute ct
 
-            let delete request ct =
-                execute (Command.Request.Delete request) ct
+            let delete ct request =
+                Command.Request.Delete request |> execute ct
 
         module Response =
 
-            let private execute command ct storage =
+            let private execute ct command storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Command.Response.execute command ct
+                | InMemoryContext context -> context |> InMemoryRepository.Command.Response.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let create response ct =
-                execute (Command.Response.Create response) ct
+            let create ct response =
+                Command.Response.Create response |> execute ct
 
-            let update response ct =
-                execute (Command.Response.Update response) ct
+            let update ct response =
+                Command.Response.Update response |> execute ct
 
-            let delete response ct =
-                execute (Command.Response.Delete response) ct
+            let delete ct response =
+                Command.Response.Delete response |> execute ct

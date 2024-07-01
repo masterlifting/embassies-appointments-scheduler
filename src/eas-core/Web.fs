@@ -79,6 +79,7 @@ module Parser =
                         | "input" ->
                             match node |> getAttributeValue "name", node |> getAttributeValue "value" with
                             | Ok(Some name), Ok(Some value) -> Some(name, value)
+                            | Ok(Some name), Ok(None) -> Some(name, System.String.Empty)
                             | _ -> None
                         | "img" ->
                             match node |> getAttributeValue "src" with
@@ -88,8 +89,25 @@ module Parser =
                     |> Map.ofSeq
                     |> Ok)
             |> Result.bind (fun result ->
-                match result.Count < 4 with
-                | true -> Error <| Business "No required data found on the start page request."
+                let requiredKeys =
+                    [ "__EVENTTARGET"
+                      "__EVENTARGUMENT"
+                      "__VIEWSTATE"
+                      "__VIEWSTATEGENERATOR"
+                      "__EVENTVALIDATION"
+                      "ctl00$MainContent$txtID"
+                      "ctl00$MainContent$txtUniqueID"
+                      "ctl00$MainContent$txtCode"
+                      "ctl00$MainContent$ButtonA"
+                      "ctl00$MainContent$FeedbackClientID"
+                      "ctl00$MainContent$FeedbackOrderID" ]
+
+                let difference = requiredKeys |> List.except (result.Keys |> List.ofSeq)
+
+                match difference.Length > 0 with
+                | true ->
+                    Error
+                    <| Business $"No required data found on the start page response. Missing keys: {difference}"
                 | false -> Ok result)
 
         let parseValidationPage page =

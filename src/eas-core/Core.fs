@@ -22,13 +22,13 @@ module Russian =
         data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
 
     let private getStartPageData getStartPage getCaptchaImage solveCaptchaImage httpClient =
-        fun queryParams ct ->
+        fun queryParams ->
             let request =
                 { Path = "/queue/OrderInfo.aspx?" + queryParams
                   Headers = None }
 
             httpClient
-            |> getStartPage request ct
+            |> getStartPage request
             |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
             |> ResultAsync.bind' (fun startPage ->
                 match startPage |> Map.tryFind "captcha" with
@@ -39,8 +39,8 @@ module Russian =
                           Headers = None }
 
                     httpClient
-                    |> getCaptchaImage request ct
-                    |> ResultAsync.bind' (solveCaptchaImage ct)
+                    |> getCaptchaImage request
+                    |> ResultAsync.bind' solveCaptchaImage
                     |> ResultAsync.map' (fun captcha ->
                         startPage
                         |> Map.filter (fun key _ -> key <> "captcha")
@@ -48,7 +48,7 @@ module Russian =
                         |> buildFormData))
 
     let private getValidationPageData postValidationPage httpClient =
-        fun formData queryParams ct ->
+        fun formData queryParams ->
             let request =
                 { Path = "/queue/OrderInfo.aspx?" + queryParams
                   Headers = None }
@@ -60,7 +60,7 @@ module Russian =
                        MediaType = "application/x-www-form-urlencoded" |}
 
             httpClient
-            |> postValidationPage request content ct
+            |> postValidationPage request content
             |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
             |> ResultAsync.map' buildFormData
 
@@ -74,8 +74,8 @@ module Russian =
     let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
-    let private getKdmidResponse props =
-        fun ct (credentials: Credentials) ->
+    let private searchResponse props =
+        fun (credentials: Credentials) ->
             let city, id, cd, ems = credentials.Value
             let queryParams = createQueryParams id cd ems
 
@@ -86,13 +86,13 @@ module Russian =
                         httpClient
                         |> getStartPageData props.getStartPage props.getCaptchaImage props.solveCaptchaImage
 
-                    match! getStartPageData queryParams ct with
+                    match! getStartPageData queryParams with
                     | Error error -> return Error error
                     | Ok startPageData ->
                         let getValidationPageData =
                             httpClient |> getValidationPageData props.postValidationPage
 
-                        match! getValidationPageData startPageData queryParams ct with
+                        match! getValidationPageData startPageData queryParams with
                         | Error error -> return Error error
                         | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
                 })
@@ -103,12 +103,12 @@ module Russian =
             | response when response.Appointments.IsEmpty -> None
             | response -> Some response
 
-        fun ct (request: Request) ->
+        fun (request: Request) ->
             match request.Data |> Map.tryFind "url" with
             | None -> async { return Error <| NotFound "Url for Kdmid request." }
             | Some url ->
                 createCredentials url
-                |> ResultAsync.wrap (getKdmidResponse props ct)
+                |> ResultAsync.wrap (searchResponse props)
                 |> ResultAsync.map toResponseResult
 
     let tryGetResponse props requests =

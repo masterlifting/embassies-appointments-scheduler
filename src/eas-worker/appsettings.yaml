@@ -16,7 +16,7 @@ Worker:
               Parallel: true
               Recursively: true
               Steps:
-                - Name: Look for appointments
+                - Name: Search Appointments
                   Duration: 00:03:00
                 - Name: Notify users
                   Schedule:
