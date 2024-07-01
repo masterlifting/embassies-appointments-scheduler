@@ -1,14 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="Persistence.fs" />
-    <Compile Include="Embassies.fs" />
-    <Compile Include="Countries.fs" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
+  
   <ItemGroup>
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -16,13 +12,18 @@
     <Content Include="appsettings.yaml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_response.html" />
-    <Content Include="test_data\start_page_response.html" />
-    <Content Include="test_data\validation_page_invalid_response.html" />
-    <Content Include="test_data\validation_page_valid_response.html" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Include="Persistence.fs" />
+    <Compile Include="Embassies.fs" />
+    <Compile Include="Countries.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-worker\src\fsharp-worker.fsproj" />
     <ProjectReference Include="..\eas-core\eas-core.fsproj" />
   </ItemGroup>
+  
 </Project>

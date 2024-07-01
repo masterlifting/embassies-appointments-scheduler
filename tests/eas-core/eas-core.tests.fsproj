@@ -6,6 +6,21 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Content Include="test_data\calendar_page_empty_response.html" >
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="test_data\start_page_response.html" />
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="test_data\validation_page_invalid_response.html" >
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="test_data\validation_page_valid_response.html" >
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\eas-core\eas-core.fsproj" />
     </ItemGroup>
 
