@@ -83,7 +83,7 @@ module Internal =
         module Russian =
             open Web.Domain
             open Web.Client.Http
-            open Infrastructure.Dsl.ActivePatterns
+            open Infrastructure.DSL.AP
             open Infrastructure.Domain.Errors
 
             type GetResponseProps =

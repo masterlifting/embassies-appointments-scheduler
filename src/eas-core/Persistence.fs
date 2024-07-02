@@ -1,8 +1,8 @@
 ﻿module Eas.Persistence
 
 open Infrastructure
-open Infrastructure.Dsl.SerDe
-open Infrastructure.Dsl.Threading
+open Infrastructure.DSL.SerDe
+open Infrastructure.DSL.Threading
 open Infrastructure.Domain.Errors
 open Persistence.Domain
 open Persistence.Storage
@@ -115,7 +115,7 @@ module private InMemoryRepository =
 
                             context
                             |> getEntities<External.Request> key
-                            |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
+                            |> Result.bind (Seq.map Internal.toRequest >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Request.get"
                 }
@@ -127,7 +127,7 @@ module private InMemoryRepository =
                         | true ->
                             context
                             |> getEntities<External.Request> key
-                            |> Result.bind (Seq.map Internal.toRequest >> Dsl.Seq.roe)
+                            |> Result.bind (Seq.map Internal.toRequest >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = requestId))
                         | _ -> Error <| Cancelled "Query.Request.get'"
                 }
@@ -158,7 +158,7 @@ module private InMemoryRepository =
 
                             context
                             |> getEntities<External.Response> key
-                            |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
+                            |> Result.bind (Seq.map Internal.toResponse >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Response.get"
 
@@ -171,7 +171,7 @@ module private InMemoryRepository =
                         | true ->
                             context
                             |> getEntities<External.Response> key
-                            |> Result.bind (Seq.map Internal.toResponse >> Dsl.Seq.roe)
+                            |> Result.bind (Seq.map Internal.toResponse >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = responseId))
                         | _ -> Error <| Cancelled "Query.Response.get'"
                 }

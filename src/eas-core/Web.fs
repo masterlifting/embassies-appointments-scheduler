@@ -5,7 +5,7 @@ open Infrastructure.Domain.Errors
 module Parser =
     module Html =
         open HtmlAgilityPack
-        open Infrastructure.Dsl.ActivePatterns
+        open Infrastructure.DSL.AP
 
         let private hasError (html: HtmlDocument) =
             try

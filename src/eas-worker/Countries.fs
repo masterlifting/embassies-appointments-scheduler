@@ -1,7 +1,7 @@
 ﻿module internal Eas.Worker.Countries
 
 open Infrastructure.Domain.Graph
-open Infrastructure.Dsl
+open Infrastructure.DSL
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence

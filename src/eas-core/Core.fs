@@ -1,7 +1,7 @@
 module Eas.Core
 
 open System
-open Infrastructure.Dsl
+open Infrastructure.DSL
 open Infrastructure.Domain.Errors
 open Web.Domain.Http
 open Web.Client
@@ -94,7 +94,7 @@ module Russian =
 
                         match! getValidationPageData startPageData queryParams with
                         | Error error -> return Error error
-                        | Ok calendarPageFormData -> return Error <| NotImplemented calendarPageFormData
+                        | Ok calendarPageFormData -> return Error <| NotImplemented "searchResponse"
                 })
 
     let getResponse props =

@@ -22,7 +22,7 @@ let getTaskNode handlersGraph configuration =
             return
                 getTasksGraph handlersGraph configuration
                 |> Result.bind (fun graph ->
-                    Dsl.Graph.findNode taskName graph
+                    DSL.Graph.findNode taskName graph
                     |> Option.map Ok
                     |> Option.defaultValue (
                         Error
