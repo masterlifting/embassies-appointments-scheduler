@@ -1,36 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <OutputType>Exe</OutputType>
-    </PropertyGroup>
+  <PropertyGroup>
+      <TargetFramework>net8.0</TargetFramework>
+      <OutputType>Exe</OutputType>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <Content Include="test_data\calendar_page_empty_response.html" >
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-      <Content Include="test_data\start_page_response.html" />
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-      <Content Include="test_data\validation_page_invalid_response.html" >
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-      <Content Include="test_data\validation_page_valid_response.html" >
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
-    </ItemGroup>
+  <ItemGroup>
+    <Content Include="test_data\calendar_page_empty_response.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_data\start_page_response.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_data\validation_page_invalid_response.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_data\validation_page_valid_response.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\..\src\eas-core\eas-core.fsproj" />
-    </ItemGroup>
+  <ItemGroup>
+      <ProjectReference Include="..\..\src\eas-core\eas-core.fsproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <Compile Include="Core.fs" />
-      <Compile Include="Program.fs" />
-    </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Core.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Expecto" Version="10.2.1" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="10.2.1" />
+  </ItemGroup>
 
 </Project>

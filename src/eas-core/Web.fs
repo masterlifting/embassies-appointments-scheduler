@@ -116,7 +116,7 @@ module Parser =
             |> Result.bind (getNodes "//input")
             |> Result.bind (fun nodes ->
                 match nodes with
-                | None -> Error <| Business "No nodes found on the start page."
+                | None -> Error <| Business "No nodes found on the validation page."
                 | Some nodes ->
                     nodes
                     |> Seq.choose (fun node ->
