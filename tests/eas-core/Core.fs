@@ -26,7 +26,7 @@ module Embassies =
                 { getStartPage = fun _ _ -> async { return Ok String.Empty }
                   postValidationPage = fun _ _ _ -> async { return Ok String.Empty }
                   getCaptchaImage = fun _ _ -> async { return Ok [||] }
-                  solveCaptchaImage = fun _ -> async { return Ok 1 } }
+                  solveCaptchaImage = Web.Client.Http.Captcha.AntiCaptcha.solveToInt Threading.CancellationToken.None }
 
             let loadFile fileName =
                 Environment.CurrentDirectory + "/test_data/" + fileName
