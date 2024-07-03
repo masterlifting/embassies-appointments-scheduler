@@ -6,4 +6,6 @@ open Eas.Core.Tests
 let private tests = testList "Tests" [ Embassies.Russian.tests ]
 
 [<EntryPoint>]
-let main args = runTestsWithCLIArgs [] args tests
+let main args =
+    System.Console.OutputEncoding <- System.Text.Encoding.UTF8
+    runTestsWithCLIArgs [] args tests

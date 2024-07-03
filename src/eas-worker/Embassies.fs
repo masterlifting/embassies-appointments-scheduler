@@ -29,7 +29,7 @@ module Russian =
             Eas.Core.Russian.getResponse
                 { getStartPage = Http.Request.Get.string ct
                   postValidationPage = Http.Request.Post.waitString ct
-                  getCaptchaImage = Http.Request.Get.bytes ct
+                  getCaptchaImage = Http.Request.Get.bytes' ct
                   solveCaptchaImage = Http.Captcha.AntiCaptcha.solveToInt ct }
 
         let updateRequest request =

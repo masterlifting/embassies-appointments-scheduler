@@ -2,6 +2,7 @@ module Eas.Core
 
 open System
 open Infrastructure.DSL
+open Infrastructure.DSL.CE
 open Infrastructure.Domain.Errors
 open Web.Domain.Http
 open Web.Client
@@ -19,7 +20,11 @@ module Russian =
         | None -> $"id=%i{id}&cd=%s{cd}"
 
     let private buildFormData (data: Map<string, string>) =
-        data |> Seq.map (fun x -> $"{x.Key}={x.Value}") |> String.concat "%24"
+        data
+        |> Map.add "__EVENTTARGET" String.Empty
+        |> Map.add "__EVENTARGUMENT" String.Empty
+        |> Seq.map (fun x -> $"{Uri.EscapeDataString x.Key}={Uri.EscapeDataString x.Value}")
+        |> String.concat "&"
 
     let private getStartPageData getStartPage getCaptchaImage solveCaptchaImage httpClient =
         fun queryParams ->
@@ -30,8 +35,8 @@ module Russian =
             httpClient
             |> getStartPage request
             |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
-            |> ResultAsync.bind' (fun startPage ->
-                match startPage |> Map.tryFind "captcha" with
+            |> ResultAsync.bind' (fun pageData ->
+                match pageData |> Map.tryFind "captcha" with
                 | None -> async { return Error <| NotFound "Captcha data for Kdmid request." }
                 | Some urlPath ->
                     let request =
@@ -40,11 +45,20 @@ module Russian =
 
                     httpClient
                     |> getCaptchaImage request
+                    |> ResultAsync.map' (fun (image, headers) -> 
+                        match headers with
+                        | None -> image
+                        | Some headers -> 
+
+                        match headers |> Map.tryFind "Set-Cookie" with
+                        | None -> image
+                        | Some cookies -> 
+                            image)
                     |> ResultAsync.bind' solveCaptchaImage
                     |> ResultAsync.map' (fun captcha ->
-                        startPage
+                        pageData
                         |> Map.filter (fun key _ -> key <> "captcha")
-                        |> Map.add "ctl00%24MainContent%24txtCode" (captcha |> string)
+                        |> Map.add "ctl00$MainContent$txtCode" (captcha |> string)
                         |> buildFormData))
 
     let private getValidationPageData postValidationPage httpClient =
@@ -62,7 +76,13 @@ module Russian =
             httpClient
             |> postValidationPage request content
             |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
-            |> ResultAsync.map' buildFormData
+            |> ResultAsync.map' (fun pageData ->
+                pageData
+                |> Map.add "ctl00$MainContent$ButtonB.x" "100"
+                |> Map.add "ctl00$MainContent$ButtonB.y" "20"
+                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
+                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+                |> buildFormData)
 
     let private postCalendarPage
         (data: Map<string, string>)
@@ -81,20 +101,18 @@ module Russian =
 
             createKdmidHttpClient city
             |> ResultAsync.wrap (fun httpClient ->
-                async {
-                    let getStartPageData =
-                        httpClient
-                        |> getStartPageData props.getStartPage props.getCaptchaImage props.solveCaptchaImage
+                let getStartPageData =
+                    httpClient
+                    |> getStartPageData props.getStartPage props.getCaptchaImage props.solveCaptchaImage
 
-                    match! getStartPageData queryParams with
-                    | Error error -> return Error error
-                    | Ok startPageData ->
-                        let getValidationPageData =
-                            httpClient |> getValidationPageData props.postValidationPage
+                let getValidationPageData =
+                    httpClient |> getValidationPageData props.postValidationPage
 
-                        match! getValidationPageData startPageData queryParams with
-                        | Error error -> return Error error
-                        | Ok calendarPageFormData -> return Error <| NotImplemented "searchResponse"
+                resultAsync {
+                    let! startPageData = getStartPageData queryParams
+                    let! getValidationPageData = getValidationPageData startPageData queryParams
+
+                    return async { return Error <| NotImplemented "searchResponse" }
                 })
 
     let getResponse props =

@@ -90,7 +90,7 @@ module Internal =
                 { getStartPage: Http.Request -> Http.Client -> Async<Result<string, Error'>>
                   postValidationPage:
                       Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
-                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte[], Error'>>
+                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<(byte[] * Http.Headers), Error'>>
                   solveCaptchaImage: byte[] -> Async<Result<int, Error'>> }
 
             type TryGetResponseProps =
