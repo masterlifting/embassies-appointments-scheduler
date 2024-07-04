@@ -82,16 +82,16 @@ module Internal =
 
         module Russian =
             open Web.Domain
-            open Web.Client.Http
+            open Web.Client
             open Infrastructure.DSL.AP
             open Infrastructure.Domain.Errors
 
             type GetResponseProps =
-                { getStartPage: Http.Request -> Http.Client -> Async<Result<string, Error'>>
+                { getStartPage: Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
                   postValidationPage:
                       Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
-                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<(byte[] * Http.Headers), Error'>>
-                  solveCaptchaImage: byte[] -> Async<Result<int, Error'>> }
+                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte[] * Http.Headers, Error'>>
+                  solveCaptchaImage: byte array -> Async<Result<int, Error'>> }
 
             type TryGetResponseProps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>
@@ -124,13 +124,13 @@ module Internal =
 
             let createCredentials url =
                 url
-                |> toUri
+                |> Http.Route.toUri
                 |> Result.bind (fun uri ->
                     match uri.Host.Split('.') with
                     | hostParts when hostParts.Length < 3 -> Error(Parsing $"City is not recognized {url}.")
                     | hostParts ->
                         uri
-                        |> toQueryParams
+                        |> Http.Route.toQueryParams
                         |> Result.bind (fun paramsMap ->
                             let city =
                                 match hostParts[0] with

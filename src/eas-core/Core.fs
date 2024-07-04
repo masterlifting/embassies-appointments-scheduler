@@ -12,28 +12,64 @@ module Russian =
     open Embassies.Russian
 
     let private createKdmidHttpClient city =
-        Http.create $"https://%s{city}.kdmid.ru" None
+        let headers =
+            Map
+                [ "Accept",
+                  "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                  "Accept-Language", "en-US,en;q=0.9,ru;q=0.8"
+                  "Cache-Control", "max-age=0"
+                  "Sec-Ch-Ua", "Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121"
+                  "Sec-Ch-Ua-Mobile", "?0"
+                  "Sec-Ch-Ua-Platform", "\"Windows\""
+                  "Sec-Fetch-Dest", "document"
+                  "Sec-Fetch-Mode", "navigate"
+                  "Sec-Fetch-User", "?1"
+                  "Upgrade-Insecure-Requests", "1"
+                  "User-Agent",
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0" ]
+            |> Some
+
+        Http.create $"https://%s{city}.kdmid.ru" headers
 
     let private createQueryParams id cd ems =
         match ems with
         | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"id=%i{id}&cd=%s{cd}"
 
-    let private buildFormData (data: Map<string, string>) =
+    let private buildFormData data =
         data
         |> Map.add "__EVENTTARGET" String.Empty
         |> Map.add "__EVENTARGUMENT" String.Empty
         |> Seq.map (fun x -> $"{Uri.EscapeDataString x.Key}={Uri.EscapeDataString x.Value}")
         |> String.concat "&"
 
+    let private setCookie data httpClient =
+        let headers = data |> Seq.map (fun x -> "Cookie", x) |> Map.ofSeq
+        httpClient |> Http.Headers.add (Some headers)
+
+    let private setRequiredCookie httpClient (data: string, headers: Headers) =
+        headers
+        |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
+        |> Result.map (fun result ->
+            httpClient |> setCookie result
+            data)
+
+    let private setSessionCookie httpClient (image: byte array, headers: Headers) =
+        headers
+        |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
+        |> Result.map (fun result ->
+            httpClient |> setCookie result
+            image)
+
     let private getStartPageData getStartPage getCaptchaImage solveCaptchaImage httpClient =
         fun queryParams ->
             let request =
-                { Path = "/queue/OrderInfo.aspx?" + queryParams
+                { Path = "/queue/orderinfo.aspx?" + queryParams
                   Headers = None }
 
             httpClient
             |> getStartPage request
+            |> ResultAsync.bind (httpClient |> setRequiredCookie)
             |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
             |> ResultAsync.bind' (fun pageData ->
                 match pageData |> Map.tryFind "captcha" with
@@ -43,29 +79,36 @@ module Russian =
                         { Path = $"/queue/{urlPath}"
                           Headers = None }
 
+                    let addFormData captcha =
+                        pageData
+                        |> Map.remove "captcha"
+                        |> Map.add "ctl00$MainContent$txtCode" (captcha |> string)
+                        |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
+                        |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+
                     httpClient
                     |> getCaptchaImage request
-                    |> ResultAsync.map' (fun (image, headers) -> 
-                        match headers with
-                        | None -> image
-                        | Some headers -> 
-
-                        match headers |> Map.tryFind "Set-Cookie" with
-                        | None -> image
-                        | Some cookies -> 
-                            image)
+                    |> ResultAsync.bind (httpClient |> setSessionCookie)
                     |> ResultAsync.bind' solveCaptchaImage
-                    |> ResultAsync.map' (fun captcha ->
-                        pageData
-                        |> Map.filter (fun key _ -> key <> "captcha")
-                        |> Map.add "ctl00$MainContent$txtCode" (captcha |> string)
-                        |> buildFormData))
+                    |> ResultAsync.map' addFormData
+                    |> ResultAsync.map' buildFormData)
 
     let private getValidationPageData postValidationPage httpClient =
         fun formData queryParams ->
+
+            let requestPath = "/queue/orderinfo.aspx?" + queryParams
+            let origin = httpClient |> Http.Route.toOrigin
+
+            let headers =
+                Map
+                    [ "Origin", origin
+                      "Referer", (origin + requestPath)
+                      "Priority", "u=0, i"
+                      "Sec-Fetch-Site", "same-origin" ]
+
             let request =
-                { Path = "/queue/OrderInfo.aspx?" + queryParams
-                  Headers = None }
+                { Path = requestPath
+                  Headers = Some headers }
 
             let content =
                 String
@@ -73,16 +116,18 @@ module Russian =
                        Encoding = Text.Encoding.ASCII
                        MediaType = "application/x-www-form-urlencoded" |}
 
+            let addFormData data =
+                data
+                |> Map.add "ctl00$MainContent$ButtonA.x" "100"
+                |> Map.add "ctl00$MainContent$ButtonA.y" "20"
+                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
+                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+
             httpClient
             |> postValidationPage request content
             |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
-            |> ResultAsync.map' (fun pageData ->
-                pageData
-                |> Map.add "ctl00$MainContent$ButtonB.x" "100"
-                |> Map.add "ctl00$MainContent$ButtonB.y" "20"
-                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
-                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
-                |> buildFormData)
+            |> ResultAsync.map' addFormData
+            |> ResultAsync.map' buildFormData
 
     let private postCalendarPage
         (data: Map<string, string>)

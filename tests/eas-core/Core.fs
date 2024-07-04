@@ -23,7 +23,7 @@ module Embassies =
                   Modified = DateTime.UtcNow }
 
             let getResponseProps =
-                { getStartPage = fun _ _ -> async { return Ok String.Empty }
+                { getStartPage = fun _ _ -> async { return Ok (String.Empty, None) }
                   postValidationPage = fun _ _ _ -> async { return Ok String.Empty }
                   getCaptchaImage = fun _ _ -> async { return Ok ([||], None) }
                   solveCaptchaImage = fun _ -> async { return Ok 42 } }

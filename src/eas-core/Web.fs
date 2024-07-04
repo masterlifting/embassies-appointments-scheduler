@@ -88,9 +88,7 @@ module Parser =
                           "__EVENTVALIDATION"
                           "ctl00$MainContent$txtID"
                           "ctl00$MainContent$txtUniqueID"
-                          "ctl00$MainContent$ButtonA"
-                          "ctl00$MainContent$FeedbackClientID"
-                          "ctl00$MainContent$FeedbackOrderID" ]
+                          "ctl00$MainContent$ButtonA" ]
 
                 let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
 
