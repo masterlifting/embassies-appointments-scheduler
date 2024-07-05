@@ -17,6 +17,7 @@ module Russian =
                 [ "Accept",
                   "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
                   "Accept-Language", "en-US,en;q=0.9,ru;q=0.8"
+                  
                   "Cache-Control", "max-age=0"
                   "Sec-Ch-Ua", "Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121"
                   "Sec-Ch-Ua-Mobile", "?0"
@@ -44,7 +45,7 @@ module Russian =
         |> String.concat "&"
 
     let private setCookie data httpClient =
-        let headers = data |> Seq.map (fun x -> "Cookie", x) |> Map.ofSeq
+        let headers = data |> String.concat "; " |> (fun x -> Map [ "Cookie", x ])
         httpClient |> Http.Headers.add (Some headers)
 
     let private setRequiredCookie httpClient (data: string, headers: Headers) =
@@ -73,7 +74,7 @@ module Russian =
             |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
             |> ResultAsync.bind' (fun pageData ->
                 match pageData |> Map.tryFind "captcha" with
-                | None -> async { return Error <| NotFound "Captcha data for Kdmid request." }
+                | None -> async { return Error <| NotFound "Captcha information on the Start Page." }
                 | Some urlPath ->
                     let request =
                         { Path = $"/queue/{urlPath}"
@@ -82,7 +83,7 @@ module Russian =
                     let addFormData captcha =
                         pageData
                         |> Map.remove "captcha"
-                        |> Map.add "ctl00$MainContent$txtCode" (captcha |> string)
+                        |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
                         |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                         |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 

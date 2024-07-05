@@ -18,7 +18,7 @@ module Serbia =
                       Embassy = Russian <| Serbia Belgrade
                       Data =
                         Map
-                            [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38" ]
+                            [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57"]
                       Modified = System.DateTime.UtcNow }
 
                 storage
