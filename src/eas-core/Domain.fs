@@ -126,8 +126,8 @@ module Internal =
                 url
                 |> Http.Route.toUri
                 |> Result.bind (fun uri ->
-                    match uri.Host.Split('.') with
-                    | hostParts when hostParts.Length < 3 -> Error(Parsing $"City is not recognized {url}.")
+                    match uri.Host.Split '.' with
+                    | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized {url}."
                     | hostParts ->
                         uri
                         |> Http.Route.toQueryParams
@@ -183,7 +183,7 @@ module Internal =
                                     |> List.choose Operators.id
                                     |> List.fold (fun acc error -> $"{acc},{error}") ""
 
-                                Error(Parsing $"Invalid parameters in {url}.{errors}.")))
+                                Error <| Parsing $"Invalid parameters in {url}.{errors}."))
 
 module External =
 
