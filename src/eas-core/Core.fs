@@ -4,153 +4,76 @@ open System
 open Infrastructure.DSL
 open Infrastructure.DSL.CE
 open Infrastructure.Domain.Errors
-open Web.Domain.Http
-open Web.Client
 open Eas.Domain.Internal
 
 module Russian =
+    open Web.Domain
     open Embassies.Russian
+    open Eas.Web.Russian
 
-    let private createKdmidHttpClient city =
-        let headers =
-            Map
-                [ "Accept",
-                  [ "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7" ]
-                  "Accept-Language", [ "en-US,en;q=0.9,ru;q=0.8" ]
-                  "Cache-Control", [ "max-age=0" ]
-                  "Sec-Ch-Ua", [ "Not A(Brand\";v=\"99\", \"Microsoft Edge\";v=\"121\", \"Chromium\";v=\"121" ]
-                  "Sec-Ch-Ua-Mobile", [ "?0" ]
-                  "Sec-Ch-Ua-Platform", [ "\"Windows\"" ]
-                  "Sec-Fetch-Dest", [ "document" ]
-                  "Sec-Fetch-Mode", [ "navigate" ]
-                  "Sec-Fetch-User", [ "?1" ]
-                  "Upgrade-Insecure-Requests", [ "1" ]
-                  "User-Agent",
-                  [ "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0" ] ]
-            |> Some
+    type private StartPageDeps =
+        { HttpClient: Http.Client
+          getStartPage: Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
+          getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
+          solveCaptchaImage: byte array -> Async<Result<int, Error'>> }
 
-        Http.create $"https://%s{city}.kdmid.ru" headers
-
-    let private createQueryParams id cd ems =
-        match ems with
-        | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
-        | None -> $"id=%i{id}&cd=%s{cd}"
-
-    let private buildFormData (data: (string * string) list) =
-        data
-        |> Seq.map (fun (key, value) -> $"{Uri.EscapeDataString key}={Uri.EscapeDataString value}")
-        |> String.concat "&"
-
-    let private setCookie cookies httpClient =
-        let headers = Map [ "Cookie", cookies ]
-        httpClient |> Http.Headers.add (Some headers)
-
-    let private setRequiredCookie httpClient (data: string, headers: Headers) =
-        headers
-        |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
-        |> Result.map (fun cookie ->
-            httpClient |> setCookie cookie
-            data)
-
-    let private setSessionCookie httpClient (image: byte array, headers: Headers) =
-        headers
-        |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
-        |> Result.map (fun cookie ->
-            httpClient |> setCookie cookie
-            image)
-
-    let private getStartPageData getStartPage getCaptchaImage solveCaptchaImage httpClient =
+    let private getStartPageData deps =
         fun queryParams ->
-            let request =
-                { Path = "/queue/orderinfo.aspx?" + queryParams
-                  Headers = None }
 
-            httpClient
-            |> getStartPage request
-            |> ResultAsync.bind (httpClient |> setRequiredCookie)
-            |> ResultAsync.bind WebClient.Parser.Html.parseStartPage
+            let getStartPage =
+                let request = Http.createGetStartPageRequest queryParams
+                deps.getStartPage request
+
+            let setRequiredCookie = deps.HttpClient |> Http.setRequiredCookie
+
+            deps.HttpClient
+            |> getStartPage
+            |> ResultAsync.bind setRequiredCookie
+            |> ResultAsync.bind Parser.Html.parseStartPage
             |> ResultAsync.bind' (fun pageData ->
-                match pageData |> Map.tryFind "captcha" with
+                match pageData |> Map.tryFind "captchaUrlPath" with
                 | None -> async { return Error <| NotFound "Captcha information on the Start Page." }
                 | Some urlPath ->
-                    let origin = httpClient |> Http.Route.toOrigin
-                    let host = httpClient |> Http.Route.toHost
 
-                    let headers =
-                        Map
-                            [ "Host", [ host ]
-                              "Referer", [ (origin + "/queue/orderinfo.aspx?" + queryParams) ]
-                              "Sec-Fetch-Site", [ "same-origin" ] ]
+                    let getCaptchaImage =
+                        let request =
+                            deps.HttpClient |> Http.createGetCaptchaImageRequest urlPath queryParams
 
-                    let request =
-                        { Path = $"/queue/{urlPath}"
-                          Headers = Some headers }
+                        deps.getCaptchaImage request
 
-                    let addFormData captcha =
-                        pageData
-                        |> Map.remove "captcha"
-                        |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
-                        |> Map.add "__EVENTTARGET" ""
-                        |> Map.add "__EVENTARGUMENT" ""
-                        |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
-                        |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+                    let inline setSessionCookie image =
+                        deps.HttpClient |> Http.setSessionCookie <| image
 
-                    let formatDataOrderPattern =
-                        [ "__EVENTTARGET"
-                          "__EVENTARGUMENT"
-                          "__VIEWSTATE"
-                          "__VIEWSTATEGENERATOR"
-                          "__EVENTVALIDATION"
-                          "ctl00$MainContent$txtID"
-                          "ctl00$MainContent$txtUniqueID"
-                          "ctl00$MainContent$txtCode"
-                          "ctl00$MainContent$ButtonA"
-                          "ctl00$MainContent$FeedbackClientID"
-                          "ctl00$MainContent$FeedbackOrderID" ]
+                    let solveCaptchaImage = deps.solveCaptchaImage
 
-                    let orderFormData (pattern: string list) (pageData: Map<string, string>) : (string * string) list =
+                    let inline addFormData captcha =
+                        pageData |> Http.addStartPageFormData <| captcha
 
-                        let a = pattern |> List.map (fun key -> key, pageData[key])
-
-                        a
-
-
-                    httpClient
-                    |> getCaptchaImage request
-                    |> ResultAsync.bind (httpClient |> setSessionCookie)
+                    deps.HttpClient
+                    |> getCaptchaImage
+                    |> ResultAsync.bind setSessionCookie
                     |> ResultAsync.bind' solveCaptchaImage
                     |> ResultAsync.map' addFormData
-                    |> ResultAsync.map' (orderFormData formatDataOrderPattern)
-                    |> ResultAsync.map' buildFormData)
+                    |> ResultAsync.map' Http.buildFormData)
 
-    let private getValidationPageData postValidationPage httpClient =
+    type private ValidationPageDeps =
+        { HttpClient: Http.Client
+          postValidationPage: Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>> }
+
+    let private getValidationPageData deps =
         fun formData queryParams ->
 
-            let headers = Map [ "Origin", [ httpClient |> Http.Route.toOrigin ] ]
+            let postValidationPage =
+                let request, content =
+                    deps.HttpClient |> Http.createPostValidationPageRequest formData queryParams
 
-            let request =
-                { Path = "/queue/orderinfo.aspx?" + queryParams
-                  Headers = Some headers }
+                deps.postValidationPage request content
 
-            let content =
-                String
-                    {| Data = formData
-                       Encoding = Text.Encoding.ASCII
-                       MediaType = "application/x-www-form-urlencoded" |}
-
-            let addFormData data =
-                data
-                |> Map.add "ctl00$MainContent$ButtonA.x" "100"
-                |> Map.add "ctl00$MainContent$ButtonA.y" "20"
-                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
-                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
-                |> Map.toList
-
-            httpClient
-            |> postValidationPage request content
-            |> ResultAsync.bind WebClient.Parser.Html.parseValidationPage
-            |> ResultAsync.map' addFormData
-            |> ResultAsync.map' buildFormData
+            deps.HttpClient
+            |> postValidationPage
+            |> ResultAsync.bind Parser.Html.parseValidationPage
+            |> ResultAsync.map' Http.addValidationPageFormData
+            |> ResultAsync.map' Http.buildFormData
 
     let private postCalendarPage
         (data: Map<string, string>)
@@ -162,19 +85,26 @@ module Russian =
     let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
-    let private searchResponse props =
+    let private searchResponse (deps: GetResponseDeps) =
         fun (credentials: Credentials) ->
-            let city, id, cd, ems = credentials.Value
-            let queryParams = createQueryParams id cd ems
 
-            createKdmidHttpClient city
+            let city, id, cd, ems = credentials.Value
+            let queryParams = Http.createQueryParams id cd ems
+
+            Http.createKdmidClient city
             |> ResultAsync.wrap (fun httpClient ->
+
                 let getStartPageData =
-                    httpClient
-                    |> getStartPageData props.getStartPage props.getCaptchaImage props.solveCaptchaImage
+                    getStartPageData
+                        { HttpClient = httpClient
+                          getStartPage = deps.getStartPage
+                          getCaptchaImage = deps.getCaptchaImage
+                          solveCaptchaImage = deps.solveCaptchaImage }
 
                 let getValidationPageData =
-                    httpClient |> getValidationPageData props.postValidationPage
+                    getValidationPageData
+                        { HttpClient = httpClient
+                          postValidationPage = deps.postValidationPage }
 
                 resultAsync {
                     let! startPageData = getStartPageData queryParams
@@ -183,42 +113,46 @@ module Russian =
                     return async { return Error <| NotImplemented "searchResponse" }
                 })
 
-    let getResponse props =
-        let inline toResponseResult response =
-            match response with
-            | response when response.Appointments.IsEmpty -> None
-            | response -> Some response
+    module API =
+        let getResponse deps =
 
-        fun (request: Request) ->
-            match request.Data |> Map.tryFind "url" with
-            | None -> async { return Error <| NotFound "Url for Kdmid request." }
-            | Some url ->
-                createCredentials url
-                |> ResultAsync.wrap (searchResponse props)
-                |> ResultAsync.map toResponseResult
+            let searchResponse = searchResponse deps
 
-    let tryGetResponse props requests =
+            let inline toResponseResult response =
+                match response with
+                | response when response.Appointments.IsEmpty -> None
+                | response -> Some response
 
-        let rec innerLoop requests error =
-            async {
-                match requests with
-                | [] ->
-                    return
-                        match error with
-                        | Some error -> Error error
-                        | None -> Ok None
-                | request :: requestsTail ->
+            fun (request: Request) ->
+                match request.Data |> Map.tryFind "url" with
+                | None -> async { return Error <| NotFound "Url for Kdmid request." }
+                | Some url ->
+                    createCredentials url
+                    |> ResultAsync.wrap searchResponse
+                    |> ResultAsync.map toResponseResult
 
-                    let request: Request =
-                        { request with
-                            Modified = DateTime.UtcNow }
+        let tryGetResponse deps requests =
 
-                    match! props.updateRequest request with
-                    | Error error -> return Error error
-                    | _ ->
-                        match! props.getResponse request with
-                        | Error error -> return! innerLoop requestsTail (Some error)
-                        | response -> return response
-            }
+            let rec innerLoop requests error =
+                async {
+                    match requests with
+                    | [] ->
+                        return
+                            match error with
+                            | Some error -> Error error
+                            | None -> Ok None
+                    | request :: requestsTail ->
 
-        innerLoop requests None
+                        let request: Request =
+                            { request with
+                                Modified = DateTime.UtcNow }
+
+                        match! deps.updateRequest request with
+                        | Error error -> return Error error
+                        | _ ->
+                            match! deps.getResponse request with
+                            | Error error -> return! innerLoop requestsTail (Some error)
+                            | response -> return response
+                }
+
+            innerLoop requests None

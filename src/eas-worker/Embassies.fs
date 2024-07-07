@@ -3,6 +3,7 @@
 open Infrastructure.DSL
 open Infrastructure.Domain.Graph
 open Worker.Domain.Internal
+open Eas.Core
 open Eas.Domain.Internal
 open Eas.Persistence.Filter
 open Persistence.Domain
@@ -26,7 +27,7 @@ module Russian =
     let private tryGetResponse ct storage requests =
 
         let getResponse =
-            Eas.Core.Russian.getResponse
+            Russian.API.getResponse
                 { getStartPage = Http.Request.Get.string' ct
                   postValidationPage = Http.Request.Post.waitString ct
                   getCaptchaImage = Http.Request.Get.bytes' ct
@@ -36,7 +37,7 @@ module Russian =
             storage |> Repository.Command.Request.update ct request
 
         requests
-        |> Eas.Core.Russian.tryGetResponse
+        |> Russian.API.tryGetResponse
             { updateRequest = updateRequest
               getResponse = getResponse }
 

@@ -86,14 +86,14 @@ module Internal =
             open Infrastructure.DSL.AP
             open Infrastructure.Domain.Errors
 
-            type GetResponseProps =
+            type GetResponseDeps =
                 { getStartPage: Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
                   postValidationPage:
                       Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
                   getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
                   solveCaptchaImage: byte array -> Async<Result<int, Error'>> }
 
-            type TryGetResponseProps =
+            type TryGetResponseDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>
                   getResponse: Request -> Async<Result<Response option, Error'>> }
 
