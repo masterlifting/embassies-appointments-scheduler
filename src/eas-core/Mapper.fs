@@ -19,7 +19,7 @@ module Internal =
         | "Tirana" -> Ok <| Internal.Tirana
         | "Paris" -> Ok <| Internal.Paris
         | "Rome" -> Ok <| Internal.Rome
-        | _ -> Error <| Mapping $"City {city.Name} not supported."
+        | _ -> Error <| NotSupported $"City {city.Name}."
 
     let toCountry (country: External.Country) : Result<Internal.Country, Error'> =
         toCity country.City
@@ -30,14 +30,14 @@ module Internal =
             | "Hungary" -> Ok <| Internal.Hungary city
             | "Montenegro" -> Ok <| Internal.Montenegro city
             | "Albania" -> Ok <| Internal.Albania city
-            | _ -> Error <| Mapping $"Country {country.Name} not supported.")
+            | _ -> Error <| NotSupported $"Country {country.Name}.")
 
     let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, Error'> =
         toCountry embassy.Country
         |> Result.bind (fun country ->
             match embassy.Name with
             | "Russian" -> Ok <| Internal.Russian country
-            | _ -> Error <| Mapping $"Embassy {embassy.Name} not supported.")
+            | _ -> Error <| NotSupported $"Embassy {embassy.Name}.")
 
     let toRequest (request: External.Request) : Result<Internal.Request, Error'> =
         toEmbassy request.Embassy
@@ -49,7 +49,7 @@ module Internal =
               Modified = request.Modified })
 
     let toAppointment (appointment: External.Appointment) : Internal.Appointment =
-        { Id = Internal.AppointementId appointment.Id
+        { Id = Internal.AppointmentId appointment.Id
           Date = DateOnly.FromDateTime(appointment.DateTime)
           Time = TimeOnly.FromDateTime(appointment.DateTime)
           Description = appointment.Description }

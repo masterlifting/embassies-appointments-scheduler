@@ -11,12 +11,12 @@ module Internal =
             match this with
             | UserId id -> id
 
-    type AppointementId =
-        | AppointementId of Guid
+    type AppointmentId =
+        | AppointmentId of Guid
 
         member this.Value =
             match this with
-            | AppointementId id -> id
+            | AppointmentId id -> id
 
     type RequestId =
         | RequestId of Guid
@@ -66,7 +66,7 @@ module Internal =
           Modified: DateTime }
 
     type Appointment =
-        { Id: AppointementId
+        { Id: AppointmentId
           Date: DateOnly
           Time: TimeOnly
           Description: string }
@@ -127,7 +127,7 @@ module Internal =
                 |> Http.Route.toUri
                 |> Result.bind (fun uri ->
                     match uri.Host.Split '.' with
-                    | hostParts when hostParts.Length < 3 -> Error <| Parsing $"City is not recognized {url}."
+                    | hostParts when hostParts.Length < 3 -> Error <| NotSupported $"Kdmid. City in {url}."
                     | hostParts ->
                         uri
                         |> Http.Route.toQueryParams
@@ -183,7 +183,7 @@ module Internal =
                                     |> List.choose Operators.id
                                     |> List.fold (fun acc error -> $"{acc},{error}") ""
 
-                                Error <| Parsing $"Invalid parameters in {url}.{errors}."))
+                                Error <| NotSupported $"Parameters in {url}. {errors}."))
 
 module External =
 

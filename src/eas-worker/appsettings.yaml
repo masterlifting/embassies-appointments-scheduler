@@ -24,7 +24,7 @@ Worker:
                     Delay: 00:00:10
               Schedule:
                 IsEnabled: true
-                Limit: 6
+                Limit: 2
                 Workdays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true

@@ -51,7 +51,7 @@ module Embassies =
 
                 Expect.equal
                     responseRes
-                    (Error <| Business "No nodes found on the validation page.")
+                    (Error <| NotFound "No nodes found on the validation page.")
                     "The first page should be parsed"
             }
 

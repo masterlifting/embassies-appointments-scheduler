@@ -13,7 +13,7 @@ let private getTasksGraph handlersGraph configuration =
     |> Option.map (fun graph -> Worker.Mapper.buildCoreGraph graph handlersGraph)
     |> Option.defaultValue (
         Error
-        <| Persistence $"Section '%s{sectionName}' was not found in the configuration."
+        <| NotFound $"Section '%s{sectionName}' in the configuration."
     )
 
 let getTaskNode handlersGraph configuration =
@@ -26,7 +26,7 @@ let getTaskNode handlersGraph configuration =
                     |> Option.map Ok
                     |> Option.defaultValue (
                         Error
-                        <| Persistence
-                            $"Task '%s{taskName}' was not found in the section '%s{sectionName}' of the configuration."
+                        <| NotFound
+                            $"Task '%s{taskName}' in the section '%s{sectionName}' of the configuration."
                     ))
         }

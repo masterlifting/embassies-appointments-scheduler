@@ -23,7 +23,7 @@ module Serbia =
 
                 storage
                 |> Repository.Command.Request.create ct request
-                |> ResultAsync.map (fun _ -> Info $"Test request was created \n{request}"))
+                |> ResultAsync.map (fun _ -> Info "Test request was created."))
 
     let private Belgrade =
         Node(

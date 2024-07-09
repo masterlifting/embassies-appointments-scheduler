@@ -192,12 +192,12 @@ module private InMemoryRepository =
 
             let private add (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
-                | Some _ -> Error(Persistence $"Request {request.Id} already exists.")
+                | Some _ -> Error <| AlreadyExists $"Request {request.Id} already exists."
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
             let private update (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| Persistence $"Request {request.Id} not found to update."
+                | None -> Error <| NotFound $"Request {request.Id} not found to update."
                 | Some index ->
                     Ok(
                         requests
@@ -206,7 +206,7 @@ module private InMemoryRepository =
 
             let private delete (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| Persistence $"Request {request.Id} not found to delete."
+                | None -> Error <| NotFound $"Request {request.Id} not found to delete."
                 | Some index -> Ok(requests |> Array.removeAt index)
 
             let execute ct command context =
@@ -231,12 +231,12 @@ module private InMemoryRepository =
 
             let private add (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
-                | Some _ -> Error <| Persistence $"Response {response.Id} already exists."
+                | Some _ -> Error <| AlreadyExists $"Response {response.Id} already exists."
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
             let private update (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| Persistence $"Response {response.Id} not found to update."
+                | None -> Error <| NotFound $"Response {response.Id} not found to update."
                 | Some index ->
                     Ok(
                         responses
@@ -245,7 +245,7 @@ module private InMemoryRepository =
 
             let private delete (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| Persistence $"Response {response.Id} not found to delete."
+                | None -> Error <| NotFound $"Response {response.Id} not found to delete."
                 | Some index -> Ok(responses |> Array.removeAt index)
 
             let execute ct command context =

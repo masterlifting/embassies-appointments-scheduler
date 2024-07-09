@@ -108,34 +108,30 @@ module Russian =
                        MediaType = "application/x-www-form-urlencoded" |}
 
             request, content
-        
+
         open SkiaSharp
         open System.IO
 
         let prepareCaptchaImage (image: byte array) =
 
-            let dateFormat = "yyyy_MM_dd_HH_mm_ss"
-            let time = DateTime.Now.ToString dateFormat
-            let filePath = $"{Environment.CurrentDirectory}/captcha/image_{time}.png"
-            IO.File.WriteAllBytes(filePath, image)
+            try
+                let bitmap = image |> SKBitmap.Decode
+                let bitmapInfo = bitmap.Info
+                let bitmapPixels = bitmap.GetPixels()
 
-            use stream = new MemoryStream(image)
-            use bitmap = SKBitmap.Decode(stream)
+                use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
 
-            let width = bitmap.Width / 3
+                let x = pixmap.Width / 3
+                let y = 0
+                let width = x * 2
+                let height = pixmap.Height
 
-            use croppedBitmap = new SKBitmap(width, bitmap.Height)
-            use image = SKImage.FromBitmap(croppedBitmap)
-            let result = image.Encode(SKEncodedImageFormat.Png, 100)
-            let result = result.ToArray()
+                let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
+                let data = subset.Encode(SKPngEncoderOptions.Default)
 
-            let dateFormat = "yyyy_MM_dd_HH_mm_ss"
-            let time = DateTime.Now.ToString dateFormat
-            let filePath = $"{Environment.CurrentDirectory}/captcha/result_{time}.png"
-            IO.File.WriteAllBytes(filePath, result)
-
-            Ok result
-
+                Ok <| data.ToArray()
+            with ex ->
+                Error <| Operation { Message = ex.Message; Code = None }
 
     module Parser =
         module Html =
@@ -148,10 +144,10 @@ module Russian =
                     | null -> Ok html
                     | error ->
                         match error.InnerText with
-                        | IsString msg -> Error <| Business msg
+                        | IsString msg -> Error <| Operation { Message = msg; Code = None }
                         | _ -> Ok html
                 with ex ->
-                    Error <| Parsing ex.Message
+                    Error <| NotSupported ex.Message
 
             let private getNode (xpath: string) (html: HtmlDocument) =
                 try
@@ -159,7 +155,7 @@ module Russian =
                     | null -> Ok None
                     | node -> Ok <| Some node
                 with ex ->
-                    Error <| Parsing ex.Message
+                    Error <| NotSupported ex.Message
 
             let private getNodes (xpath: string) (html: HtmlDocument) =
                 try
@@ -167,7 +163,7 @@ module Russian =
                     | null -> Ok None
                     | nodes -> Ok <| Some nodes
                 with ex ->
-                    Error <| Parsing ex.Message
+                    Error <| NotSupported ex.Message
 
             let private getAttributeValue (attribute: string) (node: HtmlNode) =
                 try
@@ -175,7 +171,7 @@ module Russian =
                     | "" -> Ok None
                     | value -> Ok <| Some value
                 with ex ->
-                    Error <| Parsing ex.Message
+                    Error <| NotSupported ex.Message
 
             let parseStartPage page =
                 Web.Parser.Html.load page
