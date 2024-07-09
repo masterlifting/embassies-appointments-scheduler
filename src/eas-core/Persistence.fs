@@ -277,6 +277,7 @@ module Repository =
         | Some storage -> Ok storage
         | _ -> Persistence.Core.createStorage InMemory
 
+    [<RequireQualifiedAccessAttribute>]
     module Query =
 
         module Request =
@@ -303,6 +304,7 @@ module Repository =
                 | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
+    [<RequireQualifiedAccessAttribute>]
     module Command =
 
         module Request =

@@ -18,44 +18,30 @@ module Embassies =
                 { Id = Guid.NewGuid() |> RequestId
                   User = { Id = UserId 1; Name = "Andrei" }
                   Embassy = Russian <| Serbia Belgrade
-                  Data =
-                    Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38" ]
+                  Data = Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38" ]
                   Modified = DateTime.UtcNow }
 
             let getResponseProps =
-                { getStartPage = fun _ _ -> async { return Ok (String.Empty, None) }
+                { getStartPage = fun _ _ -> async { return Ok(String.Empty, None) }
                   postValidationPage = fun _ _ _ -> async { return Ok String.Empty }
-                  getCaptchaImage = fun _ _ -> async { return Ok ([||], None) }
+                  getCaptchaImage = fun _ _ -> async { return Ok([||], None) }
                   solveCaptchaImage = fun _ -> async { return Ok 42 } }
 
             let loadFile fileName =
                 Environment.CurrentDirectory + "/test_data/" + fileName
                 |> FileSystem.create
                 |> ResultAsync.wrap FileSystem.get
-            
+
             let loadFile' fileName =
-                Environment.CurrentDirectory + "/test_data/" + fileName
-                |> FileSystem.create
-                |> ResultAsync.wrap FileSystem.get
-                |> ResultAsync.map (fun data -> (data, None))
+                let requiredHeader =
+                    Some
+                    <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
+
+                loadFile fileName |> ResultAsync.map (fun data -> (data, requiredHeader))
 
         open Fixture
 
-        let private ``the first page should be parsed`` =
-            testAsync "The First page should be parsed" {
-                let! responseRes =
-                    request
-                    |> Russian.API.getResponse
-                        { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile' "start_page_response.html" }
-
-                Expect.equal
-                    responseRes
-                    (Error <| NotFound "No nodes found on the validation page.")
-                    "The first page should be parsed"
-            }
-
-        let private ``the validation page should be parsed`` =
+        let private ``request should have valid html pipeline`` =
             testAsync "The Validation page should be parsed" {
                 let! responseRes =
                     request
@@ -71,7 +57,4 @@ module Embassies =
             }
 
         let tests =
-            testList
-                "Embassies.Russian"
-                [ //``the first page should be parsed``
-                  ``the validation page should be parsed`` ]
+            testList "Embassies.Russian" [ ``request should have valid html pipeline`` ]

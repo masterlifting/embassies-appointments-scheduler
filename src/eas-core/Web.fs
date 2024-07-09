@@ -110,10 +110,8 @@ module Russian =
             request, content
 
         open SkiaSharp
-        open System.IO
 
         let prepareCaptchaImage (image: byte array) =
-
             try
                 let bitmap = image |> SKBitmap.Decode
                 let bitmapInfo = bitmap.Info
@@ -121,17 +119,20 @@ module Russian =
 
                 use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
 
-                let x = pixmap.Width / 3
-                let y = 0
-                let width = x * 2
-                let height = pixmap.Height
+                if pixmap.Height = pixmap.Width then
+                    Ok image
+                else
+                    let x = pixmap.Width / 3
+                    let y = 0
+                    let width = x * 2
+                    let height = pixmap.Height
 
-                let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
-                let data = subset.Encode(SKPngEncoderOptions.Default)
+                    let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
+                    let data = subset.Encode(SKEncodedImageFormat.Png, 100)
 
-                Ok <| data.ToArray()
+                    Ok <| data.ToArray()
             with ex ->
-                Error <| Operation { Message = ex.Message; Code = None }
+                Error <| NotSupported ex.Message
 
     module Parser =
         module Html =
@@ -211,7 +212,7 @@ module Russian =
 
                     match requiredKeys.Count = result.Count with
                     | true -> Ok result
-                    | false -> Error <| NotFound "Required headers for Start Page.")
+                    | false -> Error <| NotFound "Start Page headers.")
 
             let parseValidationPage page =
                 Web.Parser.Html.load page
@@ -237,4 +238,4 @@ module Russian =
 
                     match requiredKeys.Count = result.Count with
                     | true -> Ok result
-                    | false -> Error <| NotFound "Required headers for Start Page.")
+                    | false -> Error <| NotFound "Validation Page headers.")
