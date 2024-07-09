@@ -52,6 +52,7 @@ module Russian =
                     deps.HttpClient
                     |> getCaptchaImage
                     |> ResultAsync.bind setSessionCookie
+                    |> ResultAsync.bind Http.prepareCaptchaImage
                     |> ResultAsync.bind' solveCaptchaImage
                     |> ResultAsync.map' addFormData
                     |> ResultAsync.map' Http.buildFormData)

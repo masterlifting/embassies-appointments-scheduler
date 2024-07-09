@@ -26,4 +26,8 @@
     <ProjectReference Include="..\eas-core\eas-core.fsproj" />
   </ItemGroup>
   
+  <ItemGroup>
+    <Folder Include="bin\Debug\net8.0\captcha\" />
+  </ItemGroup>
+  
 </Project>

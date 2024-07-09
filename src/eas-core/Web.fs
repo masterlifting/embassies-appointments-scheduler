@@ -7,7 +7,7 @@ module Russian =
 
     module Http =
         open Web.Domain.Http
-        open Web.Client.Http
+        open Web.Client
 
         [<Literal>]
         let private BasePath = "/queue/orderinfo.aspx?"
@@ -30,7 +30,7 @@ module Russian =
                       [ "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0" ] ]
                 |> Some
 
-            create $"https://%s{city}.kdmid.ru" headers
+            Http.create $"https://%s{city}.kdmid.ru" headers
 
         let createQueryParams id cd ems =
             match ems with
@@ -60,18 +60,18 @@ module Russian =
 
         let private setCookie cookie httpClient =
             let headers = Map [ "Cookie", cookie ] |> Some
-            httpClient |> Headers.add headers
+            httpClient |> Http.Headers.add headers
 
         let setRequiredCookie httpClient (data: string, headers: Headers) =
             headers
-            |> Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
+            |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
                 data)
 
         let setSessionCookie httpClient (image: byte array, headers: Headers) =
             headers
-            |> Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
+            |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
                 image)
@@ -81,8 +81,8 @@ module Russian =
               Headers = None }
 
         let createGetCaptchaImageRequest urlPath queryParams httpClient =
-            let origin = httpClient |> Route.toOrigin
-            let host = httpClient |> Route.toHost
+            let origin = httpClient |> Http.Route.toOrigin
+            let host = httpClient |> Http.Route.toHost
 
             let headers =
                 Map
@@ -95,7 +95,7 @@ module Russian =
               Headers = headers }
 
         let createPostValidationPageRequest formData queryParams httpClient =
-            let headers = Map [ "Origin", [ httpClient |> Route.toOrigin ] ] |> Some
+            let headers = Map [ "Origin", [ httpClient |> Http.Route.toOrigin ] ] |> Some
 
             let request =
                 { Path = BasePath + queryParams
@@ -108,6 +108,33 @@ module Russian =
                        MediaType = "application/x-www-form-urlencoded" |}
 
             request, content
+        
+        open SkiaSharp
+        open System.IO
+
+        let prepareCaptchaImage (image: byte array) =
+
+            let dateFormat = "yyyy_MM_dd_HH_mm_ss"
+            let time = DateTime.Now.ToString dateFormat
+            let filePath = $"{Environment.CurrentDirectory}/captcha/image_{time}.png"
+            IO.File.WriteAllBytes(filePath, image)
+
+            use stream = new MemoryStream(image)
+            use bitmap = SKBitmap.Decode(stream)
+
+            let width = bitmap.Width / 3
+
+            use croppedBitmap = new SKBitmap(width, bitmap.Height)
+            use image = SKImage.FromBitmap(croppedBitmap)
+            let result = image.Encode(SKEncodedImageFormat.Png, 100)
+            let result = result.ToArray()
+
+            let dateFormat = "yyyy_MM_dd_HH_mm_ss"
+            let time = DateTime.Now.ToString dateFormat
+            let filePath = $"{Environment.CurrentDirectory}/captcha/result_{time}.png"
+            IO.File.WriteAllBytes(filePath, result)
+
+            Ok result
 
 
     module Parser =

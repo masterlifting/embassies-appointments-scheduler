@@ -32,6 +32,12 @@ module Embassies =
                 Environment.CurrentDirectory + "/test_data/" + fileName
                 |> FileSystem.create
                 |> ResultAsync.wrap FileSystem.get
+            
+            let loadFile' fileName =
+                Environment.CurrentDirectory + "/test_data/" + fileName
+                |> FileSystem.create
+                |> ResultAsync.wrap FileSystem.get
+                |> ResultAsync.map (fun data -> (data, None))
 
         open Fixture
 
@@ -39,9 +45,9 @@ module Embassies =
             testAsync "The First page should be parsed" {
                 let! responseRes =
                     request
-                    |> Russian.getResponse
+                    |> Russian.API.getResponse
                         { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile "start_page_response.html" }
+                            getStartPage = fun _ _ -> loadFile' "start_page_response.html" }
 
                 Expect.equal
                     responseRes
@@ -53,9 +59,9 @@ module Embassies =
             testAsync "The Validation page should be parsed" {
                 let! responseRes =
                     request
-                    |> Russian.getResponse
+                    |> Russian.API.getResponse
                         { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile "start_page_response.html"
+                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
                             postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
 
                 Expect.equal
