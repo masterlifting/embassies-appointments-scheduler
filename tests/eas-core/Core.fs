@@ -18,13 +18,17 @@ module Embassies =
                 { Id = Guid.NewGuid() |> RequestId
                   User = { Id = UserId 1; Name = "Andrei" }
                   Embassy = Russian <| Serbia Belgrade
-                  Data = Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38" ]
+                  Data = Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57" ]
                   Modified = DateTime.UtcNow }
 
+            let requiredHeaders =
+                Some
+                <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
+
             let getResponseProps =
-                { getStartPage = fun _ _ -> async { return Ok(String.Empty, None) }
+                { getStartPage = fun _ _ -> async { return Ok(String.Empty, requiredHeaders) }
                   postValidationPage = fun _ _ _ -> async { return Ok String.Empty }
-                  getCaptchaImage = fun _ _ -> async { return Ok([||], None) }
+                  getCaptchaImage = fun _ _ -> async { return Ok([||], requiredHeaders) }
                   solveCaptchaImage = fun _ -> async { return Ok 42 } }
 
             let loadFile fileName =
@@ -33,16 +37,42 @@ module Embassies =
                 |> ResultAsync.wrap FileSystem.get
 
             let loadFile' fileName =
-                let requiredHeader =
-                    Some
-                    <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
-
-                loadFile fileName |> ResultAsync.map (fun data -> (data, requiredHeader))
+                loadFile fileName |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
         open Fixture
 
+        let private ``validation page response should be invalid`` =
+            testAsync "Validation page response should be invalid" {
+                let! responseRes =
+                    request
+                    |> Russian.API.getResponse
+                        { getResponseProps with
+                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
+                            postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
+
+                Expect.equal
+                    responseRes
+                    (Error <| NotImplemented "searchResponse")
+                    "The validation page should be parsed"
+            }
+
+        let private ``validation page response should have confirmation request`` =
+            testAsync "Validation page response should have confirmation request" {
+                let! responseRes =
+                    request
+                    |> Russian.API.getResponse
+                        { getResponseProps with
+                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
+                            postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
+
+                Expect.equal
+                    responseRes
+                    (Error <| NotImplemented "searchResponse")
+                    "The validation page should be parsed"
+            }
+
         let private ``request should have valid html pipeline`` =
-            testAsync "The Validation page should be parsed" {
+            testAsync "Request should have valid html pipeline" {
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
@@ -57,4 +87,8 @@ module Embassies =
             }
 
         let tests =
-            testList "Embassies.Russian" [ ``request should have valid html pipeline`` ]
+            testList
+                "Embassies.Russian"
+                [ ``validation page response should be invalid``
+                  ``validation page response should have confirmation request``
+                  ``request should have valid html pipeline`` ]

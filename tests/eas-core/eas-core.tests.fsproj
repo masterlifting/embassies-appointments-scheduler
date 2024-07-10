@@ -18,7 +18,7 @@
     <Content Include="test_data\validation_page_valid_response.html" >
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\validation_page_invalid_val_response.html">
+    <Content Include="test_data\validation_page_invalid_requires_confirmation.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

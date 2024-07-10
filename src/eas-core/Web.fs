@@ -113,24 +113,27 @@ module Russian =
 
         let prepareCaptchaImage (image: byte array) =
             try
-                let bitmap = image |> SKBitmap.Decode
-                let bitmapInfo = bitmap.Info
-                let bitmapPixels = bitmap.GetPixels()
-
-                use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
-
-                if pixmap.Height = pixmap.Width then
-                    Ok image
+                if image.Length = 0 then
+                    Ok [||]
                 else
-                    let x = pixmap.Width / 3
-                    let y = 0
-                    let width = x * 2
-                    let height = pixmap.Height
+                    let bitmap = image |> SKBitmap.Decode
+                    let bitmapInfo = bitmap.Info
+                    let bitmapPixels = bitmap.GetPixels()
 
-                    let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
-                    let data = subset.Encode(SKEncodedImageFormat.Png, 100)
+                    use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
 
-                    Ok <| data.ToArray()
+                    if pixmap.Height = pixmap.Width then
+                        Ok image
+                    else
+                        let x = pixmap.Width / 3
+                        let y = 0
+                        let width = x * 2
+                        let height = pixmap.Height
+
+                        let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
+                        let data = subset.Encode(SKEncodedImageFormat.Png, 100)
+
+                        Ok <| data.ToArray()
             with ex ->
                 Error <| NotSupported ex.Message
 

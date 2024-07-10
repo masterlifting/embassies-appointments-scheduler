@@ -83,7 +83,7 @@ module Russian =
         //getStartPage baseUrl urlParams
         async { return Error <| NotImplemented "getCalendarPage" }
 
-    let private postConfirmation (data: Map<string, string>) apointment queryParams : Async<Result<unit, Error'>> =
+    let private postConfirmation (data: Map<string, string>) appointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
     let private searchResponse (deps: GetResponseDeps) =
