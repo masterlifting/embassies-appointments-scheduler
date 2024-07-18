@@ -86,13 +86,12 @@ module Internal =
             open Infrastructure.DSL.AP
             open Infrastructure.Domain.Errors
 
-            module Errors =
+            module ErrorCodes =
 
                 [<Literal>]
-                let ResponseError = "Page has an error."
-
+                let PageHasError = "PageHasError"
                 [<Literal>]
-                let ConfirmationError = "The assignment is not confirmed."
+                let NotConfirmed = "NotConfirmed"
 
 
             type GetStartPage = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>

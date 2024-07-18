@@ -57,8 +57,11 @@ module Embassies =
 
                 match Expect.wantError responseRes "Response should have an error" with
                 | Operation reason ->
-                    Expect.equal reason.Code (Some Errors.ResponseError) $"Error code should be {Errors.ResponseError}"
-                | _ -> Expect.isTrue false "Error should be Operation type"
+                    Expect.equal
+                        reason.Code
+                        (Some ErrorCodes.PageHasError)
+                        $"Error code should be {ErrorCodes.PageHasError}"
+                | error -> Expect.isTrue false $"Error should be {nameof Operation} type, but was {error}"
             }
 
         let private ``validation page should have a confirmation request`` =
@@ -69,14 +72,17 @@ module Embassies =
                         { getResponseProps with
                             getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                             getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
-                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_invalid_requires_confirmation.html" }
+                            postValidationPage =
+                                fun _ _ _ -> loadHtml "validation_page_invalid_requires_confirmation.html" }
 
                 match Expect.wantError responseRes "Response should have an error" with
                 | Operation reason ->
-                    Expect.equal reason.Code (Some Errors.ResponseError) $"Error code should be {Errors.ResponseError}"
-                | _ -> Expect.isTrue false "Error should be Operation type"
+                    Expect.equal
+                        reason.Code
+                        (Some ErrorCodes.NotConfirmed)
+                        $"Error code should be {ErrorCodes.NotConfirmed}"
+                | error -> Expect.isTrue false $"Error should be {nameof Operation} type, but was {error}"
             }
-
 
         let private ``calendar page should not have appointments`` =
             testAsync "calendar page should not have appointments" {

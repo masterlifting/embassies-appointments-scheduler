@@ -145,20 +145,38 @@ module Russian =
             open Infrastructure.DSL.AP
             open Web.Parser.Domain.Html
 
-            let private hasError (html: Page) =
-                try
-                    match html.DocumentNode.SelectSingleNode("//span[@id='ctl00_MainContent_lblCodeErr']") with
-                    | null -> Ok html
-                    | error ->
-                        match error.InnerText with
+            let private hasError html =
+                html
+                |> Html.getNode "//span[@id='ctl00_MainContent_lblCodeErr']"
+                |> Result.bind (fun error ->
+                    match error with
+                    | None -> Ok html
+                    | Some node ->
+                        match node.InnerText with
                         | IsString msg ->
                             Error
                             <| Operation
                                 { Message = msg
-                                  Code = Some Russian.Errors.ResponseError }
-                        | _ -> Ok html
-                with ex ->
-                    Error <| NotSupported ex.Message
+                                  Code = Some Russian.ErrorCodes.PageHasError }
+                        | _ -> Ok html)
+
+            let private hasConfirmationRequest html =
+                html
+                |> Html.getNode "//span[@id='ctl00_MainContent_Content']"
+                |> Result.bind (fun request ->
+                    match request with
+                    | None -> Ok html
+                    | Some node ->
+                        match node.InnerText with
+                        | IsString msg ->
+                            match msg.Contains "Ваша заявка требует подтверждения" with
+                            | true ->
+                                Error
+                                <| Operation
+                                    { Message = msg
+                                      Code = Some Russian.ErrorCodes.NotConfirmed }
+                            | false -> Ok html
+                        | _ -> Ok html)
 
             let parseStartPage page =
                 Html.load page
@@ -205,6 +223,7 @@ module Russian =
             let parseValidationPage (page, _) =
                 Html.load page
                 |> Result.bind hasError
+                |> Result.bind hasConfirmationRequest
                 |> Result.bind (Html.getNodes "//input")
                 |> Result.bind (fun nodes ->
                     match nodes with

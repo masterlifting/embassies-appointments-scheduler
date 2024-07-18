@@ -4,6 +4,7 @@ open Infrastructure
 open Infrastructure.DSL.SerDe
 open Infrastructure.DSL.Threading
 open Infrastructure.Domain.Errors
+open Persistence.Domain.Core
 open Persistence.Storage
 open Domain
 open Mapper
@@ -191,12 +192,12 @@ module private InMemoryRepository =
 
             let private add (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
-                | Some _ -> Error <| AlreadyExists $"Request {request.Id} already exists."
+                | Some _ -> Error <| Operation { Message =  $"Request {request.Id} already exists."; Code = Some ErrorCodes.AlreadyExists } 
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
             let private update (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| NotFound $"Request {request.Id} not found to update."
+                | None -> Error <| Operation { Message =  $"Request {request.Id} not found to update."; Code = Some ErrorCodes.NotFound }
                 | Some index ->
                     Ok(
                         requests
@@ -205,7 +206,7 @@ module private InMemoryRepository =
 
             let private delete (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| NotFound $"Request {request.Id} not found to delete."
+                | None -> Error <| Operation { Message =  $"Request {request.Id} not found to delete."; Code = Some ErrorCodes.NotFound }
                 | Some index -> Ok(requests |> Array.removeAt index)
 
             let execute ct command context =
@@ -230,12 +231,12 @@ module private InMemoryRepository =
 
             let private add (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
-                | Some _ -> Error <| AlreadyExists $"Response {response.Id} already exists."
+                | Some _ -> Error <| Operation { Message =  $"Response {response.Id} already exists."; Code = Some ErrorCodes.AlreadyExists }
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
             let private update (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| NotFound $"Response {response.Id} not found to update."
+                | None -> Error <| Operation { Message =  $"Response {response.Id} not found to update."; Code = Some ErrorCodes.NotFound }
                 | Some index ->
                     Ok(
                         responses
@@ -244,7 +245,7 @@ module private InMemoryRepository =
 
             let private delete (response: Internal.Response) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| NotFound $"Response {response.Id} not found to delete."
+                | None -> Error <| Operation { Message =  $"Response {response.Id} not found to delete."; Code = Some ErrorCodes.NotFound }
                 | Some index -> Ok(responses |> Array.removeAt index)
 
             let execute ct command context =
@@ -266,8 +267,9 @@ module private InMemoryRepository =
                 }
 
 module Repository =
-    open Persistence.Core
-    open Persistence.Core.Domain    
+    open Persistence.Domain.Core
+    open Persistence.Storage.Core
+    
 
     ///<summary>Creates a storage context</summary>
     /// <param name="storage">The storage context</param>
@@ -276,7 +278,7 @@ module Repository =
     let createStorage storage =
         match storage with
         | Some storage -> Ok storage
-        | _ -> Storage.create InMemory
+        | _ -> createStorage InMemory
 
     [<RequireQualifiedAccess>]
     module Query =
@@ -285,24 +287,24 @@ module Repository =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get ct filter
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.Request.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct requestId storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Request.get' ct requestId
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.Request.get' ct requestId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module Response =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get ct filter
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.Response.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' ct responseId
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.Response.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
     [<RequireQualifiedAccess>]
@@ -312,7 +314,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Command.Request.execute ct command
+                | InMemoryStorage context -> context |> InMemoryRepository.Command.Request.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let create ct request =
@@ -328,7 +330,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryContext context -> context |> InMemoryRepository.Command.Response.execute ct command
+                | InMemoryStorage context -> context |> InMemoryRepository.Command.Response.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let create ct response =

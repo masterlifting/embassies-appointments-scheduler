@@ -9,8 +9,8 @@ open Eas.Persistence.Filter
 open Persistence.Domain
 
 module Russian =
-    open Persistence.Core.Domain
-    open Persistence.Core
+    open Persistence.Domain.Core
+    open Persistence.Storage.Core
     open Web.Client
     open Eas.Persistence
 
@@ -58,7 +58,7 @@ module Russian =
 
     let private searchAppointments country =
         fun _ ct ->
-            Storage.create InMemory
+            createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
                 storage
                 |> getRequests ct country
