@@ -8,9 +8,11 @@ open Eas.Persistence
 open Persistence.Domain
 
 module Serbia =
+    open Persistence.Core
+    open Persistence.Core.Domain
     let private createTestRequest =
         fun _ ct ->
-            Persistence.Core.createStorage InMemory
+            Storage.create InMemory
             |> ResultAsync.wrap (fun storage ->
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId

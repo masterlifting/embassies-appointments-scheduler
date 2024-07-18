@@ -9,6 +9,8 @@ open Eas.Persistence.Filter
 open Persistence.Domain
 
 module Russian =
+    open Persistence.Core.Domain
+    open Persistence.Core
     open Web.Client
     open Eas.Persistence
 
@@ -29,7 +31,7 @@ module Russian =
         let getResponse =
             Russian.API.getResponse
                 { getStartPage = Http.Request.Get.string' ct
-                  postValidationPage = Http.Request.Post.waitString ct
+                  postValidationPage = Http.Request.Post.waitString' ct
                   getCaptchaImage = Http.Request.Get.bytes' ct
                   solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct }
 
@@ -56,7 +58,7 @@ module Russian =
 
     let private searchAppointments country =
         fun _ ct ->
-            Persistence.Core.createStorage InMemory
+            Storage.create InMemory
             |> ResultAsync.wrap (fun storage ->
                 storage
                 |> getRequests ct country

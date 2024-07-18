@@ -13,9 +13,9 @@ module Russian =
 
     type private StartPageDeps =
         { HttpClient: Http.Client
-          getStartPage: Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-          getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
-          solveCaptchaImage: byte array -> Async<Result<int, Error'>> }
+          getStartPage: GetStartPage
+          getCaptchaImage: GetCaptchaImage
+          solveCaptchaImage: SolveCaptchaImage }
 
     let private getStartPageData deps =
         fun queryParams ->
@@ -24,7 +24,8 @@ module Russian =
                 let request = Http.createGetStartPageRequest queryParams
                 deps.getStartPage request
 
-            let setRequiredCookie = deps.HttpClient |> Http.setRequiredCookie
+            let setRequiredCookie response =
+                deps.HttpClient |> Http.setRequiredCookie response
 
             deps.HttpClient
             |> getStartPage
@@ -41,28 +42,26 @@ module Russian =
 
                         deps.getCaptchaImage request
 
-                    let inline setSessionCookie image =
-                        deps.HttpClient |> Http.setSessionCookie <| image
-
-                    let solveCaptchaImage = deps.solveCaptchaImage
+                    let inline setSessionCookie response =
+                        deps.HttpClient |> Http.setSessionCookie response
 
                     let inline addFormData captcha =
-                        pageData |> Http.addStartPageFormData <| captcha
+                        pageData |> Http.addStartPageFormData captcha
 
                     deps.HttpClient
                     |> getCaptchaImage
                     |> ResultAsync.bind setSessionCookie
                     |> ResultAsync.bind Http.prepareCaptchaImage
-                    |> ResultAsync.bind' solveCaptchaImage
+                    |> ResultAsync.bind' deps.solveCaptchaImage
                     |> ResultAsync.map' addFormData
                     |> ResultAsync.map' Http.buildFormData)
 
     type private ValidationPageDeps =
         { HttpClient: Http.Client
-          postValidationPage: Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>> }
+          postValidationPage: PostValidationPage }
 
     let private getValidationPageData deps =
-        fun formData queryParams ->
+        fun queryParams formData ->
 
             let postValidationPage =
                 let request, content =
@@ -109,10 +108,11 @@ module Russian =
 
                 resultAsync {
                     let! startPageData = getStartPageData queryParams
-                    let! getValidationPageData = getValidationPageData startPageData queryParams
+                    let! getValidationPageData = getValidationPageData queryParams startPageData
 
                     return async { return Error <| NotImplemented "searchResponse" }
                 })
+
     [<RequireQualifiedAccess>]
     module API =
         let getResponse deps =

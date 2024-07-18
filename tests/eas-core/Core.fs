@@ -8,11 +8,11 @@ module Embassies =
         open System
         open Infrastructure.Domain.Errors
         open Infrastructure.DSL
-        open Persistence.Storage
+        open Eas.Domain.Internal.Embassies.Russian
 
         module private Fixture =
+            open Persistence.Storage
             open Eas.Domain.Internal
-            open Eas.Domain.Internal.Embassies.Russian
 
             let request =
                 { Id = Guid.NewGuid() |> RequestId
@@ -27,68 +27,90 @@ module Embassies =
 
             let getResponseProps =
                 { getStartPage = fun _ _ -> async { return Ok(String.Empty, requiredHeaders) }
-                  postValidationPage = fun _ _ _ -> async { return Ok String.Empty }
+                  postValidationPage = fun _ _ _ -> async { return Ok(String.Empty, requiredHeaders) }
                   getCaptchaImage = fun _ _ -> async { return Ok([||], requiredHeaders) }
                   solveCaptchaImage = fun _ -> async { return Ok 42 } }
 
-            let loadFile fileName =
+            let loadHtml fileName =
                 Environment.CurrentDirectory + "/test_data/" + fileName
-                |> FileSystem.create
-                |> ResultAsync.wrap FileSystem.get
+                |> FileSystem.Context.create
+                |> ResultAsync.wrap FileSystem.Read.string
+                |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
-            let loadFile' fileName =
-                loadFile fileName |> ResultAsync.map (fun data -> (data, requiredHeaders))
+            let loadImage fileName =
+                Environment.CurrentDirectory + "/test_data/" + fileName
+                |> FileSystem.Context.create
+                |> ResultAsync.wrap FileSystem.Read.bytes
+                |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
         open Fixture
 
-        let private ``validation page response should be invalid`` =
-            testAsync "Validation page response should be invalid" {
+        let private ``validation page should have an error`` =
+            testAsync "validation page should have an error" {
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
                         { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
-                            postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
+                            getStartPage = fun _ _ -> loadHtml "start_page_response.html"
+                            getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_invalid_response.html" }
 
-                Expect.equal
-                    responseRes
-                    (Error <| NotImplemented "searchResponse")
-                    "The validation page should be parsed"
+                match Expect.wantError responseRes "Response should have an error" with
+                | Operation reason ->
+                    Expect.equal reason.Code (Some Errors.ResponseError) $"Error code should be {Errors.ResponseError}"
+                | _ -> Expect.isTrue false "Error should be Operation type"
             }
 
-        let private ``validation page response should have confirmation request`` =
-            testAsync "Validation page response should have confirmation request" {
+        let private ``validation page should have a confirmation request`` =
+            testAsync "validation page should have a confirmation request" {
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
                         { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
-                            postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
+                            getStartPage = fun _ _ -> loadHtml "start_page_response.html"
+                            getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_invalid_requires_confirmation.html" }
 
-                Expect.equal
-                    responseRes
-                    (Error <| NotImplemented "searchResponse")
-                    "The validation page should be parsed"
+                match Expect.wantError responseRes "Response should have an error" with
+                | Operation reason ->
+                    Expect.equal reason.Code (Some Errors.ResponseError) $"Error code should be {Errors.ResponseError}"
+                | _ -> Expect.isTrue false "Error should be Operation type"
             }
 
-        let private ``request should have valid html pipeline`` =
-            testAsync "Request should have valid html pipeline" {
+
+        let private ``calendar page should not have appointments`` =
+            testAsync "calendar page should not have appointments" {
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
                         { getResponseProps with
-                            getStartPage = fun _ _ -> loadFile' "start_page_response.html"
-                            postValidationPage = fun _ _ _ -> loadFile "validation_page_valid_response.html" }
+                            getStartPage = fun _ _ -> loadHtml "start_page_response.html"
+                            getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html" }
 
-                Expect.equal
-                    responseRes
-                    (Error <| NotImplemented "searchResponse")
-                    "The validation page should be parsed"
+                let responseOpt = Expect.wantOk responseRes "Response should be Ok"
+                Expect.isNone responseOpt "Response should not be Some"
+            }
+
+        let private ``calendar page should have appointments`` =
+            testAsync "calendar page should have appointments" {
+                let! responseRes =
+                    request
+                    |> Russian.API.getResponse
+                        { getResponseProps with
+                            getStartPage = fun _ _ -> loadHtml "start_page_response.html"
+                            getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html" }
+
+                let responseOpt = Expect.wantOk responseRes "Response should be Ok"
+                let response = Expect.wantSome responseOpt "Response should be Some"
+                Expect.isTrue (not response.Appointments.IsEmpty) "Appointments should not be empty"
             }
 
         let tests =
             testList
                 "Embassies.Russian"
-                [ ``validation page response should be invalid``
-                  ``validation page response should have confirmation request``
-                  ``request should have valid html pipeline`` ]
+                [ ``validation page should have a confirmation request``
+                  ``validation page should have an error``
+                  ``calendar page should not have appointments``
+                  ``calendar page should have appointments`` ]

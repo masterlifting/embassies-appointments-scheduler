@@ -30,4 +30,8 @@
     <Folder Include="bin\Debug\net8.0\" />
   </ItemGroup>
   
+  <ItemGroup>
+    <EmbeddedResource Remove="bin\**" />
+  </ItemGroup>
+  
 </Project>

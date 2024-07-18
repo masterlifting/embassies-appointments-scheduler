@@ -1,6 +1,7 @@
 module Eas.Web
 
 open System
+open Eas.Domain.Internal.Embassies
 open Infrastructure.Domain.Errors
 
 module Russian =
@@ -37,7 +38,7 @@ module Russian =
             | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
             | None -> $"id=%i{id}&cd=%s{cd}"
 
-        let addStartPageFormData pageData captcha =
+        let addStartPageFormData captcha pageData =
             pageData
             |> Map.remove "captcha"
             |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
@@ -62,14 +63,14 @@ module Russian =
             let headers = Map [ "Cookie", cookie ] |> Some
             httpClient |> Http.Headers.add headers
 
-        let setRequiredCookie httpClient (data: string, headers: Headers) =
+        let setRequiredCookie (data: string, headers: Headers) httpClient =
             headers
             |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
                 data)
 
-        let setSessionCookie httpClient (image: byte array, headers: Headers) =
+        let setSessionCookie (image: byte array, headers: Headers) httpClient =
             headers
             |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
             |> Result.map (fun cookie ->
@@ -114,7 +115,7 @@ module Russian =
         let prepareCaptchaImage (image: byte array) =
             try
                 if image.Length = 0 then
-                    Ok [||]
+                    Error <| NotFound "Captcha image is empty."
                 else
                     let bitmap = image |> SKBitmap.Decode
                     let bitmapInfo = bitmap.Info
@@ -138,49 +139,31 @@ module Russian =
                 Error <| NotSupported ex.Message
 
     module Parser =
-        module Html =
-            open HtmlAgilityPack
-            open Infrastructure.DSL.AP
+        open Web.Parser.Client
 
-            let private hasError (html: HtmlDocument) =
+        module Html =
+            open Infrastructure.DSL.AP
+            open Web.Parser.Domain.Html
+
+            let private hasError (html: Page) =
                 try
                     match html.DocumentNode.SelectSingleNode("//span[@id='ctl00_MainContent_lblCodeErr']") with
                     | null -> Ok html
                     | error ->
                         match error.InnerText with
-                        | IsString msg -> Error <| Operation { Message = msg; Code = None }
+                        | IsString msg ->
+                            Error
+                            <| Operation
+                                { Message = msg
+                                  Code = Some Russian.Errors.ResponseError }
                         | _ -> Ok html
                 with ex ->
                     Error <| NotSupported ex.Message
 
-            let private getNode (xpath: string) (html: HtmlDocument) =
-                try
-                    match html.DocumentNode.SelectSingleNode(xpath) with
-                    | null -> Ok None
-                    | node -> Ok <| Some node
-                with ex ->
-                    Error <| NotSupported ex.Message
-
-            let private getNodes (xpath: string) (html: HtmlDocument) =
-                try
-                    match html.DocumentNode.SelectNodes(xpath) with
-                    | null -> Ok None
-                    | nodes -> Ok <| Some nodes
-                with ex ->
-                    Error <| NotSupported ex.Message
-
-            let private getAttributeValue (attribute: string) (node: HtmlNode) =
-                try
-                    match node.GetAttributeValue(attribute, "") with
-                    | "" -> Ok None
-                    | value -> Ok <| Some value
-                with ex ->
-                    Error <| NotSupported ex.Message
-
             let parseStartPage page =
-                Web.Parser.Html.load page
+                Html.load page
                 |> Result.bind hasError
-                |> Result.bind (getNodes "//input | //img")
+                |> Result.bind (Html.getNodes "//input | //img")
                 |> Result.bind (fun nodes ->
                     match nodes with
                     | None -> Error <| NotFound "Nodes on the Start Page."
@@ -189,12 +172,14 @@ module Russian =
                         |> Seq.choose (fun node ->
                             match node.Name with
                             | "input" ->
-                                match node |> getAttributeValue "name", node |> getAttributeValue "value" with
+                                match
+                                    node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value"
+                                with
                                 | Ok(Some name), Ok(Some value) -> Some(name, value)
                                 | Ok(Some name), Ok(None) -> Some(name, String.Empty)
                                 | _ -> None
                             | "img" ->
-                                match node |> getAttributeValue "src" with
+                                match node |> Html.getAttributeValue "src" with
                                 | Ok(Some code) when code.Contains "CodeImage" -> Some("captchaUrlPath", code)
                                 | _ -> None
                             | _ -> None)
@@ -217,17 +202,17 @@ module Russian =
                     | true -> Ok result
                     | false -> Error <| NotFound "Start Page headers.")
 
-            let parseValidationPage page =
-                Web.Parser.Html.load page
+            let parseValidationPage (page, _) =
+                Html.load page
                 |> Result.bind hasError
-                |> Result.bind (getNodes "//input")
+                |> Result.bind (Html.getNodes "//input")
                 |> Result.bind (fun nodes ->
                     match nodes with
                     | None -> Error <| NotFound "Nodes on the Validation Page."
                     | Some nodes ->
                         nodes
                         |> Seq.choose (fun node ->
-                            match node |> getAttributeValue "name", node |> getAttributeValue "value" with
+                            match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
                             | Ok(Some name), Ok(Some value) -> Some(name, value)
                             | Ok(Some name), Ok(None) -> Some(name, String.Empty)
                             | _ -> None)

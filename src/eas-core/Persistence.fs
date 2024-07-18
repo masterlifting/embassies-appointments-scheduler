@@ -4,7 +4,6 @@ open Infrastructure
 open Infrastructure.DSL.SerDe
 open Infrastructure.DSL.Threading
 open Infrastructure.Domain.Errors
-open Persistence.Domain
 open Persistence.Storage
 open Domain
 open Mapper
@@ -65,7 +64,7 @@ module private InMemoryRepository =
 
     let private getEntities<'a> key context =
         context
-        |> InMemory.get key
+        |> InMemory.Query.get key
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
 
 
@@ -182,11 +181,11 @@ module private InMemoryRepository =
             if data.Length = 1 then
                 data
                 |> Json.serialize
-                |> Result.bind (fun value -> context |> InMemory.add key value)
+                |> Result.bind (fun value -> context |> InMemory.Command.add key value)
             else
                 data
                 |> Json.serialize
-                |> Result.bind (fun value -> context |> InMemory.update key value)
+                |> Result.bind (fun value -> context |> InMemory.Command.update key value)
 
         module Request =
 
@@ -267,17 +266,19 @@ module private InMemoryRepository =
                 }
 
 module Repository =
+    open Persistence.Core
+    open Persistence.Core.Domain    
 
     ///<summary>Creates a storage context</summary>
-    /// <param name="storage">The storage type</param>
+    /// <param name="storage">The storage context</param>
     /// <returns>The storage context</returns>
     /// <remarks>Default is InMemory</remarks>
-    let createStorage =
-        function
+    let createStorage storage =
+        match storage with
         | Some storage -> Ok storage
-        | _ -> Persistence.Core.createStorage InMemory
+        | _ -> Storage.create InMemory
 
-    [<RequireQualifiedAccessAttribute>]
+    [<RequireQualifiedAccess>]
     module Query =
 
         module Request =
@@ -304,7 +305,7 @@ module Repository =
                 | InMemoryContext context -> context |> InMemoryRepository.Query.Response.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-    [<RequireQualifiedAccessAttribute>]
+    [<RequireQualifiedAccess>]
     module Command =
 
         module Request =

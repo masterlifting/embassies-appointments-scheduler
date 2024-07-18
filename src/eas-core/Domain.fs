@@ -86,12 +86,27 @@ module Internal =
             open Infrastructure.DSL.AP
             open Infrastructure.Domain.Errors
 
+            module Errors =
+
+                [<Literal>]
+                let ResponseError = "Page has an error."
+
+                [<Literal>]
+                let ConfirmationError = "The assignment is not confirmed."
+
+
+            type GetStartPage = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
+            type GetCaptchaImage = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
+            type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
+
+            type PostValidationPage =
+                Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
+
             type GetResponseDeps =
-                { getStartPage: Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-                  postValidationPage:
-                      Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
-                  getCaptchaImage: Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
-                  solveCaptchaImage: byte array -> Async<Result<int, Error'>> }
+                { getStartPage: GetStartPage
+                  postValidationPage: PostValidationPage
+                  getCaptchaImage: GetCaptchaImage
+                  solveCaptchaImage: SolveCaptchaImage }
 
             type TryGetResponseDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>
