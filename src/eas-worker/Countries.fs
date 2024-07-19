@@ -5,7 +5,6 @@ open Infrastructure.DSL
 open Worker.Domain.Internal
 open Eas.Domain.Internal
 open Eas.Persistence
-open Persistence.Domain
 
 module Serbia =
     open Persistence.Storage.Core
@@ -20,7 +19,7 @@ module Serbia =
                       Embassy = Russian <| Serbia Belgrade
                       Data =
                         Map
-                            [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57"]
+                            [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"]
                       Modified = System.DateTime.UtcNow }
 
                 storage

@@ -6,7 +6,6 @@ open Worker.Domain.Internal
 open Eas.Core
 open Eas.Domain.Internal
 open Eas.Persistence.Filter
-open Persistence.Domain
 
 module Russian =
     open Persistence.Domain.Core
@@ -31,9 +30,10 @@ module Russian =
         let getResponse =
             Russian.API.getResponse
                 { getStartPage = Http.Request.Get.string' ct
-                  postValidationPage = Http.Request.Post.waitString' ct
                   getCaptchaImage = Http.Request.Get.bytes' ct
-                  solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct }
+                  solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
+                  postValidationPage = Http.Request.Post.waitString' ct
+                  postCalendarPage = Http.Request.Post.waitString' ct }
 
         let updateRequest request =
             storage |> Repository.Command.Request.update ct request

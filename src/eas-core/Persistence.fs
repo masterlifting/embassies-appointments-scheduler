@@ -267,7 +267,6 @@ module private InMemoryRepository =
                 }
 
 module Repository =
-    open Persistence.Domain.Core
     open Persistence.Storage.Core
     
 

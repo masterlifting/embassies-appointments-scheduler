@@ -34,6 +34,7 @@ module Internal =
 
     type City =
         | Belgrade
+        | Berlin
         | Budapest
         | Sarajevo
         | Podgorica
@@ -43,6 +44,7 @@ module Internal =
 
     type Country =
         | Serbia of City
+        | Germany of City
         | Bosnia of City
         | Montenegro of City
         | Albania of City
@@ -90,22 +92,24 @@ module Internal =
 
                 [<Literal>]
                 let PageHasError = "PageHasError"
+
                 [<Literal>]
                 let NotConfirmed = "NotConfirmed"
 
 
-            type GetStartPage = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-            type GetCaptchaImage = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
+            type GetStringRequest = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
+            type GetBytesRequest = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
             type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
 
-            type PostValidationPage =
+            type PostStringRequest =
                 Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
 
             type GetResponseDeps =
-                { getStartPage: GetStartPage
-                  postValidationPage: PostValidationPage
-                  getCaptchaImage: GetCaptchaImage
-                  solveCaptchaImage: SolveCaptchaImage }
+                { getStartPage: GetStringRequest
+                  getCaptchaImage: GetBytesRequest
+                  solveCaptchaImage: SolveCaptchaImage
+                  postValidationPage: PostStringRequest
+                  postCalendarPage: PostStringRequest }
 
             type TryGetResponseDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>
@@ -135,6 +139,7 @@ module Internal =
                         | Tirana -> ("tirana", id, cd, ems)
                         | Paris -> ("paris", id, cd, ems)
                         | Rome -> ("rome", id, cd, ems)
+                        | Berlin -> ("berlin", id, cd, ems)
 
             let createCredentials url =
                 url
@@ -151,6 +156,7 @@ module Internal =
                                 | "belgrad" -> Ok Belgrade
                                 | "budapest" -> Ok Budapest
                                 | "sarajevo" -> Ok Sarajevo
+                                | "berlin" -> Ok Berlin
                                 | _ -> Error $"City {hostParts[0]} is not supported"
 
                             let id =

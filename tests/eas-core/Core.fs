@@ -18,18 +18,19 @@ module Embassies =
                 { Id = Guid.NewGuid() |> RequestId
                   User = { Id = UserId 1; Name = "Andrei" }
                   Embassy = Russian <| Serbia Belgrade
-                  Data = Map [ "url", "https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57" ]
+                  Data = Map [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F" ]
                   Modified = DateTime.UtcNow }
 
             let requiredHeaders =
                 Some
                 <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
 
-            let getResponseProps =
+            let getResponseDeps =
                 { getStartPage = fun _ _ -> async { return Ok(String.Empty, requiredHeaders) }
-                  postValidationPage = fun _ _ _ -> async { return Ok(String.Empty, requiredHeaders) }
                   getCaptchaImage = fun _ _ -> async { return Ok([||], requiredHeaders) }
-                  solveCaptchaImage = fun _ -> async { return Ok 42 } }
+                  solveCaptchaImage = fun _ -> async { return Ok 42 }
+                  postValidationPage = fun _ _ _ -> async { return Ok(String.Empty, requiredHeaders) }
+                  postCalendarPage = fun _ _ _ -> async { return Ok(String.Empty, requiredHeaders) } }
 
             let loadHtml fileName =
                 Environment.CurrentDirectory + "/test_data/" + fileName
@@ -50,7 +51,7 @@ module Embassies =
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
-                        { getResponseProps with
+                        { getResponseDeps with
                             getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                             getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
                             postValidationPage = fun _ _ _ -> loadHtml "validation_page_invalid_response.html" }
@@ -69,7 +70,7 @@ module Embassies =
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
-                        { getResponseProps with
+                        { getResponseDeps with
                             getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                             getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
                             postValidationPage =
@@ -89,10 +90,11 @@ module Embassies =
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
-                        { getResponseProps with
+                        { getResponseDeps with
                             getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                             getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
-                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html" }
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
+                            postCalendarPage = fun _ _ _ -> loadHtml "calendar_page_empty_response.html" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 Expect.isNone responseOpt "Response should not be Some"
@@ -103,10 +105,11 @@ module Embassies =
                 let! responseRes =
                     request
                     |> Russian.API.getResponse
-                        { getResponseProps with
+                        { getResponseDeps with
                             getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                             getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
-                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html" }
+                            postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
+                            postCalendarPage = fun _ _ _ -> loadHtml "calendar_page_empty_response.html" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 let response = Expect.wantSome responseOpt "Response should be Some"

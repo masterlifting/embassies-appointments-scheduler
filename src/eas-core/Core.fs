@@ -13,87 +13,124 @@ module Russian =
 
     type private StartPageDeps =
         { HttpClient: Http.Client
-          getStartPage: GetStartPage
-          getCaptchaImage: GetCaptchaImage
+          getStartPage: GetStringRequest
+          getCaptchaImage: GetBytesRequest
           solveCaptchaImage: SolveCaptchaImage }
 
     let private getStartPageData deps =
         fun queryParams ->
 
-            let getStartPage =
-                let request = Http.createGetStartPageRequest queryParams
+            // define
+            let getRequest =
+                let request = Http.StartPage.createRequest queryParams
                 deps.getStartPage request
 
-            let setRequiredCookie response =
-                deps.HttpClient |> Http.setRequiredCookie response
+            let setResponseCookie =
+                let setCookie = deps.HttpClient |> Http.setRequiredCookie
+                ResultAsync.bind setCookie
 
+            let parseResponse = ResultAsync.bind Parser.Html.parseStartPage
+
+            // pipe
             deps.HttpClient
-            |> getStartPage
-            |> ResultAsync.bind setRequiredCookie
-            |> ResultAsync.bind Parser.Html.parseStartPage
+            |> getRequest
+            |> setResponseCookie
+            |> parseResponse
             |> ResultAsync.bind' (fun pageData ->
                 match pageData |> Map.tryFind "captchaUrlPath" with
                 | None -> async { return Error <| NotFound "Captcha information on the Start Page." }
                 | Some urlPath ->
 
-                    let getCaptchaImage =
+                    // define
+                    let getCaptchaRequest =
                         let request =
-                            deps.HttpClient |> Http.createGetCaptchaImageRequest urlPath queryParams
+                            deps.HttpClient |> Http.StartPage.createCaptchaImageRequest urlPath queryParams
 
                         deps.getCaptchaImage request
 
-                    let inline setSessionCookie response =
-                        deps.HttpClient |> Http.setSessionCookie response
+                    let setResponseCookie =
+                        let setCookie = deps.HttpClient |> Http.setSessionCookie
+                        ResultAsync.bind setCookie
 
-                    let inline addFormData captcha =
-                        pageData |> Http.addStartPageFormData captcha
+                    let prepareResponse = ResultAsync.bind Http.StartPage.prepareCaptchaImage
 
+                    let solveCaptcha = ResultAsync.bind' deps.solveCaptchaImage
+
+                    let addFormData =
+                        let addData = pageData |> Http.StartPage.addFormData
+                        ResultAsync.map' addData
+
+                    let buildFormContent = ResultAsync.map' Http.buildFormContent
+
+                    // pipe
                     deps.HttpClient
-                    |> getCaptchaImage
-                    |> ResultAsync.bind setSessionCookie
-                    |> ResultAsync.bind Http.prepareCaptchaImage
-                    |> ResultAsync.bind' deps.solveCaptchaImage
-                    |> ResultAsync.map' addFormData
-                    |> ResultAsync.map' Http.buildFormData)
+                    |> getCaptchaRequest
+                    |> setResponseCookie
+                    |> prepareResponse
+                    |> solveCaptcha
+                    |> addFormData
+                    |> buildFormContent)
 
     type private ValidationPageDeps =
         { HttpClient: Http.Client
-          postValidationPage: PostValidationPage }
+          postValidationPage: PostStringRequest }
 
     let private getValidationPageData deps =
         fun queryParams formData ->
 
-            let postValidationPage =
-                let request, content =
-                    deps.HttpClient |> Http.createPostValidationPageRequest formData queryParams
+            // define
+            let postRequest =
+                let request, content = Http.ValidationPage.createRequest formData queryParams
 
                 deps.postValidationPage request content
 
-            deps.HttpClient
-            |> postValidationPage
-            |> ResultAsync.bind Parser.Html.parseValidationPage
-            |> ResultAsync.map' Http.addValidationPageFormData
-            |> ResultAsync.map' Http.buildFormData
+            let parseResponse = ResultAsync.bind Parser.Html.parseValidationPage
 
-    let private postCalendarPage
-        (data: Map<string, string>)
-        queryParams
-        : Async<Result<(Map<string, string> * Set<Appointment>), Error'>> =
-        //getStartPage baseUrl urlParams
-        async { return Error <| NotImplemented "getCalendarPage" }
+            let addFormData = ResultAsync.map' Http.ValidationPage.addFormData
+
+            let buildFormData = ResultAsync.map' Http.buildFormContent
+
+            // pipe
+            deps.HttpClient |> postRequest |> parseResponse |> addFormData |> buildFormData
+
+    type private CalendarPageDeps =
+        { HttpClient: Http.Client
+          Request: Request
+          postCalendarPage: PostStringRequest }
+
+    let private getCalendarPageData deps =
+        fun queryParams formData ->
+
+            // define
+            let postRequest =
+                let request, content =
+                    deps.HttpClient |> Http.CalendarPage.createRequest formData queryParams
+
+                deps.postCalendarPage request content
+
+            let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
+
+            let createResult =
+                let createRequest = Http.CalendarPage.createResponse deps.Request
+                ResultAsync.bind createRequest
+
+            // pipe
+            deps.HttpClient |> postRequest |> parseResponse |> createResult
+
 
     let private postConfirmation (data: Map<string, string>) appointment queryParams : Async<Result<unit, Error'>> =
         async { return Error <| NotImplemented "postConfirmation" }
 
-    let private searchResponse (deps: GetResponseDeps) =
+    let private searchResponse (deps: GetResponseDeps) request =
         fun (credentials: Credentials) ->
 
             let city, id, cd, ems = credentials.Value
             let queryParams = Http.createQueryParams id cd ems
 
-            Http.createKdmidClient city
+            Http.createHttpClient city
             |> ResultAsync.wrap (fun httpClient ->
 
+                // define
                 let getStartPageData =
                     getStartPageData
                         { HttpClient = httpClient
@@ -106,11 +143,17 @@ module Russian =
                         { HttpClient = httpClient
                           postValidationPage = deps.postValidationPage }
 
+                let getCalendarPageData =
+                    getCalendarPageData
+                        { HttpClient = httpClient
+                          Request = request
+                          postCalendarPage = deps.postCalendarPage }
+
+                // pipe
                 resultAsync {
                     let! startPageData = getStartPageData queryParams
-                    let! getValidationPageData = getValidationPageData queryParams startPageData
-
-                    return async { return Error <| NotImplemented "searchResponse" }
+                    let! validationPageData = getValidationPageData queryParams startPageData
+                    return getCalendarPageData queryParams validationPageData
                 })
 
     [<RequireQualifiedAccess>]
@@ -129,7 +172,7 @@ module Russian =
                 | None -> async { return Error <| NotFound "Url for Kdmid request." }
                 | Some url ->
                     createCredentials url
-                    |> ResultAsync.wrap searchResponse
+                    |> ResultAsync.wrap (searchResponse request)
                     |> ResultAsync.map toResponseResult
 
         let tryGetResponse deps requests =
