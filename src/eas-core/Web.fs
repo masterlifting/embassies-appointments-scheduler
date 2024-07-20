@@ -2,10 +2,10 @@ module Eas.Web
 
 open System
 open Eas.Domain.Internal
-open Eas.Domain.Internal.Embassies
 open Infrastructure.Domain.Errors
 
 module Russian =
+    open Eas.Domain.Internal.Embassies.Russian
 
     module Http =
         open Web.Domain.Http
@@ -188,27 +188,27 @@ module Russian =
         module Html =
             open Infrastructure.DSL.AP
 
-            let private hasError html =
-                html
+            let private hasError page =
+                page
                 |> Html.getNode "//span[@id='ctl00_MainContent_lblCodeErr']"
                 |> Result.bind (fun error ->
                     match error with
-                    | None -> Ok html
+                    | None -> Ok page
                     | Some node ->
                         match node.InnerText with
                         | IsString text ->
                             Error
                             <| Operation
                                 { Message = text
-                                  Code = Some Russian.ErrorCodes.PageHasError }
-                        | _ -> Ok html)
+                                  Code = Some ErrorCodes.PageHasError }
+                        | _ -> Ok page)
 
-            let private hasConfirmationRequest html =
-                html
+            let private hasConfirmationRequest page =
+                page
                 |> Html.getNode "//span[@id='ctl00_MainContent_Content']"
                 |> Result.bind (fun request ->
                     match request with
-                    | None -> Ok html
+                    | None -> Ok page
                     | Some node ->
                         match node.InnerText with
                         | IsString text ->
@@ -217,9 +217,9 @@ module Russian =
                                 Error
                                 <| Operation
                                     { Message = text
-                                      Code = Some Russian.ErrorCodes.NotConfirmed }
-                            | false -> Ok html
-                        | _ -> Ok html)
+                                      Code = Some ErrorCodes.NotConfirmed }
+                            | false -> Ok page
+                        | _ -> Ok page)
 
             let parseStartPage page =
                 Html.load page
