@@ -10,7 +10,6 @@ open Eas.Persistence.Filter
 module Russian =
     open Persistence.Domain.Core
     open Persistence.Storage.Core
-    open Web.Client
     open Eas.Persistence
 
     let private getRequests ct country storage =
@@ -27,13 +26,10 @@ module Russian =
 
     let private tryGetResponse ct storage requests =
 
+        let deps = Russian.API.createGetResponseDeps ct
+
         let getResponse =
-            Russian.API.getResponse
-                { getStartPage = Http.Request.Get.string' ct
-                  getCaptchaImage = Http.Request.Get.bytes' ct
-                  solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
-                  postValidationPage = Http.Request.Post.waitString' ct
-                  postCalendarPage = Http.Request.Post.waitString' ct }
+            Russian.API.getResponse deps
 
         let updateRequest request =
             storage |> Repository.Command.Request.update ct request

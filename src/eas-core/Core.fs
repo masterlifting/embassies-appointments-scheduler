@@ -8,8 +8,8 @@ open Eas.Domain.Internal
 
 module Russian =
     open Web.Domain
-    open Embassies.Russian
     open Eas.Web.Russian
+    open Embassies.Russian
 
     type private StartPageDeps =
         { HttpClient: Http.Client
@@ -17,7 +17,7 @@ module Russian =
           getCaptchaImage: GetBytesRequest
           solveCaptchaImage: SolveCaptchaImage }
 
-    let private getStartPageData deps =
+    let private processStartPage deps =
         fun queryParams ->
 
             // define
@@ -60,7 +60,7 @@ module Russian =
                         let addData = pageData |> Http.StartPage.addFormData
                         ResultAsync.map' addData
 
-                    let buildFormContent = ResultAsync.map' Http.buildFormContent
+                    let buildFormData = ResultAsync.map' Http.buildFormData
 
                     // pipe
                     deps.HttpClient
@@ -69,13 +69,14 @@ module Russian =
                     |> prepareResponse
                     |> solveCaptcha
                     |> addFormData
-                    |> buildFormContent)
+                    |> buildFormData)
+
 
     type private ValidationPageDeps =
         { HttpClient: Http.Client
           postValidationPage: PostStringRequest }
 
-    let private getValidationPageData deps =
+    let private processValidationPage deps =
         fun queryParams formData ->
 
             // define
@@ -88,34 +89,48 @@ module Russian =
 
             let addFormData = ResultAsync.map' Http.ValidationPage.addFormData
 
-            let buildFormData = ResultAsync.map' Http.buildFormContent
+            let buildFormData = ResultAsync.map' Http.buildFormData
 
             // pipe
             deps.HttpClient |> postRequest |> parseResponse |> addFormData |> buildFormData
 
+
     type private CalendarPageDeps =
         { HttpClient: Http.Client
           Request: Request
-          postCalendarPage: PostStringRequest }
+          postCalendarPage: PostStringRequest
+          getCalendarPage: GetStringRequest }
 
-    let private getCalendarPageData deps =
-        fun queryParams formData ->
+    let private processCalendarPage deps =
+        fun queryParamsId queryParams formData ->
 
             // define
             let postRequest =
-                let request, content =
-                    deps.HttpClient |> Http.CalendarPage.createRequest formData queryParams
+                let request, content = Http.CalendarPage.createPostRequest formData queryParams
 
                 deps.postCalendarPage request content
 
-            let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
+            let parsePostResponse = ResultAsync.map (fun (page, _) -> 
+                deps.HttpClient)
+
+            let getRequest =
+                let request = Http.CalendarPage.createGetRequest queryParamsId
+
+                ResultAsync.bind' (deps.getCalendarPage request)
+
+            let parseGetResponse = ResultAsync.bind Parser.Html.parseCalendarPage
 
             let createResult =
                 let createRequest = Http.CalendarPage.createResponse deps.Request
                 ResultAsync.bind createRequest
 
             // pipe
-            deps.HttpClient |> postRequest |> parseResponse |> createResult
+            deps.HttpClient
+            |> postRequest
+            |> parsePostResponse
+            |> getRequest
+            |> parseGetResponse
+            |> createResult
 
 
     let private postConfirmation (data: Map<string, string>) appointment queryParams : Async<Result<unit, Error'>> =
@@ -131,33 +146,37 @@ module Russian =
             |> ResultAsync.wrap (fun httpClient ->
 
                 // define
-                let getStartPageData =
-                    getStartPageData
+                let processStartPage =
+                    processStartPage
                         { HttpClient = httpClient
                           getStartPage = deps.getStartPage
                           getCaptchaImage = deps.getCaptchaImage
                           solveCaptchaImage = deps.solveCaptchaImage }
 
-                let getValidationPageData =
-                    getValidationPageData
+                let processValidationPage =
+                    processValidationPage
                         { HttpClient = httpClient
                           postValidationPage = deps.postValidationPage }
 
-                let getCalendarPageData =
-                    getCalendarPageData
+                let processCalendarPage =
+                    processCalendarPage
                         { HttpClient = httpClient
                           Request = request
-                          postCalendarPage = deps.postCalendarPage }
+                          postCalendarPage = deps.postCalendarPage
+                          getCalendarPage = deps.getCalendarPage }
 
                 // pipe
                 resultAsync {
-                    let! startPageData = getStartPageData queryParams
-                    let! validationPageData = getValidationPageData queryParams startPageData
-                    return getCalendarPageData queryParams validationPageData
+                    let! startPageResult = processStartPage queryParams
+                    let! validationPageResult = processValidationPage queryParams startPageResult
+                    return processCalendarPage id queryParams validationPageResult
                 })
 
     [<RequireQualifiedAccess>]
     module API =
+
+        let createGetResponseDeps = Http.createGetResponseDeps
+
         let getResponse deps =
 
             let searchResponse = searchResponse deps

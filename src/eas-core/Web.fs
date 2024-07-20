@@ -1,10 +1,10 @@
 module Eas.Web
 
 open System
-open Eas.Domain.Internal
 open Infrastructure.Domain.Errors
+open Eas.Domain.Internal
 
-module Russian =
+module internal Russian =
     open Eas.Domain.Internal.Embassies.Russian
 
     module Http =
@@ -57,12 +57,20 @@ module Russian =
                 httpClient |> setCookie cookie
                 image)
 
-        let buildFormContent data =
+        let buildFormData data =
             data
             |> Map.add "__EVENTTARGET" ""
             |> Map.add "__EVENTARGUMENT" ""
             |> Seq.map (fun x -> $"{Uri.EscapeDataString x.Key}={Uri.EscapeDataString x.Value}")
             |> String.concat "&"
+
+        let createGetResponseDeps ct =
+            { getStartPage = Http.Request.Get.string' ct
+              getCaptchaImage = Http.Request.Get.bytes' ct
+              solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
+              postValidationPage = Http.Request.Post.waitString' ct
+              postCalendarPage = Http.Request.Post.waitString' ct
+              getCalendarPage = Http.Request.Get.string' ct }
 
         module StartPage =
             open SkiaSharp
@@ -142,12 +150,11 @@ module Russian =
 
         module CalendarPage =
 
-            let createRequest formData queryParams httpClient =
-                let headers = Map [ "Origin", [ httpClient |> Http.Route.toOrigin ] ] |> Some
+            let createPostRequest formData queryParams =
 
                 let request =
                     { Path = BasePath + queryParams
-                      Headers = headers }
+                      Headers = None }
 
                 let content =
                     String
@@ -156,6 +163,14 @@ module Russian =
                            MediaType = "application/x-www-form-urlencoded" |}
 
                 request, content
+
+            let createGetRequest queryParamsId =
+
+                let request =
+                    { Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
+                      Headers = None }
+
+                request
 
             let createResponse request data =
                 let date = data |> Map.tryFind "ctl00$MainContent$Calendar1$TextBox1"

@@ -42,6 +42,15 @@
     <Content Include="test_data\calendar_page_empty_result_7.html" >
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="test_data\calendar_page_has_result_1.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_data\calendar_page_has_result_2.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="test_data\calendar_page_has_result_3.html" >
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
