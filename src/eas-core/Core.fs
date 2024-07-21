@@ -56,8 +56,8 @@ module Russian =
 
                     let solveCaptcha = ResultAsync.bind' deps.solveCaptchaImage
 
-                    let addFormData =
-                        let addData = pageData |> Http.StartPage.addFormData
+                    let prepareFormData =
+                        let addData = pageData |> Http.StartPage.prepareFormData
                         ResultAsync.map' addData
 
                     let buildFormData = ResultAsync.map' Http.buildFormData
@@ -68,7 +68,7 @@ module Russian =
                     |> setResponseCookie
                     |> prepareResponse
                     |> solveCaptcha
-                    |> addFormData
+                    |> prepareFormData
                     |> buildFormData)
 
 
@@ -87,50 +87,40 @@ module Russian =
 
             let parseResponse = ResultAsync.bind Parser.Html.parseValidationPage
 
-            let addFormData = ResultAsync.map' Http.ValidationPage.addFormData
+            let prepareFormData = ResultAsync.map' Http.ValidationPage.prepareFormData
 
             let buildFormData = ResultAsync.map' Http.buildFormData
 
             // pipe
-            deps.HttpClient |> postRequest |> parseResponse |> addFormData |> buildFormData
+            deps.HttpClient
+            |> postRequest
+            |> parseResponse
+            |> prepareFormData
+            |> buildFormData
 
 
     type private CalendarPageDeps =
         { HttpClient: Http.Client
           Request: Request
-          postCalendarPage: PostStringRequest
-          getCalendarPage: GetStringRequest }
+          postCalendarPage: PostStringRequest }
 
     let private processCalendarPage deps =
-        fun queryParamsId queryParams formData ->
+        fun queryParams formData ->
 
             // define
             let postRequest =
-                let request, content = Http.CalendarPage.createPostRequest formData queryParams
+                let request, content = Http.CalendarPage.createRequest formData queryParams
 
                 deps.postCalendarPage request content
 
-            let parsePostResponse = ResultAsync.map (fun (page, _) -> 
-                deps.HttpClient)
-
-            let getRequest =
-                let request = Http.CalendarPage.createGetRequest queryParamsId
-
-                ResultAsync.bind' (deps.getCalendarPage request)
-
-            let parseGetResponse = ResultAsync.bind Parser.Html.parseCalendarPage
+            let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
 
             let createResult =
                 let createRequest = Http.CalendarPage.createResponse deps.Request
                 ResultAsync.bind createRequest
 
             // pipe
-            deps.HttpClient
-            |> postRequest
-            |> parsePostResponse
-            |> getRequest
-            |> parseGetResponse
-            |> createResult
+            deps.HttpClient |> postRequest |> parseResponse |> createResult
 
 
     let private postConfirmation (data: Map<string, string>) appointment queryParams : Async<Result<unit, Error'>> =
@@ -162,14 +152,13 @@ module Russian =
                     processCalendarPage
                         { HttpClient = httpClient
                           Request = request
-                          postCalendarPage = deps.postCalendarPage
-                          getCalendarPage = deps.getCalendarPage }
+                          postCalendarPage = deps.postCalendarPage }
 
                 // pipe
                 resultAsync {
                     let! startPageResult = processStartPage queryParams
                     let! validationPageResult = processValidationPage queryParams startPageResult
-                    return processCalendarPage id queryParams validationPageResult
+                    return processCalendarPage queryParams validationPageResult
                 })
 
     [<RequireQualifiedAccess>]

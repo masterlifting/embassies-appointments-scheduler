@@ -42,8 +42,7 @@ module Embassies =
                   getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
                   solveCaptchaImage = fun _ -> async { return Ok 42 }
                   postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
-                  postCalendarPage = fun _ _ _ -> async { return Ok(String.Empty, requiredHeaders) }
-                  getCalendarPage = fun _ _ -> loadHtml "calendar_page_has_result_1.html" }
+                  postCalendarPage = fun _ _ _ -> loadHtml "calendar_page_has_result_1.html" }
 
         open Fixture
 
@@ -89,7 +88,7 @@ module Embassies =
                         request
                         |> Russian.API.getResponse
                             { getResponseDeps with
-                                getCalendarPage = fun _ _ -> loadHtml $"calendar_page_empty_result_{i}.html" }
+                                postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_empty_result_{i}.html" }
 
                     let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                     Expect.isNone responseOpt "Response should not be Some"
@@ -103,7 +102,7 @@ module Embassies =
                         request
                         |> Russian.API.getResponse
                             { getResponseDeps with
-                                getCalendarPage = fun _ _ -> loadHtml $"calendar_page_has_result_{i}.html" }
+                                postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_has_result_{i}.html" }
 
                     let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                     let response = Expect.wantSome responseOpt "Response should be Some"

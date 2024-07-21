@@ -109,8 +109,7 @@ module Internal =
                   getCaptchaImage: GetBytesRequest
                   solveCaptchaImage: SolveCaptchaImage
                   postValidationPage: PostStringRequest
-                  postCalendarPage: PostStringRequest
-                  getCalendarPage: GetStringRequest }
+                  postCalendarPage: PostStringRequest }
 
             type TryGetResponseDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>

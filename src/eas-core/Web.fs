@@ -69,8 +69,7 @@ module internal Russian =
               getCaptchaImage = Http.Request.Get.bytes' ct
               solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
               postValidationPage = Http.Request.Post.waitString' ct
-              postCalendarPage = Http.Request.Post.waitString' ct
-              getCalendarPage = Http.Request.Get.string' ct }
+              postCalendarPage = Http.Request.Post.waitString' ct }
 
         module StartPage =
             open SkiaSharp
@@ -119,9 +118,9 @@ module internal Russian =
                 with ex ->
                     Error <| NotSupported ex.Message
 
-            let addFormData pageData captcha =
+            let prepareFormData pageData captcha =
                 pageData
-                |> Map.remove "captcha"
+                |> Map.remove "captchaUrlPath"
                 |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
@@ -141,16 +140,39 @@ module internal Russian =
 
                 request, content
 
-            let addFormData data =
+            let prepareFormData data =
                 data
-                |> Map.add "ctl00$MainContent$ButtonA.x" "100"
-                |> Map.add "ctl00$MainContent$ButtonA.y" "20"
+                |> Map.add "ctl00$MainContent$ButtonB.x" "100"
+                |> Map.add "ctl00$MainContent$ButtonB.y" "20"
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
         module CalendarPage =
+            open Infrastructure.DSL
 
-            let createPostRequest formData queryParams =
+            let private getAppointment (key: string) =
+                //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
+                let parts = key.Split '|'
+
+                match parts.Length with
+                | 4 ->
+                    let dateTime = parts[1]
+                    let window = parts[3]
+
+                    let date = DateOnly.TryParse dateTime
+                    let time = TimeOnly.TryParse dateTime
+
+                    match date, time with
+                    | (true, date), (true, time) ->
+                        Ok
+                        <| { Id = Guid.NewGuid() |> AppointmentId
+                             Date = date
+                             Time = time
+                             Description = window }
+                    | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
+                | _ -> Error <| NotSupported $"Appointment row: {key}."
+
+            let createRequest formData queryParams =
 
                 let request =
                     { Path = BasePath + queryParams
@@ -164,38 +186,26 @@ module internal Russian =
 
                 request, content
 
-            let createGetRequest queryParamsId =
-
-                let request =
-                    { Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
-                      Headers = None }
-
-                request
-
-            let createResponse request data =
-                let date = data |> Map.tryFind "ctl00$MainContent$Calendar1$TextBox1"
-                let time = data |> Map.tryFind "ctl00$MainContent$Calendar1$TextBox2"
-                let appointment = data |> Map.tryFind "ctl00$MainContent$Calendar1$TextBox3"
-
-                match date, time, appointment with
-                | Some date, Some time, Some appointment ->
-                    let date = DateOnly.Parse date
-                    let time = TimeOnly.Parse time
-                    let _ = DateTime.Parse appointment
-
-                    let appointment =
-                        { Id = Guid.NewGuid() |> AppointmentId
-                          Date = date
-                          Time = time
-                          Description = "" }
-
+            let createResponse request (data: Map<string, string>) =
+                match data.Count = 0 with
+                | true ->
                     Ok
                     <| { Id = Guid.NewGuid() |> ResponseId
                          Request = request
-                         Appointments = Set.singleton appointment
-                         Data = data
+                         Appointments = Set.empty
+                         Data = Map.empty
                          Modified = DateTime.Now }
-                | _ -> Error <| NotFound "Appointments on the Calendar Page."
+                | false ->
+                    data
+                    |> Seq.map (fun x -> getAppointment x.Key)
+                    |> Seq.roe
+                    |> Result.map Set.ofSeq
+                    |> Result.map (fun appointments ->
+                        { Id = Guid.NewGuid() |> ResponseId
+                          Request = request
+                          Appointments = appointments
+                          Data = Map.empty
+                          Modified = DateTime.Now })
 
     module Parser =
         open Web.Parser.Client
@@ -308,25 +318,19 @@ module internal Russian =
             let parseCalendarPage (page, _) =
                 Html.load page
                 |> Result.bind hasError
-                |> Result.bind (Html.getNodes "//input")
+                |> Result.bind (Html.getNodes "//input[@type='radio']")
                 |> Result.bind (fun nodes ->
                     match nodes with
-                    | None -> Error <| NotFound "Nodes on the Calendar Page."
+                    | None -> Ok Map.empty
                     | Some nodes ->
                         nodes
                         |> Seq.choose (fun node ->
                             match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
-                            | Ok(Some name), Ok(Some value) -> Some(name, value)
-                            | Ok(Some name), Ok(None) -> Some(name, String.Empty)
+                            | Ok(Some name), Ok(Some value) -> Some(value, name)
                             | _ -> None)
-                        |> Map.ofSeq
-                        |> Ok)
-                |> Result.bind (fun result ->
-                    let requiredKeys =
-                        Set [ "__VIEWSTATE"; "__VIEWSTATEGENERATOR"; "__EVENTVALIDATION" ]
-
-                    let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
-
-                    match requiredKeys.Count = result.Count with
-                    | true -> Ok result
-                    | false -> Error <| NotFound "Calendar Page headers.")
+                        |> List.ofSeq
+                        |> fun list ->
+                            match list.Length = 0 with
+                            | true -> Error <| NotFound "Calendar Page appointments."
+                            | false -> list |> Map.ofList |> Ok)
+                |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
