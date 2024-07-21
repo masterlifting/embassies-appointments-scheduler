@@ -150,28 +150,6 @@ module internal Russian =
         module CalendarPage =
             open Infrastructure.DSL
 
-            let private getAppointment (key: string) =
-                //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
-                let parts = key.Split '|'
-
-                match parts.Length with
-                | 4 ->
-                    let dateTime = parts[1]
-                    let window = parts[3]
-
-                    let date = DateOnly.TryParse dateTime
-                    let time = TimeOnly.TryParse dateTime
-
-                    match date, time with
-                    | (true, date), (true, time) ->
-                        Ok
-                        <| { Id = Guid.NewGuid() |> AppointmentId
-                             Date = date
-                             Time = time
-                             Description = window }
-                    | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
-                | _ -> Error <| NotSupported $"Appointment row: {key}."
-
             let createRequest formData queryParams =
 
                 let request =
@@ -186,26 +164,40 @@ module internal Russian =
 
                 request, content
 
-            let createResponse request (data: Map<string, string>) =
+            let getAppointments (data: Map<string, string>) =
+
+                let parse (key: string) =
+                    //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
+                    let parts = key.Split '|'
+
+                    match parts.Length with
+                    | 4 ->
+                        let dateTime = parts[1]
+                        let window = parts[3]
+
+                        let date = DateOnly.TryParse dateTime
+                        let time = TimeOnly.TryParse dateTime
+
+                        match date, time with
+                        | (true, date), (true, time) ->
+                            Ok
+                            <| { Id = Guid.NewGuid() |> AppointmentId
+                                 Date = date
+                                 Time = time
+                                 Description = window }
+                        | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
+                    | _ -> Error <| NotSupported $"Appointment row: {key}."
+
                 match data.Count = 0 with
-                | true ->
-                    Ok
-                    <| { Id = Guid.NewGuid() |> ResponseId
-                         Request = request
-                         Appointments = Set.empty
-                         Data = Map.empty
-                         Modified = DateTime.Now }
-                | false ->
-                    data
-                    |> Seq.map (fun x -> getAppointment x.Key)
-                    |> Seq.roe
-                    |> Result.map Set.ofSeq
-                    |> Result.map (fun appointments ->
-                        { Id = Guid.NewGuid() |> ResponseId
-                          Request = request
-                          Appointments = appointments
-                          Data = Map.empty
-                          Modified = DateTime.Now })
+                | true -> Ok Set.empty
+                | false -> data |> Seq.map (fun x -> parse x.Key) |> Seq.roe |> Result.map Set.ofSeq
+
+            let createResponse request appointments =
+                { Id = Guid.NewGuid() |> ResponseId
+                  Request = request
+                  Appointments = appointments
+                  Data = Map.empty
+                  Modified = DateTime.Now }
 
     module Parser =
         open Web.Parser.Client

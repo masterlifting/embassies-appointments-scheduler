@@ -115,12 +115,18 @@ module Russian =
 
             let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
 
+            let getAppointments = ResultAsync.bind Http.CalendarPage.getAppointments
+
             let createResult =
-                let createRequest = Http.CalendarPage.createResponse deps.Request
-                ResultAsync.bind createRequest
+                let createResponse = Http.CalendarPage.createResponse deps.Request
+                ResultAsync.map createResponse
 
             // pipe
-            deps.HttpClient |> postRequest |> parseResponse |> createResult
+            deps.HttpClient
+            |> postRequest
+            |> parseResponse
+            |> getAppointments
+            |> createResult
 
 
     let private postConfirmation (data: Map<string, string>) appointment queryParams : Async<Result<unit, Error'>> =
