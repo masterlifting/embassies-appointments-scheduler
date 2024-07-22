@@ -1,7 +1,6 @@
 module Eas.Core
 
 open System
-open Eas.Web.Russian.Http
 open Infrastructure.DSL
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
@@ -10,16 +9,16 @@ module Russian =
     open Eas.Web.Russian
     open Embassies.Russian
 
-    let private processStartPage (deps: StartPage.Deps) =
+    let private processStartPage (deps: Http.StartPage.Deps) =
         fun queryParams ->
 
             // define
             let getRequest =
-                let request = StartPage.createRequest queryParams
+                let request = Http.StartPage.createRequest queryParams
                 deps.getStartPage request
 
             let setResponseCookie =
-                let setCookie = deps.HttpClient |> setRequiredCookie
+                let setCookie = deps.HttpClient |> Http.setRequiredCookie
                 ResultAsync.bind setCookie
 
             let parseResponse = ResultAsync.bind Parser.Html.parseStartPage
@@ -37,20 +36,20 @@ module Russian =
                     // define
                     let getCaptchaRequest =
                         let request =
-                            deps.HttpClient |> StartPage.createCaptchaImageRequest urlPath queryParams
+                            deps.HttpClient |> Http.StartPage.createCaptchaImageRequest urlPath queryParams
 
                         deps.getCaptchaImage request
 
                     let setResponseCookie =
-                        let setCookie = deps.HttpClient |> setSessionCookie
+                        let setCookie = deps.HttpClient |> Http.setSessionCookie
                         ResultAsync.bind setCookie
 
-                    let prepareResponse = ResultAsync.bind StartPage.prepareCaptchaImage
+                    let prepareResponse = ResultAsync.bind Http.StartPage.prepareCaptchaImage
 
                     let solveCaptcha = ResultAsync.bind' deps.solveCaptchaImage
 
                     let prepareFormData =
-                        let addData = pageData |> StartPage.prepareFormData
+                        let addData = pageData |> Http.StartPage.prepareFormData
                         ResultAsync.map' addData
 
                     let buildFormData = ResultAsync.map' Http.buildFormData
@@ -64,85 +63,87 @@ module Russian =
                     |> prepareFormData
                     |> buildFormData)
 
-    let private processValidationPage (deps: ValidationPage.Deps) =
+    let private processValidationPage (deps: Http.ValidationPage.Deps) =
         fun queryParams formData ->
 
             // define
             let postRequest =
-                let request, content = ValidationPage.createRequest formData queryParams
+                let request, content = Http.ValidationPage.createRequest formData queryParams
 
                 deps.postValidationPage request content
 
             let parseResponse = ResultAsync.bind Parser.Html.parseValidationPage
 
-            let prepareFormData = ResultAsync.map' ValidationPage.prepareFormData
-
-            let buildFormData = ResultAsync.map' Http.buildFormData
+            let prepareFormData = ResultAsync.map' Http.ValidationPage.prepareFormData
 
             // pipe
-            deps.HttpClient
-            |> postRequest
-            |> parseResponse
-            |> prepareFormData
-            |> buildFormData
+            deps.HttpClient |> postRequest |> parseResponse |> prepareFormData
 
-    let private processCalendarPage (deps: CalendarPage.Deps) =
+    let private processCalendarPage (deps: Http.CalendarPage.Deps) =
         fun queryParams formData ->
 
             // define
             let postRequest =
-                let request, content = CalendarPage.createRequest formData queryParams
+                let formData = Http.buildFormData formData
+                let request, content = Http.CalendarPage.createRequest formData queryParams
 
                 deps.postCalendarPage request content
 
             let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
 
-            let prepareFormData = ResultAsync.map' CalendarPage.prepareFormData
+            let getAppointments = ResultAsync.bind Http.CalendarPage.getAppointments
 
-            let buildFormData = ResultAsync.map' Http.buildFormData
-
-            let createResult = ResultAsync.bind CalendarPage.getAppointments
+            let createResult =
+                let createResult appointments = (appointments, formData)
+                ResultAsync.map createResult
 
             // pipe
             deps.HttpClient
             |> postRequest
             |> parseResponse
-            |> prepareFormData
-            |> buildFormData
+            |> getAppointments
             |> createResult
 
-    let private processConfirmationPage (deps: ConfirmationPage.Deps) =
-        fun queryParams formData ->
+    let private processConfirmationPage (deps: Http.ConfirmationPage.Deps) =
+        fun queryParamsId appointments formData option ->
 
-            // define
-            let postRequest =
-                let request, content = ConfirmationPage.createRequest formData queryParams
+            match Http.ConfirmationPage.chooseAppointment appointments option with
+            | None -> async { return Ok None }
+            | Some appointment ->
+                // define
+                let postRequest =
+                    let formData =
+                        Http.ConfirmationPage.prepareFormData formData appointment.Description
+                        |> Http.buildFormData
 
-                deps.postConfirmationPage request content
+                    let request, content = Http.ConfirmationPage.createRequest formData queryParamsId
 
-            let parseResponse = ResultAsync.bind Parser.Html.parseConfirmationPage
+                    deps.postConfirmationPage request content
 
-            let getConfirmation = ResultAsync.bind ConfirmationPage.getConfirmation
+                let parseResponse = ResultAsync.bind Parser.Html.parseConfirmationPage
 
-            // pipe
-            deps.HttpClient |> postRequest |> parseResponse |> getConfirmation
+                let getConfirmation = ResultAsync.bind Http.ConfirmationPage.getConfirmation
+
+                // pipe
+                deps.HttpClient |> postRequest |> parseResponse |> getConfirmation
 
     let private getAppointments (deps: GetResponseDeps) =
         fun (credentials: Credentials) ->
 
             let city, id, cd, ems = credentials.Value
-            let queryParams = createQueryParams id cd ems
+            let queryParams = Http.createQueryParams id cd ems
 
-            createHttpClient city
+            city
+            |> Http.createHttpClient
             |> ResultAsync.wrap (fun httpClient ->
 
                 // define
                 let processStartPage () =
-                    let startPageDeps = StartPage.createDeps deps httpClient
+                    let startPageDeps = Http.StartPage.createDeps deps httpClient
                     processStartPage startPageDeps queryParams
 
                 let processValidationPage =
-                    let validationPageDeps = ValidationPage.createDeps deps httpClient
+                    let validationPageDeps = Http.ValidationPage.createDeps deps httpClient
 
                     let process' formData =
                         processValidationPage validationPageDeps queryParams formData
@@ -150,7 +151,7 @@ module Russian =
                     ResultAsync.bind' process'
 
                 let processCalendarPage =
-                    let calendarPageDeps = CalendarPage.createDeps deps httpClient
+                    let calendarPageDeps = Http.CalendarPage.createDeps deps httpClient
 
                     let process' formData =
                         processCalendarPage calendarPageDeps queryParams formData
@@ -163,22 +164,23 @@ module Russian =
 
                 getAppointments ())
 
-    let private bookAppointment (deps: GetResponseDeps) =
-        fun (credentials: Credentials) (appointment: Appointment) ->
+    let private setAppointment (deps: GetResponseDeps) =
+        fun (credentials: Credentials) (option: AppointmentOption) ->
 
             let city, id, cd, ems = credentials.Value
-            let queryParams = createQueryParams id cd ems
+            let queryParams = Http.createQueryParams id cd ems
 
-            createHttpClient city
+            city
+            |> Http.createHttpClient
             |> ResultAsync.wrap (fun httpClient ->
 
                 // define
                 let processStartPage () =
-                    let startPageDeps = StartPage.createDeps deps httpClient
+                    let startPageDeps = Http.StartPage.createDeps deps httpClient
                     processStartPage startPageDeps queryParams
 
                 let processValidationPage =
-                    let validationPageDeps = ValidationPage.createDeps deps httpClient
+                    let validationPageDeps = Http.ValidationPage.createDeps deps httpClient
 
                     let process' formData =
                         processValidationPage validationPageDeps queryParams formData
@@ -186,7 +188,7 @@ module Russian =
                     ResultAsync.bind' process'
 
                 let processCalendarPage =
-                    let calendarPageDeps = CalendarPage.createDeps deps httpClient
+                    let calendarPageDeps = Http.CalendarPage.createDeps deps httpClient
 
                     let process' formData =
                         processCalendarPage calendarPageDeps queryParams formData
@@ -194,21 +196,21 @@ module Russian =
                     ResultAsync.bind' process'
 
                 let processConfirmationPage =
-                    let confirmationPageDeps = ConfirmationPage.createDeps deps httpClient
+                    let confirmationPageDeps = Http.ConfirmationPage.createDeps deps httpClient
 
-                    let process' formData =
-                        processConfirmationPage confirmationPageDeps queryParams formData
+                    let process' (appointments, formData) =
+                        processConfirmationPage confirmationPageDeps id appointments formData option
 
                     ResultAsync.bind' process'
 
                 // pipe
-                let getConfirmationResult =
+                let bookAppointment =
                     processStartPage
                     >> processValidationPage
                     >> processCalendarPage
                     >> processConfirmationPage
 
-                getConfirmationResult ())
+                bookAppointment ())
 
     [<RequireQualifiedAccess>]
     module API =
@@ -217,10 +219,10 @@ module Russian =
 
         let getResponse deps =
 
-            let inline toResponse request (appointments: Set<Appointment>) =
+            let inline toResponse request (appointments: Set<Appointment>, _) =
                 match appointments.IsEmpty with
                 | true -> None
-                | false -> Some <| (request |> createResponse appointments)
+                | false -> Some <| (request |> Http.createResponse appointments)
 
             fun (request: Request) ->
                 match request.Data |> Map.tryFind "url" with

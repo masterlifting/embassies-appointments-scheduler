@@ -73,6 +73,10 @@ module Internal =
           Time: TimeOnly
           Description: string }
 
+    type AppointmentOption =
+        | FirstAvailable
+        | Appointment of Appointment
+
     type Response =
         { Id: ResponseId
           Request: Request
@@ -110,6 +114,10 @@ module Internal =
                   solveCaptchaImage: SolveCaptchaImage
                   postValidationPage: PostStringRequest
                   postCalendarPage: PostStringRequest }
+
+            type SetResponseDeps =
+                { GetResponseDeps: GetResponseDeps
+                  postConfirmationPage: PostStringRequest }
 
             type TryGetResponseDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>

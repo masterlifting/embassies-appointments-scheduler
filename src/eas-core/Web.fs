@@ -191,9 +191,6 @@ module internal Russian =
 
                 request, content
 
-            let prepareFormData data value =
-                data |> Map.add "ctl00$MainContent$TextBox1" value
-
             let getAppointments (data: Set<string>) =
 
                 let parse (value: string) =
@@ -232,10 +229,15 @@ module internal Russian =
 
         module ConfirmationPage =
 
-            let createRequest formData queryParams =
+            let chooseAppointment (appointments: Appointment Set) option =
+                match option with
+                | FirstAvailable -> appointments |> Seq.tryHead
+                | Appointment appointment -> appointments |> Seq.tryFind (fun x -> x.Id = appointment.Id)
+
+            let createRequest formData queryParamsId =
 
                 let request =
-                    { Path = BasePath + queryParams
+                    { Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
                       Headers = None }
 
                 let content =
@@ -245,6 +247,9 @@ module internal Russian =
                            MediaType = "application/x-www-form-urlencoded" |}
 
                 request, content
+
+            let prepareFormData data value =
+                data |> Map.add "ctl00$MainContent$TextBox1" value
 
             type Deps =
                 { HttpClient: Client
@@ -382,3 +387,6 @@ module internal Russian =
                             | false -> list |> Map.ofList |> Ok)
                 |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
                 |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
+
+            let parseConfirmationPage (page, _) =
+                Html.load page |> Result.bind hasError |> Result.map (fun _ -> true)
