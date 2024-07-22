@@ -71,6 +71,13 @@ module internal Russian =
               postValidationPage = Http.Request.Post.waitString' ct
               postCalendarPage = Http.Request.Post.waitString' ct }
 
+        let createResponse appointments request =
+            { Id = Guid.NewGuid() |> ResponseId
+              Request = request
+              Appointments = appointments
+              Data = Map.empty
+              Modified = DateTime.Now }
+
         module StartPage =
             open SkiaSharp
 
@@ -125,6 +132,18 @@ module internal Russian =
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
+            type Deps =
+                { HttpClient: Client
+                  getStartPage: GetStringRequest
+                  getCaptchaImage: GetBytesRequest
+                  solveCaptchaImage: SolveCaptchaImage }
+
+            let createDeps (deps: GetResponseDeps) httpClient =
+                { HttpClient = httpClient
+                  getStartPage = deps.getStartPage
+                  getCaptchaImage = deps.getCaptchaImage
+                  solveCaptchaImage = deps.solveCaptchaImage }
+
         module ValidationPage =
             let createRequest formData queryParams =
 
@@ -147,6 +166,14 @@ module internal Russian =
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
+            type Deps =
+                { HttpClient: Client
+                  postValidationPage: PostStringRequest }
+
+            let createDeps (deps: GetResponseDeps) httpClient =
+                { HttpClient = httpClient
+                  postValidationPage = deps.postValidationPage }
+
         module CalendarPage =
             open Infrastructure.DSL
 
@@ -164,11 +191,14 @@ module internal Russian =
 
                 request, content
 
-            let getAppointments (data: Map<string, string>) =
+            let prepareFormData data value =
+                data |> Map.add "ctl00$MainContent$TextBox1" value
 
-                let parse (key: string) =
+            let getAppointments (data: Set<string>) =
+
+                let parse (value: string) =
                     //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
-                    let parts = key.Split '|'
+                    let parts = value.Split '|'
 
                     match parts.Length with
                     | 4 ->
@@ -186,18 +216,43 @@ module internal Russian =
                                  Time = time
                                  Description = window }
                         | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
-                    | _ -> Error <| NotSupported $"Appointment row: {key}."
+                    | _ -> Error <| NotSupported $"Appointment row: {value}."
 
-                match data.Count = 0 with
+                match data.IsEmpty with
                 | true -> Ok Set.empty
-                | false -> data |> Seq.map (fun x -> parse x.Key) |> Seq.roe |> Result.map Set.ofSeq
+                | false -> data |> Set.map parse |> Seq.roe |> Result.map Set.ofSeq
 
-            let createResponse request appointments =
-                { Id = Guid.NewGuid() |> ResponseId
-                  Request = request
-                  Appointments = appointments
-                  Data = Map.empty
-                  Modified = DateTime.Now }
+            type Deps =
+                { HttpClient: Client
+                  postCalendarPage: PostStringRequest }
+
+            let createDeps (deps: GetResponseDeps) httpClient =
+                { HttpClient = httpClient
+                  postCalendarPage = deps.postCalendarPage }
+
+        module ConfirmationPage =
+
+            let createRequest formData queryParams =
+
+                let request =
+                    { Path = BasePath + queryParams
+                      Headers = None }
+
+                let content =
+                    String
+                        {| Data = formData
+                           Encoding = Text.Encoding.ASCII
+                           MediaType = "application/x-www-form-urlencoded" |}
+
+                request, content
+
+            type Deps =
+                { HttpClient: Client
+                  postValidationPage: PostStringRequest }
+
+            let createDeps (deps: GetResponseDeps) httpClient =
+                { HttpClient = httpClient
+                  postValidationPage = deps.postValidationPage }
 
     module Parser =
         open Web.Parser.Client
@@ -326,3 +381,4 @@ module internal Russian =
                             | true -> Error <| NotFound "Calendar Page appointments."
                             | false -> list |> Map.ofList |> Ok)
                 |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
+                |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
