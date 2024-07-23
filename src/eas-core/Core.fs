@@ -87,7 +87,7 @@ module Russian =
             |> createResult
 
     let private processConfirmationPage (deps: ConfirmationPage.Deps) =
-        fun queryParamsId formData appointments option ->
+        fun queryParamsId option (appointments, formData) ->
 
             match ConfirmationPage.chooseAppointment appointments option with
             | None -> async { return Error <| NotFound "Appointment to book." }
@@ -165,9 +165,7 @@ module Russian =
 
                 let processConfirmationPage =
                     let deps = ConfirmationPage.createDeps deps httpClient
-
-                    ResultAsync.bind' (fun (appointments, formData) ->
-                        processConfirmationPage deps id formData appointments option)
+                    ResultAsync.bind' (processConfirmationPage deps id option)
 
                 // pipe
                 let bookAppointment =
