@@ -26,7 +26,6 @@ module internal Russian =
         { Id = Guid.NewGuid() |> ResponseId
           Request = request
           Appointments = appointments
-          Data = Map.empty
           Modified = DateTime.Now }
 
     let createConfirmationResponse description request =

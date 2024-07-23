@@ -23,31 +23,27 @@ module Filter =
         | Asc of OrderBy<'a>
         | Desc of OrderBy<'a>
 
+    type Predicate<'a> = 'a -> bool
+
     type Pagination<'a> =
         { Page: int
           PageSize: int
           SortBy: SortBy<'a> }
 
-    type EmbassyFilter<'a> =
-        { Pagination: Pagination<'a>
-          Embassy: Internal.Embassy }
-
-    type UserEmbassyFilter<'a> =
-        { Pagination: Pagination<'a>
-          Embassy: Internal.Embassy }
-
-    type RequestFilter =
+    type Request =
         { Pagination: Pagination<Internal.Request>
           Embassy: Internal.Embassy option
-          Modified: DateTime option }
+          Modified: Predicate<DateTime> option }
 
-    type Request =
-        | ByEmbassy of EmbassyFilter<Internal.Request>
-        | ByUserEmbassy of UserEmbassyFilter<Internal.Request>
+    type AppointmentsResponse =
+        { Pagination: Pagination<Internal.AppointmentsResponse>
+          Request: Internal.Request option
+          Modified: Predicate<DateTime> option }
 
-    type Response =
-        | ByEmbassy of EmbassyFilter<Internal.AppointmentsResponse>
-        | ByUserEmbassy of UserEmbassyFilter<Internal.AppointmentsResponse>
+    type ConfirmationResponse =
+        { Pagination: Pagination<Internal.ConfirmationResponse>
+          Request: Internal.Request option
+          Modified: Predicate<DateTime> option }
 
 module private Command =
 
@@ -56,10 +52,15 @@ module private Command =
         | Update of Internal.Request
         | Delete of Internal.Request
 
-    type Response =
+    type AppointmentsResponse =
         | Create of Internal.AppointmentsResponse
         | Update of Internal.AppointmentsResponse
         | Delete of Internal.AppointmentsResponse
+
+    type ConfirmationResponse =
+        | Create of Internal.ConfirmationResponse
+        | Update of Internal.ConfirmationResponse
+        | Delete of Internal.ConfirmationResponse
 
 module private InMemoryRepository =
 
@@ -67,7 +68,6 @@ module private InMemoryRepository =
         context
         |> InMemory.Query.get key
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
-
 
     module Query =
         open Filter
@@ -103,13 +103,16 @@ module private InMemoryRepository =
                         match ct |> notCanceled with
                         | true ->
                             let filter (requests: Internal.Request list) =
-                                match filter with
-                                | Request.ByEmbassy filter ->
-                                    requests |> List.filter (fun x -> x.Embassy = filter.Embassy) |> paginate
-                                    <| filter.Pagination
-                                | Request.ByUserEmbassy filter ->
-                                    requests |> List.filter (fun x -> x.Embassy = filter.Embassy) |> paginate
-                                    <| filter.Pagination
+                                requests
+                                |> List.filter (fun x ->
+                                    filter.Embassy
+                                    |> Option.map (fun embassy -> x.Embassy = embassy)
+                                    |> Option.defaultValue true
+                                    && filter.Modified
+                                       |> Option.map (fun predicate -> predicate x.Modified)
+                                       |> Option.defaultValue true)
+                                |> paginate
+                                <| filter.Pagination
 
                             context
                             |> getEntities<External.Request> key
@@ -130,10 +133,10 @@ module private InMemoryRepository =
                         | _ -> Error <| Cancelled "Query.Request.get'"
                 }
 
-        module Response =
+        module AppointmentsResponse =
 
             [<Literal>]
-            let private key = "responses"
+            let private key = "appointmentsResponses"
 
             let get ct filter context =
                 async {
@@ -141,23 +144,21 @@ module private InMemoryRepository =
                         match ct |> notCanceled with
                         | true ->
                             let filter (responses: Internal.AppointmentsResponse list) =
-                                match filter with
-                                | Response.ByEmbassy filter ->
-                                    responses
-                                    |> List.filter (fun x -> x.Request.Embassy = filter.Embassy)
-                                    |> paginate
-                                    <| filter.Pagination
-                                | Response.ByUserEmbassy filter ->
-                                    responses
-                                    |> List.filter (fun x -> x.Request.Embassy = filter.Embassy)
-                                    |> paginate
-                                    <| filter.Pagination
+                                responses
+                                |> List.filter (fun x ->
+                                    filter.Request
+                                    |> Option.map (fun request -> x.Request.Id = request.Id)
+                                    |> Option.defaultValue true
+                                    && filter.Modified
+                                       |> Option.map (fun predicate -> predicate x.Modified)
+                                       |> Option.defaultValue true)
+                                |> paginate
 
                             context
-                            |> getEntities<External.Response> key
-                            |> Result.bind (Seq.map Internal.toResponse >> DSL.Seq.roe)
+                            |> getEntities<External.AppointmentsResponse> key
+                            |> Result.bind (Seq.map Internal.toAppointmentsResponse >> DSL.Seq.roe)
                             |> Result.map filter
-                        | _ -> Error <| Cancelled "Query.Response.get"
+                        | _ -> Error <| Cancelled "Query.AppointmentsResponse.get"
                 }
 
             let get' ct responseId context =
@@ -166,10 +167,50 @@ module private InMemoryRepository =
                         match ct |> notCanceled with
                         | true ->
                             context
-                            |> getEntities<External.Response> key
-                            |> Result.bind (Seq.map Internal.toResponse >> DSL.Seq.roe)
+                            |> getEntities<External.AppointmentsResponse> key
+                            |> Result.bind (Seq.map Internal.toAppointmentsResponse >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = responseId))
-                        | _ -> Error <| Cancelled "Query.Response.get'"
+                        | _ -> Error <| Cancelled "Query.AppointmentsResponse.get'"
+                }
+
+        module ConfirmationResponse =
+
+            [<Literal>]
+            let private key = "confirmationResponses"
+
+            let get ct filter context =
+                async {
+                    return
+                        match ct |> notCanceled with
+                        | true ->
+                            let filter (responses: Internal.ConfirmationResponse list) =
+                                responses
+                                |> List.filter (fun x ->
+                                    filter.Request
+                                    |> Option.map (fun request -> x.Request.Id = request.Id)
+                                    |> Option.defaultValue true
+                                    && filter.Modified
+                                       |> Option.map (fun predicate -> predicate x.Modified)
+                                       |> Option.defaultValue true)
+                                |> paginate
+
+                            context
+                            |> getEntities<External.ConfirmationResponse> key
+                            |> Result.bind (Seq.map Internal.toConfirmationResponse >> DSL.Seq.roe)
+                            |> Result.map filter
+                        | _ -> Error <| Cancelled "Query.ConfirmationResponse.get"
+                }
+
+            let get' ct responseId context =
+                async {
+                    return
+                        match ct |> notCanceled with
+                        | true ->
+                            context
+                            |> getEntities<External.ConfirmationResponse> key
+                            |> Result.bind (Seq.map Internal.toConfirmationResponse >> DSL.Seq.roe)
+                            |> Result.map (List.tryFind (fun x -> x.Id = responseId))
+                        | _ -> Error <| Cancelled "Query.ConfirmationResponse.get'"
                 }
 
     module Command =
@@ -235,18 +276,21 @@ module private InMemoryRepository =
                         | _ -> Error <| Cancelled "Command.Request.execute"
                 }
 
-        module Response =
+        module AppointmentsResponse =
 
-            let private add (response: Internal.AppointmentsResponse) (responses: External.Response array) =
+            let private add (response: Internal.AppointmentsResponse) (responses: External.AppointmentsResponse array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
                 | Some _ ->
                     Error
                     <| Operation
                         { Message = $"Response {response.Id} already exists."
                           Code = Some ErrorCodes.AlreadyExists }
-                | _ -> Ok(responses |> Array.append [| External.toResponse response |])
+                | _ -> Ok(responses |> Array.append [| External.toAppointmentsResponse response |])
 
-            let private update (response: Internal.AppointmentsResponse) (responses: External.Response array) =
+            let private update
+                (response: Internal.AppointmentsResponse)
+                (responses: External.AppointmentsResponse array)
+                =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
                 | None ->
                     Error
@@ -256,10 +300,17 @@ module private InMemoryRepository =
                 | Some index ->
                     Ok(
                         responses
-                        |> Array.mapi (fun i x -> if i = index then External.toResponse response else x)
+                        |> Array.mapi (fun i x ->
+                            if i = index then
+                                External.toAppointmentsResponse response
+                            else
+                                x)
                     )
 
-            let private delete (response: Internal.AppointmentsResponse) (responses: External.Response array) =
+            let private delete
+                (response: Internal.AppointmentsResponse)
+                (responses: External.AppointmentsResponse array)
+                =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
                 | None ->
                     Error
@@ -273,17 +324,79 @@ module private InMemoryRepository =
                     return
                         match ct |> notCanceled with
                         | true ->
-                            let key = "responses"
+                            let key = "appointmentsResponses"
 
                             context
-                            |> getEntities<External.Response> key
+                            |> getEntities<External.AppointmentsResponse> key
                             |> Result.bind (fun responses ->
                                 match command with
-                                | Command.Response.Create response -> responses |> add response
-                                | Command.Response.Update response -> responses |> update response
-                                | Command.Response.Delete response -> responses |> delete response)
+                                | Command.AppointmentsResponse.Create response -> responses |> add response
+                                | Command.AppointmentsResponse.Update response -> responses |> update response
+                                | Command.AppointmentsResponse.Delete response -> responses |> delete response)
                             |> Result.bind (context |> save key)
-                        | _ -> Error <| Cancelled "Command.Response.execute"
+                        | _ -> Error <| Cancelled "Command.AppointmentsResponse.execute"
+                }
+
+        module ConfirmationResponse =
+
+            let private add (response: Internal.ConfirmationResponse) (responses: External.ConfirmationResponse array) =
+                match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
+                | Some _ ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} already exists."
+                          Code = Some ErrorCodes.AlreadyExists }
+                | _ -> Ok(responses |> Array.append [| External.toConfirmationResponse response |])
+
+            let private update
+                (response: Internal.ConfirmationResponse)
+                (responses: External.ConfirmationResponse array)
+                =
+                match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} not found to update."
+                          Code = Some ErrorCodes.NotFound }
+                | Some index ->
+                    Ok(
+                        responses
+                        |> Array.mapi (fun i x ->
+                            if i = index then
+                                External.toConfirmationResponse response
+                            else
+                                x)
+                    )
+
+            let private delete
+                (response: Internal.ConfirmationResponse)
+                (responses: External.ConfirmationResponse array)
+                =
+                match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} not found to delete."
+                          Code = Some ErrorCodes.NotFound }
+                | Some index -> Ok(responses |> Array.removeAt index)
+
+            let execute ct command context =
+                async {
+                    return
+                        match ct |> notCanceled with
+                        | true ->
+                            let key = "confirmationResponses"
+
+                            context
+                            |> getEntities<External.ConfirmationResponse> key
+                            |> Result.bind (fun responses ->
+                                match command with
+                                | Command.ConfirmationResponse.Create response -> responses |> add response
+                                | Command.ConfirmationResponse.Update response -> responses |> update response
+                                | Command.ConfirmationResponse.Delete response -> responses |> delete response)
+                            |> Result.bind (context |> save key)
+                        | _ -> Error <| Cancelled "Command.ConfirmationResponse.execute"
+
                 }
 
 module Repository =
@@ -314,16 +427,28 @@ module Repository =
                 | InMemoryStorage context -> context |> InMemoryRepository.Query.Request.get' ct requestId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-        module Response =
+        module AppointmentsResponse =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.Response.get ct filter
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.AppointmentsResponse.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.Response.get' ct responseId
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.AppointmentsResponse.get' ct responseId
+                | _ -> async { return Error <| NotSupported $"Storage {storage}" }
+
+        module ConfirmationResponse =
+
+            let get ct filter storage =
+                match storage with
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.ConfirmationResponse.get ct filter
+                | _ -> async { return Error <| NotSupported $"Storage {storage}" }
+
+            let get' ct responseId storage =
+                match storage with
+                | InMemoryStorage context -> context |> InMemoryRepository.Query.ConfirmationResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
     [<RequireQualifiedAccess>]
@@ -345,18 +470,36 @@ module Repository =
             let delete ct request =
                 Command.Request.Delete request |> execute ct
 
-        module Response =
+        module AppointmentsResponse =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Command.Response.execute ct command
+                | InMemoryStorage context ->
+                    context |> InMemoryRepository.Command.AppointmentsResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let create ct response =
-                Command.Response.Create response |> execute ct
+                Command.AppointmentsResponse.Create response |> execute ct
 
             let update ct response =
-                Command.Response.Update response |> execute ct
+                Command.AppointmentsResponse.Update response |> execute ct
 
             let delete ct response =
-                Command.Response.Delete response |> execute ct
+                Command.AppointmentsResponse.Delete response |> execute ct
+
+        module ConfirmationResponse =
+
+            let private execute ct command storage =
+                match storage with
+                | InMemoryStorage context ->
+                    context |> InMemoryRepository.Command.ConfirmationResponse.execute ct command
+                | _ -> async { return Error <| NotSupported $"Storage {storage}" }
+
+            let create ct response =
+                Command.ConfirmationResponse.Create response |> execute ct
+
+            let update ct response =
+                Command.ConfirmationResponse.Update response |> execute ct
+
+            let delete ct response =
+                Command.ConfirmationResponse.Delete response |> execute ct

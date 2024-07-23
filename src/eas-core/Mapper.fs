@@ -54,13 +54,24 @@ module Internal =
             | "" -> None
             | x -> Some x }
 
-    let toResponse (response: External.Response) : Result<Internal.AppointmentsResponse, Error'> =
+    let toAppointmentsResponse
+        (response: External.AppointmentsResponse)
+        : Result<Internal.AppointmentsResponse, Error'> =
         toRequest response.Request
         |> Result.map (fun request ->
             { Id = Internal.ResponseId response.Id
               Request = request
               Appointments = response.Appointments |> Array.map toAppointment |> set
-              Data = response.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
+              Modified = response.Modified })
+
+    let toConfirmationResponse
+        (response: External.ConfirmationResponse)
+        : Result<Internal.ConfirmationResponse, Error'> =
+        toRequest response.Request
+        |> Result.map (fun request ->
+            { Id = Internal.ResponseId response.Id
+              Request = request
+              Description = response.Description
               Modified = response.Modified })
 
 module External =
@@ -144,24 +155,24 @@ module External =
 
         result
 
-    let toResponse (response: Internal.AppointmentsResponse) : External.Response =
-        let result = External.Response()
+    let toAppointmentsResponse (response: Internal.AppointmentsResponse) : External.AppointmentsResponse =
+        let result = External.AppointmentsResponse()
 
         result.Id <- response.Id.Value
         result.RequestId <- response.Request.Id.Value
         result.Request <- toRequest response.Request
         result.Appointments <- response.Appointments |> Seq.map toAppointment |> Seq.toArray
+        result.Modified <- response.Modified
 
-        result.Data <-
-            response.Data
-            |> Map.toSeq
-            |> Seq.map (fun (key, value) ->
-                let data = External.ResponseData()
-                data.Key <- key
-                data.Value <- value
-                data)
-            |> Seq.toArray
+        result
 
+    let toConfirmationResponse (response: Internal.ConfirmationResponse) : External.ConfirmationResponse =
+        let result = External.ConfirmationResponse()
+
+        result.Id <- response.Id.Value
+        result.RequestId <- response.Request.Id.Value
+        result.Request <- toRequest response.Request
+        result.Description <- response.Description
         result.Modified <- response.Modified
 
         result

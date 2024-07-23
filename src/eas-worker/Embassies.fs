@@ -14,13 +14,12 @@ module Russian =
 
     let private createRequests ct country storage =
         let filter =
-            Request.ByEmbassy(
-                { Pagination =
-                    { Page = 1
-                      PageSize = 5
-                      SortBy = Desc(Date(_.Modified)) }
-                  Embassy = Russian country }
-            )
+            { Pagination =
+                { Page = 1
+                  PageSize = 5
+                  SortBy = Desc(Date(_.Modified)) }
+              Embassy = Some <| Russian country
+              Modified = None }
 
         storage |> Repository.Query.Request.get ct filter
 
@@ -41,7 +40,7 @@ module Russian =
     let private handleAppointmentsResult ct storage response =
 
         let saveResponse response =
-            storage |> Repository.Command.Response.create ct response
+            storage |> Repository.Command.AppointmentsResponse.create ct response
 
         match response with
         | None -> async { return Ok <| Info "No data." }

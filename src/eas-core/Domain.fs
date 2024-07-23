@@ -73,7 +73,6 @@ module Internal =
         { Id: ResponseId
           Request: Request
           Appointments: Set<Appointment>
-          Data: Map<string, string>
           Modified: DateTime }
 
     type ConfirmationResponse =
@@ -243,13 +242,11 @@ module External =
         member val Key: string = String.Empty with get, set
         member val Value: string = String.Empty with get, set
 
-    type Response() =
+    type AppointmentsResponse() =
         member val Id: Guid = Guid.Empty with get, set
-        member val Confirmed: bool = false with get, set
         member val RequestId: Guid = Guid.Empty with get, set
         member val Request: Request = Request() with get, set
         member val Appointments: Appointment array = [||] with get, set
-        member val Data: ResponseData array = [||] with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
 
     and Appointment() =
@@ -258,7 +255,9 @@ module External =
         member val DateTime: DateTime = DateTime.UtcNow with get, set
         member val Description: string = String.Empty with get, set
 
-    and ResponseData() =
-        member val Id: int = 0 with get, set
-        member val Key: string = String.Empty with get, set
-        member val Value: string = String.Empty with get, set
+    type ConfirmationResponse() =
+        member val Id: Guid = Guid.Empty with get, set
+        member val RequestId: Guid = Guid.Empty with get, set
+        member val Request: Request = Request() with get, set
+        member val Description: string = String.Empty with get, set
+        member val Modified: DateTime = DateTime.UtcNow with get, set
