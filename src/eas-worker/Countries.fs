@@ -9,17 +9,15 @@ open Eas.Persistence
 module Serbia =
     open Persistence.Storage.Core
     open Persistence.Domain.Core
+
     let private createTestRequest =
         fun _ ct ->
             createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId
-                      User = { Id = UserId 1; Name = "Andrei" }
                       Embassy = Russian <| Serbia Belgrade
-                      Data =
-                        Map
-                            [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"]
+                      Data = Map [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F" ]
                       Modified = System.DateTime.UtcNow }
 
                 storage

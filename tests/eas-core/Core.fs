@@ -16,7 +16,6 @@ module Embassies =
 
             let request =
                 { Id = Guid.NewGuid() |> RequestId
-                  User = { Id = UserId 1; Name = "Andrei" }
                   Embassy = Russian <| Serbia Belgrade
                   Data = Map [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F" ]
                   Modified = DateTime.UtcNow }
@@ -37,7 +36,7 @@ module Embassies =
                 |> ResultAsync.wrap FileSystem.Read.bytes
                 |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
-            let getResponseDeps =
+            let getAppointmentsDeps =
                 { getStartPage = fun _ _ -> loadHtml "start_page_response.html"
                   getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
                   solveCaptchaImage = fun _ -> async { return Ok 42 }
@@ -50,8 +49,8 @@ module Embassies =
             testAsync "validation page should have an error" {
                 let! responseRes =
                     request
-                    |> Russian.API.getResponse
-                        { getResponseDeps with
+                    |> Russian.API.getAppointments
+                        { getAppointmentsDeps with
                             postValidationPage = fun _ _ _ -> loadHtml "validation_page_has_error.html" }
 
                 match Expect.wantError responseRes "Response should have an error" with
@@ -67,8 +66,8 @@ module Embassies =
             testAsync "validation page should have a confirmation request" {
                 let! responseRes =
                     request
-                    |> Russian.API.getResponse
-                        { getResponseDeps with
+                    |> Russian.API.getAppointments
+                        { getAppointmentsDeps with
                             postValidationPage = fun _ _ _ -> loadHtml "validation_page_requires_confirmation.html" }
 
                 match Expect.wantError responseRes "Response should have an error" with
@@ -86,8 +85,8 @@ module Embassies =
                 async {
                     let! responseRes =
                         request
-                        |> Russian.API.getResponse
-                            { getResponseDeps with
+                        |> Russian.API.getAppointments
+                            { getAppointmentsDeps with
                                 postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_empty_result_{i}.html" }
 
                     let responseOpt = Expect.wantOk responseRes "Response should be Ok"
@@ -100,8 +99,8 @@ module Embassies =
                 async {
                     let! responseRes =
                         request
-                        |> Russian.API.getResponse
-                            { getResponseDeps with
+                        |> Russian.API.getAppointments
+                            { getAppointmentsDeps with
                                 postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_has_result_{i}.html" }
 
                     let responseOpt = Expect.wantOk responseRes "Response should be Ok"

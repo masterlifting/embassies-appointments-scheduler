@@ -4,13 +4,6 @@ open System
 
 module Internal =
 
-    type UserId =
-        | UserId of int
-
-        member this.Value =
-            match this with
-            | UserId id -> id
-
     type RequestId =
         | RequestId of Guid
 
@@ -31,13 +24,6 @@ module Internal =
         member this.Value =
             match this with
             | AppointmentId id -> id
-
-    type ConfirmationId =
-        | ConfirmationId of Guid
-
-        member this.Value =
-            match this with
-            | ConfirmationId id -> id
 
     type City =
         | Belgrade
@@ -65,35 +51,33 @@ module Internal =
         | German of Country
         | British of Country
 
-    type User = { Id: UserId; Name: string }
+    type Appointment =
+        { Id: AppointmentId
+          Value: string
+          Date: DateOnly
+          Time: TimeOnly
+          Description: string option }
+
+    type ConfirmationOption =
+        | FirstAvailable
+        | Range of DateTime * DateTime
+        | Appointment of Appointment
 
     type Request =
         { Id: RequestId
-          User: User
           Embassy: Embassy
           Data: Map<string, string>
           Modified: DateTime }
 
-    type Appointment =
-        { Id: AppointmentId
-          Date: DateOnly
-          Time: TimeOnly
-          Description: string }
-
-    type AppointmentOption =
-        | FirstAvailable
-        | Diapason of DateTime * DateTime
-        | Appointment of Appointment
-
-    type Response =
+    type AppointmentsResponse =
         { Id: ResponseId
           Request: Request
           Appointments: Set<Appointment>
           Data: Map<string, string>
           Modified: DateTime }
 
-    type Confirmation =
-        { Id: ConfirmationId
+    type ConfirmationResponse =
+        { Id: ResponseId
           Request: Request
           Description: string
           Modified: DateTime }
@@ -114,7 +98,6 @@ module Internal =
                 [<Literal>]
                 let NotConfirmed = "NotConfirmed"
 
-
             type GetStringRequest' = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
             type GetBytesRequest' = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
             type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
@@ -124,21 +107,20 @@ module Internal =
 
             type PostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
 
-
-            type GetResponseDeps =
+            type GetAppointmentsDeps =
                 { getStartPage: GetStringRequest'
                   getCaptchaImage: GetBytesRequest'
                   solveCaptchaImage: SolveCaptchaImage
                   postValidationPage: PostStringRequest'
                   postCalendarPage: PostStringRequest' }
 
-            type BookRequestDeps =
-                { GetResponseDeps: GetResponseDeps
+            type BookAppointmentDeps =
+                { GetAppointmentsDeps: GetAppointmentsDeps
                   postConfirmationPage: PostStringRequest }
 
-            type TryGetResponseDeps =
+            type TryGetAppointmentsDeps =
                 { updateRequest: Request -> Async<Result<unit, Error'>>
-                  getResponse: Request -> Async<Result<Response option, Error'>> }
+                  getAppointments: Request -> Async<Result<AppointmentsResponse option, Error'>> }
 
             type Id = private Id of int
             type Cd = private Cd of string
@@ -232,10 +214,6 @@ module Internal =
 
 module External =
 
-    type User() =
-        member val Id: int = 0 with get, set
-        member val Name: string = String.Empty with get, set
-
     type City() =
         member val Id: int = 0 with get, set
         member val Name: string = String.Empty with get, set
@@ -255,7 +233,6 @@ module External =
     type Request() =
         member val Id: Guid = Guid.Empty with get, set
         member val UserId: int = 0 with get, set
-        member val User: User = User() with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
         member val Data: RequestData array = [||] with get, set
@@ -277,6 +254,7 @@ module External =
 
     and Appointment() =
         member val Id: Guid = Guid.Empty with get, set
+        member val Value: string = String.Empty with get, set
         member val DateTime: DateTime = DateTime.UtcNow with get, set
         member val Description: string = String.Empty with get, set
 

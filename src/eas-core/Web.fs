@@ -1,15 +1,41 @@
 module Eas.Web
 
 open System
+open Infrastructure.DSL.AP
 open Infrastructure.Domain.Errors
 open Eas.Domain.Internal
 
 module internal Russian =
+    open Web.Domain
+    open Web.Client
+    open Web.Parser.Client
     open Eas.Domain.Internal.Embassies.Russian
 
+    let createGetAppointmentsDeps ct =
+        { getStartPage = Http.Request.Get.string' ct
+          getCaptchaImage = Http.Request.Get.bytes' ct
+          solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
+          postValidationPage = Http.Request.Post.waitString' ct
+          postCalendarPage = Http.Request.Post.waitString' ct }
+
+    let createBookAppointmentDeps ct =
+        { GetAppointmentsDeps = createGetAppointmentsDeps ct
+          postConfirmationPage = Http.Request.Post.waitString ct }
+
+    let createAppointmentsResponse appointments request =
+        { Id = Guid.NewGuid() |> ResponseId
+          Request = request
+          Appointments = appointments
+          Data = Map.empty
+          Modified = DateTime.Now }
+
+    let createConfirmationResponse description request =
+        { Id = Guid.NewGuid() |> ResponseId
+          Request = request
+          Description = description
+          Modified = DateTime.Now }
+
     module Http =
-        open Web.Domain.Http
-        open Web.Client
 
         let createHttpClient city =
             let headers =
@@ -40,14 +66,14 @@ module internal Russian =
             let headers = Map [ "Cookie", cookie ] |> Some
             httpClient |> Http.Headers.add headers
 
-        let setRequiredCookie httpClient (data: string, headers: Headers) =
+        let setRequiredCookie httpClient (data: string, headers: Http.Headers) =
             headers
             |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
                 data)
 
-        let setSessionCookie httpClient (image: byte array, headers: Headers) =
+        let setSessionCookie httpClient (image: byte array, headers: Http.Headers) =
             headers
             |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
             |> Result.map (fun cookie ->
@@ -61,345 +87,315 @@ module internal Russian =
             |> Seq.map (fun x -> $"{Uri.EscapeDataString x.Key}={Uri.EscapeDataString x.Value}")
             |> String.concat "&"
 
-        let createGetResponseDeps ct =
-            { getStartPage = Http.Request.Get.string' ct
-              getCaptchaImage = Http.Request.Get.bytes' ct
-              solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
-              postValidationPage = Http.Request.Post.waitString' ct
-              postCalendarPage = Http.Request.Post.waitString' ct }
+    let private hasError page =
+        page
+        |> Html.getNode "//span[@id='ctl00_MainContent_lblCodeErr']"
+        |> Result.bind (fun error ->
+            match error with
+            | None -> Ok page
+            | Some node ->
+                match node.InnerText with
+                | IsString text ->
+                    Error
+                    <| Operation
+                        { Message = text
+                          Code = Some ErrorCodes.PageHasError }
+                | _ -> Ok page)
 
-        let createBookRequestDeps ct =
-            { GetResponseDeps = createGetResponseDeps ct
-              postConfirmationPage = Http.Request.Post.waitString ct }
+    module StartPage =
+        open SkiaSharp
 
-        let createResponse appointments request =
-            { Id = Guid.NewGuid() |> ResponseId
-              Request = request
-              Appointments = appointments
-              Data = Map.empty
-              Modified = DateTime.Now }
+        type Deps =
+            { HttpClient: Http.Client
+              getStartPage: GetStringRequest'
+              getCaptchaImage: GetBytesRequest'
+              solveCaptchaImage: SolveCaptchaImage }
 
-        let createConfirmation description request =
-            { Id = Guid.NewGuid() |> ConfirmationId
-              Request = request
-              Description = description
-              Modified = DateTime.Now }
+        let createDeps (deps: GetAppointmentsDeps) httpClient =
+            { HttpClient = httpClient
+              getStartPage = deps.getStartPage
+              getCaptchaImage = deps.getCaptchaImage
+              solveCaptchaImage = deps.solveCaptchaImage }
 
-        module StartPage =
-            open SkiaSharp
+        let createRequest queryParams =
+            { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+              Http.Request.Headers = None }
 
-            type Deps =
-                { HttpClient: Client
-                  getStartPage: GetStringRequest'
-                  getCaptchaImage: GetBytesRequest'
-                  solveCaptchaImage: SolveCaptchaImage }
-
-            let createDeps (deps: GetResponseDeps) httpClient =
-                { HttpClient = httpClient
-                  getStartPage = deps.getStartPage
-                  getCaptchaImage = deps.getCaptchaImage
-                  solveCaptchaImage = deps.solveCaptchaImage }
-
-            let createRequest queryParams =
-                { Path = "/queue/orderinfo.aspx?" + queryParams
-                  Headers = None }
-
-            let createCaptchaImageRequest urlPath queryParams httpClient =
-                let origin = httpClient |> Http.Route.toOrigin
-                let host = httpClient |> Http.Route.toHost
-
-                let headers =
-                    Map
-                        [ "Host", [ host ]
-                          "Referer", [ origin + "/queue/orderinfo.aspx?" + queryParams ]
-                          "Sec-Fetch-Site", [ "same-origin" ] ]
-                    |> Some
-
-                { Path = $"/queue/{urlPath}"
-                  Headers = headers }
-
-            let prepareCaptchaImage (image: byte array) =
-                try
-                    if image.Length = 0 then
-                        Error <| NotFound "Captcha image is empty."
-                    else
-                        let bitmap = image |> SKBitmap.Decode
-                        let bitmapInfo = bitmap.Info
-                        let bitmapPixels = bitmap.GetPixels()
-
-                        use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
-
-                        if pixmap.Height = pixmap.Width then
-                            Ok image
-                        else
-                            let x = pixmap.Width / 3
-                            let y = 0
-                            let width = x * 2
-                            let height = pixmap.Height
-
-                            let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
-                            let data = subset.Encode(SKEncodedImageFormat.Png, 100)
-
-                            Ok <| data.ToArray()
-                with ex ->
-                    Error <| NotSupported ex.Message
-
-            let prepareFormData pageData captcha =
-                pageData
-                |> Map.remove "captchaUrlPath"
-                |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
-                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
-                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
-
-        module ValidationPage =
-
-            type Deps =
-                { HttpClient: Client
-                  postValidationPage: PostStringRequest' }
-
-            let createDeps (deps: GetResponseDeps) httpClient =
-                { HttpClient = httpClient
-                  postValidationPage = deps.postValidationPage }
-
-            let createRequest formData queryParams =
-
-                let request =
-                    { Path = "/queue/orderinfo.aspx?" + queryParams
-                      Headers = None }
-
-                let content =
-                    String
-                        {| Data = formData
-                           Encoding = Text.Encoding.ASCII
-                           MediaType = "application/x-www-form-urlencoded" |}
-
-                request, content
-
-            let prepareFormData data =
-                data
-                |> Map.add "ctl00$MainContent$ButtonB.x" "100"
-                |> Map.add "ctl00$MainContent$ButtonB.y" "20"
-                |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
-                |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
-
-        module CalendarPage =
-            open Infrastructure.DSL
-
-            type Deps =
-                { HttpClient: Client
-                  postCalendarPage: PostStringRequest' }
-
-            let createDeps (deps: GetResponseDeps) httpClient =
-                { HttpClient = httpClient
-                  postCalendarPage = deps.postCalendarPage }
-
-            let createRequest formData queryParams =
-
-                let request =
-                    { Path = "/queue/orderinfo.aspx?" + queryParams
-                      Headers = None }
-
-                let content =
-                    String
-                        {| Data = formData
-                           Encoding = Text.Encoding.ASCII
-                           MediaType = "application/x-www-form-urlencoded" |}
-
-                request, content
-
-            let parseAppointments (data: Set<string>) =
-
-                let parse (value: string) =
-                    //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
-                    let parts = value.Split '|'
-
-                    match parts.Length with
-                    | 4 ->
-                        let dateTime = parts[1]
-                        let window = parts[3]
-
-                        let date = DateOnly.TryParse dateTime
-                        let time = TimeOnly.TryParse dateTime
-
-                        match date, time with
-                        | (true, date), (true, time) ->
-                            Ok
-                            <| { Id = Guid.NewGuid() |> AppointmentId
-                                 Date = date
-                                 Time = time
-                                 Description = window }
-                        | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
-                    | _ -> Error <| NotSupported $"Appointment row: {value}."
-
-                match data.IsEmpty with
-                | true -> Ok Set.empty
-                | false -> data |> Set.map parse |> Seq.roe |> Result.map Set.ofSeq
-
-        module ConfirmationPage =
-
-            type Deps =
-                { HttpClient: Client
-                  postConfirmationPage: PostStringRequest }
-
-            let createDeps (deps: BookRequestDeps) httpClient =
-                { HttpClient = httpClient
-                  postConfirmationPage = deps.postConfirmationPage }
-
-            let chooseAppointment (appointments: Appointment Set) option =
-                match option with
-                | FirstAvailable -> appointments |> Seq.tryHead
-                | Appointment appointment -> appointments |> Seq.tryFind (fun x -> x.Id = appointment.Id)
-
-            let createRequest formData queryParamsId =
-
-                let request =
-                    { Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
-                      Headers = None }
-
-                let content =
-                    String
-                        {| Data = formData
-                           Encoding = Text.Encoding.ASCII
-                           MediaType = "application/x-www-form-urlencoded" |}
-
-                request, content
-
-            let prepareFormData data value =
-                data |> Map.add "ctl00$MainContent$TextBox1" value
-
-            let parseConfirmation (data: string) =
-                match data.Length = 0 with
-                | true -> Error <| NotFound "Confirmation data is empty."
-                | false -> Ok data
-
-    module Parser =
-        open Web.Parser.Client
-
-        module Html =
-            open Infrastructure.DSL.AP
-
-            let private hasError page =
-                page
-                |> Html.getNode "//span[@id='ctl00_MainContent_lblCodeErr']"
-                |> Result.bind (fun error ->
-                    match error with
-                    | None -> Ok page
-                    | Some node ->
-                        match node.InnerText with
-                        | IsString text ->
-                            Error
-                            <| Operation
-                                { Message = text
-                                  Code = Some ErrorCodes.PageHasError }
-                        | _ -> Ok page)
-
-            let private hasConfirmationRequest page =
-                page
-                |> Html.getNode "//span[@id='ctl00_MainContent_Content']"
-                |> Result.bind (fun request ->
-                    match request with
-                    | None -> Ok page
-                    | Some node ->
-                        match node.InnerText with
-                        | IsString text ->
-                            match text.Contains "Ваша заявка требует подтверждения" with
-                            | true ->
-                                Error
-                                <| Operation
-                                    { Message = text
-                                      Code = Some ErrorCodes.NotConfirmed }
-                            | false -> Ok page
-                        | _ -> Ok page)
-
-            let parseStartPage page =
-                Html.load page
-                |> Result.bind hasError
-                |> Result.bind (Html.getNodes "//input | //img")
-                |> Result.bind (fun nodes ->
-                    match nodes with
-                    | None -> Error <| NotFound "Nodes on the Start Page."
-                    | Some nodes ->
-                        nodes
-                        |> Seq.choose (fun node ->
-                            match node.Name with
-                            | "input" ->
-                                match
-                                    node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value"
-                                with
-                                | Ok(Some name), Ok(Some value) -> Some(name, value)
-                                | Ok(Some name), Ok(None) -> Some(name, String.Empty)
-                                | _ -> None
-                            | "img" ->
-                                match node |> Html.getAttributeValue "src" with
-                                | Ok(Some code) when code.Contains "CodeImage" -> Some("captchaUrlPath", code)
-                                | _ -> None
-                            | _ -> None)
-                        |> Map.ofSeq
-                        |> Ok)
-                |> Result.bind (fun result ->
-                    let requiredKeys =
-                        Set
-                            [ "captchaUrlPath"
-                              "__VIEWSTATE"
-                              "__VIEWSTATEGENERATOR"
-                              "__EVENTVALIDATION"
-                              "ctl00$MainContent$txtID"
-                              "ctl00$MainContent$txtUniqueID"
-                              "ctl00$MainContent$ButtonA" ]
-
-                    let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
-
-                    match requiredKeys.Count = result.Count with
-                    | true -> Ok result
-                    | false -> Error <| NotFound "Start Page headers.")
-
-            let parseValidationPage (page, _) =
-                Html.load page
-                |> Result.bind hasError
-                |> Result.bind hasConfirmationRequest
-                |> Result.bind (Html.getNodes "//input")
-                |> Result.bind (fun nodes ->
-                    match nodes with
-                    | None -> Error <| NotFound "Nodes on the Validation Page."
-                    | Some nodes ->
-                        nodes
-                        |> Seq.choose (fun node ->
+        let parseResponse page =
+            Html.load page
+            |> Result.bind hasError
+            |> Result.bind (Html.getNodes "//input | //img")
+            |> Result.bind (fun nodes ->
+                match nodes with
+                | None -> Error <| NotFound "Nodes on the Start Page."
+                | Some nodes ->
+                    nodes
+                    |> Seq.choose (fun node ->
+                        match node.Name with
+                        | "input" ->
                             match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
                             | Ok(Some name), Ok(Some value) -> Some(name, value)
                             | Ok(Some name), Ok(None) -> Some(name, String.Empty)
-                            | _ -> None)
-                        |> Map.ofSeq
-                        |> Ok)
-                |> Result.bind (fun result ->
-                    let requiredKeys =
-                        Set [ "__VIEWSTATE"; "__VIEWSTATEGENERATOR"; "__EVENTVALIDATION" ]
+                            | _ -> None
+                        | "img" ->
+                            match node |> Html.getAttributeValue "src" with
+                            | Ok(Some code) when code.Contains "CodeImage" -> Some("captchaUrlPath", code)
+                            | _ -> None
+                        | _ -> None)
+                    |> Map.ofSeq
+                    |> Ok)
+            |> Result.bind (fun result ->
+                let requiredKeys =
+                    Set
+                        [ "captchaUrlPath"
+                          "__VIEWSTATE"
+                          "__VIEWSTATEGENERATOR"
+                          "__EVENTVALIDATION"
+                          "ctl00$MainContent$txtID"
+                          "ctl00$MainContent$txtUniqueID"
+                          "ctl00$MainContent$ButtonA" ]
 
-                    let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+                let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
 
-                    match requiredKeys.Count = result.Count with
-                    | true -> Ok result
-                    | false -> Error <| NotFound "Validation Page headers.")
+                match requiredKeys.Count = result.Count with
+                | true -> Ok result
+                | false -> Error <| NotFound "Start Page headers.")
 
-            let parseCalendarPage (page, _) =
-                Html.load page
-                |> Result.bind hasError
-                |> Result.bind (Html.getNodes "//input[@type='radio']")
-                |> Result.bind (fun nodes ->
-                    match nodes with
-                    | None -> Ok Map.empty
-                    | Some nodes ->
-                        nodes
-                        |> Seq.choose (fun node ->
-                            match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
-                            | Ok(Some name), Ok(Some value) -> Some(value, name)
-                            | _ -> None)
-                        |> List.ofSeq
-                        |> fun list ->
-                            match list.Length = 0 with
-                            | true -> Error <| NotFound "Calendar Page appointments."
-                            | false -> list |> Map.ofList |> Ok)
-                |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
-                |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
+        let createCaptchaImageRequest urlPath queryParams httpClient =
+            let origin = httpClient |> Http.Route.toOrigin
+            let host = httpClient |> Http.Route.toHost
 
-            let parseConfirmationPage page =
-                Html.load page |> Result.bind hasError |> Result.map (fun _ -> "")
+            let headers =
+                Map
+                    [ "Host", [ host ]
+                      "Referer", [ origin + "/queue/orderinfo.aspx?" + queryParams ]
+                      "Sec-Fetch-Site", [ "same-origin" ] ]
+                |> Some
+
+            { Http.Request.Path = $"/queue/{urlPath}"
+              Http.Request.Headers = headers }
+
+        let prepareCaptchaImage (image: byte array) =
+            try
+                if image.Length = 0 then
+                    Error <| NotFound "Captcha image is empty."
+                else
+                    let bitmap = image |> SKBitmap.Decode
+                    let bitmapInfo = bitmap.Info
+                    let bitmapPixels = bitmap.GetPixels()
+
+                    use pixmap = new SKPixmap(bitmapInfo, bitmapPixels)
+
+                    if pixmap.Height = pixmap.Width then
+                        Ok image
+                    else
+                        let x = pixmap.Width / 3
+                        let y = 0
+                        let width = x * 2
+                        let height = pixmap.Height
+
+                        let subset = pixmap.ExtractSubset <| SKRectI(x, y, width, height)
+                        let data = subset.Encode(SKEncodedImageFormat.Png, 100)
+
+                        Ok <| data.ToArray()
+            with ex ->
+                Error <| NotSupported ex.Message
+
+        let prepareFormData pageData captcha =
+            pageData
+            |> Map.remove "captchaUrlPath"
+            |> Map.add "ctl00$MainContent$txtCode" $"%i{captcha}"
+            |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
+            |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+
+    module ValidationPage =
+
+        type Deps =
+            { HttpClient: Http.Client
+              postValidationPage: PostStringRequest' }
+
+        let createDeps (deps: GetAppointmentsDeps) httpClient =
+            { HttpClient = httpClient
+              postValidationPage = deps.postValidationPage }
+
+        let createRequest formData queryParams =
+
+            let request =
+                { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+                  Http.Request.Headers = None }
+
+            let content: Http.RequestContent =
+                Http.RequestContent.String
+                    {| Data = formData
+                       Encoding = Text.Encoding.ASCII
+                       MediaType = "application/x-www-form-urlencoded" |}
+
+            request, content
+
+        let private hasConfirmationRequest page =
+            page
+            |> Html.getNode "//span[@id='ctl00_MainContent_Content']"
+            |> Result.bind (fun request ->
+                match request with
+                | None -> Ok page
+                | Some node ->
+                    match node.InnerText with
+                    | IsString text ->
+                        match text.Contains "Ваша заявка требует подтверждения" with
+                        | true ->
+                            Error
+                            <| Operation
+                                { Message = text
+                                  Code = Some ErrorCodes.NotConfirmed }
+                        | false -> Ok page
+                    | _ -> Ok page)
+
+        let parseResponse (page, _) =
+            Html.load page
+            |> Result.bind hasError
+            |> Result.bind hasConfirmationRequest
+            |> Result.bind (Html.getNodes "//input")
+            |> Result.bind (fun nodes ->
+                match nodes with
+                | None -> Error <| NotFound "Nodes on the Validation Page."
+                | Some nodes ->
+                    nodes
+                    |> Seq.choose (fun node ->
+                        match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
+                        | Ok(Some name), Ok(Some value) -> Some(name, value)
+                        | Ok(Some name), Ok(None) -> Some(name, String.Empty)
+                        | _ -> None)
+                    |> Map.ofSeq
+                    |> Ok)
+            |> Result.bind (fun result ->
+                let requiredKeys =
+                    Set [ "__VIEWSTATE"; "__VIEWSTATEGENERATOR"; "__EVENTVALIDATION" ]
+
+                let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+
+                match requiredKeys.Count = result.Count with
+                | true -> Ok result
+                | false -> Error <| NotFound "Validation Page headers.")
+
+        let prepareFormData data =
+            data
+            |> Map.add "ctl00$MainContent$ButtonB.x" "100"
+            |> Map.add "ctl00$MainContent$ButtonB.y" "20"
+            |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
+            |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
+
+    module AppointmentsPage =
+        open Infrastructure.DSL
+
+        type Deps =
+            { HttpClient: Http.Client
+              postCalendarPage: PostStringRequest' }
+
+        let createDeps (deps: GetAppointmentsDeps) httpClient =
+            { HttpClient = httpClient
+              postCalendarPage = deps.postCalendarPage }
+
+        let createRequest formData queryParams =
+
+            let request =
+                { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+                  Http.Request.Headers = None }
+
+            let content: Http.RequestContent =
+                Http.RequestContent.String
+                    {| Data = formData
+                       Encoding = Text.Encoding.ASCII
+                       MediaType = "application/x-www-form-urlencoded" |}
+
+            request, content
+
+        let parseResponse (page, _) =
+            Html.load page
+            |> Result.bind hasError
+            |> Result.bind (Html.getNodes "//input[@type='radio']")
+            |> Result.bind (fun nodes ->
+                match nodes with
+                | None -> Ok Map.empty
+                | Some nodes ->
+                    nodes
+                    |> Seq.choose (fun node ->
+                        match node |> Html.getAttributeValue "name", node |> Html.getAttributeValue "value" with
+                        | Ok(Some name), Ok(Some value) -> Some(value, name)
+                        | _ -> None)
+                    |> List.ofSeq
+                    |> fun list ->
+                        match list.Length = 0 with
+                        | true -> Error <| NotFound "Calendar Page appointments."
+                        | false -> list |> Map.ofList |> Ok)
+            |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
+            |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
+
+        let parseAppointments (data: Set<string>) =
+
+            let parse (value: string) =
+                //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
+                let parts = value.Split '|'
+
+                match parts.Length with
+                | 4 ->
+                    let dateTime = parts[1]
+                    let window = parts[3]
+
+                    let date = DateOnly.TryParse dateTime
+                    let time = TimeOnly.TryParse dateTime
+
+                    match date, time with
+                    | (true, date), (true, time) ->
+                        Ok
+                        <| { Id = Guid.NewGuid() |> AppointmentId
+                             Value = value
+                             Date = date
+                             Time = time
+                             Description = Some window }
+                    | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
+                | _ -> Error <| NotSupported $"Appointment row: {value}."
+
+            match data.IsEmpty with
+            | true -> Ok Set.empty
+            | false -> data |> Set.map parse |> Seq.roe |> Result.map Set.ofSeq
+
+    module ConfirmationPage =
+
+        type Deps =
+            { HttpClient: Http.Client
+              postConfirmationPage: PostStringRequest }
+
+        let createDeps (deps: BookAppointmentDeps) httpClient =
+            { HttpClient = httpClient
+              postConfirmationPage = deps.postConfirmationPage }
+
+        let chooseAppointment (appointments: Appointment Set) option =
+            match option with
+            | FirstAvailable -> appointments |> Seq.tryHead
+            | Appointment appointment -> appointments |> Seq.tryFind (fun x -> x.Id = appointment.Id)
+            | _ -> None
+
+        let createRequest formData queryParamsId =
+
+            let request =
+                { Http.Request.Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
+                  Http.Request.Headers = None }
+
+            let content: Http.RequestContent =
+                Http.RequestContent.String
+                    {| Data = formData
+                       Encoding = Text.Encoding.ASCII
+                       MediaType = "application/x-www-form-urlencoded" |}
+
+            request, content
+
+        let parseResponse page =
+            Html.load page |> Result.bind hasError |> Result.map (fun _ -> "")
+
+        let prepareFormData data value =
+            data |> Map.add "ctl00$MainContent$TextBox1" value
+
+        let parseConfirmation (data: string) =
+            match data.Length = 0 with
+            | true -> Error <| NotFound "Confirmation data is empty."
+            | false -> Ok data

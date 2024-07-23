@@ -12,7 +12,7 @@ module Russian =
     open Persistence.Storage.Core
     open Eas.Persistence
 
-    let private getRequests ct country storage =
+    let private createRequests ct country storage =
         let filter =
             Request.ByEmbassy(
                 { Pagination =
@@ -24,22 +24,21 @@ module Russian =
 
         storage |> Repository.Query.Request.get ct filter
 
-    let private tryGetResponse ct storage requests =
+    let private tryGetAppointments ct storage requests =
 
-        let deps = Russian.API.createGetResponseDeps ct
+        let deps = Russian.API.createGetAppointmentsDeps ct
 
-        let getResponse =
-            Russian.API.getResponse deps
+        let getAppointments = Russian.API.getAppointments deps
 
         let updateRequest request =
             storage |> Repository.Command.Request.update ct request
 
         requests
-        |> Russian.API.tryGetResponse
+        |> Russian.API.tryGetAppointments
             { updateRequest = updateRequest
-              getResponse = getResponse }
+              getAppointments = getAppointments }
 
-    let private handleResponse ct storage response =
+    let private handleAppointmentsResult ct storage response =
 
         let saveResponse response =
             storage |> Repository.Command.Response.create ct response
@@ -51,15 +50,14 @@ module Russian =
             |> saveResponse
             |> ResultAsync.map (fun _ -> Success response.Appointments)
 
-
     let private searchAppointments country =
         fun _ ct ->
             createStorage InMemory
             |> ResultAsync.wrap (fun storage ->
                 storage
-                |> getRequests ct country
-                |> ResultAsync.bind' (tryGetResponse ct storage)
-                |> ResultAsync.bind' (handleResponse ct storage))
+                |> createRequests ct country
+                |> ResultAsync.bind' (tryGetAppointments ct storage)
+                |> ResultAsync.bind' (handleAppointmentsResult ct storage))
 
     let createNode country =
         Node(

@@ -34,20 +34,20 @@ module Filter =
 
     type UserEmbassyFilter<'a> =
         { Pagination: Pagination<'a>
-          User: Internal.User
           Embassy: Internal.Embassy }
 
-    type User =
-        | All
-        | ByEmbassy
+    type RequestFilter =
+        { Pagination: Pagination<Internal.Request>
+          Embassy: Internal.Embassy option
+          Modified: DateTime option }
 
     type Request =
         | ByEmbassy of EmbassyFilter<Internal.Request>
         | ByUserEmbassy of UserEmbassyFilter<Internal.Request>
 
     type Response =
-        | ByEmbassy of EmbassyFilter<Internal.Response>
-        | ByUserEmbassy of UserEmbassyFilter<Internal.Response>
+        | ByEmbassy of EmbassyFilter<Internal.AppointmentsResponse>
+        | ByUserEmbassy of UserEmbassyFilter<Internal.AppointmentsResponse>
 
 module private Command =
 
@@ -57,9 +57,9 @@ module private Command =
         | Delete of Internal.Request
 
     type Response =
-        | Create of Internal.Response
-        | Update of Internal.Response
-        | Delete of Internal.Response
+        | Create of Internal.AppointmentsResponse
+        | Update of Internal.AppointmentsResponse
+        | Delete of Internal.AppointmentsResponse
 
 module private InMemoryRepository =
 
@@ -108,9 +108,7 @@ module private InMemoryRepository =
                                     requests |> List.filter (fun x -> x.Embassy = filter.Embassy) |> paginate
                                     <| filter.Pagination
                                 | Request.ByUserEmbassy filter ->
-                                    requests
-                                    |> List.filter (fun x -> x.User.Id = filter.User.Id && x.Embassy = filter.Embassy)
-                                    |> paginate
+                                    requests |> List.filter (fun x -> x.Embassy = filter.Embassy) |> paginate
                                     <| filter.Pagination
 
                             context
@@ -142,7 +140,7 @@ module private InMemoryRepository =
                     return
                         match ct |> notCanceled with
                         | true ->
-                            let filter (responses: Internal.Response list) =
+                            let filter (responses: Internal.AppointmentsResponse list) =
                                 match filter with
                                 | Response.ByEmbassy filter ->
                                     responses
@@ -151,8 +149,7 @@ module private InMemoryRepository =
                                     <| filter.Pagination
                                 | Response.ByUserEmbassy filter ->
                                     responses
-                                    |> List.filter (fun x ->
-                                        x.Request.User.Id = filter.User.Id && x.Request.Embassy = filter.Embassy)
+                                    |> List.filter (fun x -> x.Request.Embassy = filter.Embassy)
                                     |> paginate
                                     <| filter.Pagination
 
@@ -161,7 +158,6 @@ module private InMemoryRepository =
                             |> Result.bind (Seq.map Internal.toResponse >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Response.get"
-
                 }
 
             let get' ct responseId context =
@@ -192,12 +188,20 @@ module private InMemoryRepository =
 
             let private add (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
-                | Some _ -> Error <| Operation { Message =  $"Request {request.Id} already exists."; Code = Some ErrorCodes.AlreadyExists } 
+                | Some _ ->
+                    Error
+                    <| Operation
+                        { Message = $"Request {request.Id} already exists."
+                          Code = Some ErrorCodes.AlreadyExists }
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
             let private update (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| Operation { Message =  $"Request {request.Id} not found to update."; Code = Some ErrorCodes.NotFound }
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Request {request.Id} not found to update."
+                          Code = Some ErrorCodes.NotFound }
                 | Some index ->
                     Ok(
                         requests
@@ -206,7 +210,11 @@ module private InMemoryRepository =
 
             let private delete (request: Internal.Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
-                | None -> Error <| Operation { Message =  $"Request {request.Id} not found to delete."; Code = Some ErrorCodes.NotFound }
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Request {request.Id} not found to delete."
+                          Code = Some ErrorCodes.NotFound }
                 | Some index -> Ok(requests |> Array.removeAt index)
 
             let execute ct command context =
@@ -229,23 +237,35 @@ module private InMemoryRepository =
 
         module Response =
 
-            let private add (response: Internal.Response) (responses: External.Response array) =
+            let private add (response: Internal.AppointmentsResponse) (responses: External.Response array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
-                | Some _ -> Error <| Operation { Message =  $"Response {response.Id} already exists."; Code = Some ErrorCodes.AlreadyExists }
+                | Some _ ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} already exists."
+                          Code = Some ErrorCodes.AlreadyExists }
                 | _ -> Ok(responses |> Array.append [| External.toResponse response |])
 
-            let private update (response: Internal.Response) (responses: External.Response array) =
+            let private update (response: Internal.AppointmentsResponse) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| Operation { Message =  $"Response {response.Id} not found to update."; Code = Some ErrorCodes.NotFound }
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} not found to update."
+                          Code = Some ErrorCodes.NotFound }
                 | Some index ->
                     Ok(
                         responses
                         |> Array.mapi (fun i x -> if i = index then External.toResponse response else x)
                     )
 
-            let private delete (response: Internal.Response) (responses: External.Response array) =
+            let private delete (response: Internal.AppointmentsResponse) (responses: External.Response array) =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
-                | None -> Error <| Operation { Message =  $"Response {response.Id} not found to delete."; Code = Some ErrorCodes.NotFound }
+                | None ->
+                    Error
+                    <| Operation
+                        { Message = $"Response {response.Id} not found to delete."
+                          Code = Some ErrorCodes.NotFound }
                 | Some index -> Ok(responses |> Array.removeAt index)
 
             let execute ct command context =
@@ -268,7 +288,7 @@ module private InMemoryRepository =
 
 module Repository =
     open Persistence.Storage.Core
-    
+
 
     ///<summary>Creates a storage context</summary>
     /// <param name="storage">The storage context</param>
