@@ -11,13 +11,6 @@ module Internal =
             match this with
             | UserId id -> id
 
-    type AppointmentId =
-        | AppointmentId of Guid
-
-        member this.Value =
-            match this with
-            | AppointmentId id -> id
-
     type RequestId =
         | RequestId of Guid
 
@@ -31,6 +24,20 @@ module Internal =
         member this.Value =
             match this with
             | ResponseId id -> id
+
+    type AppointmentId =
+        | AppointmentId of Guid
+
+        member this.Value =
+            match this with
+            | AppointmentId id -> id
+
+    type ConfirmationId =
+        | ConfirmationId of Guid
+
+        member this.Value =
+            match this with
+            | ConfirmationId id -> id
 
     type City =
         | Belgrade
@@ -75,6 +82,7 @@ module Internal =
 
     type AppointmentOption =
         | FirstAvailable
+        | Diapason of DateTime * DateTime
         | Appointment of Appointment
 
     type Response =
@@ -82,6 +90,12 @@ module Internal =
           Request: Request
           Appointments: Set<Appointment>
           Data: Map<string, string>
+          Modified: DateTime }
+
+    type Confirmation =
+        { Id: ConfirmationId
+          Request: Request
+          Description: string
           Modified: DateTime }
 
     module Embassies =
@@ -101,21 +115,24 @@ module Internal =
                 let NotConfirmed = "NotConfirmed"
 
 
-            type GetStringRequest = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-            type GetBytesRequest = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
+            type GetStringRequest' = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
+            type GetBytesRequest' = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
             type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
 
-            type PostStringRequest =
+            type PostStringRequest' =
                 Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
 
-            type GetResponseDeps =
-                { getStartPage: GetStringRequest
-                  getCaptchaImage: GetBytesRequest
-                  solveCaptchaImage: SolveCaptchaImage
-                  postValidationPage: PostStringRequest
-                  postCalendarPage: PostStringRequest }
+            type PostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
 
-            type SetResponseDeps =
+
+            type GetResponseDeps =
+                { getStartPage: GetStringRequest'
+                  getCaptchaImage: GetBytesRequest'
+                  solveCaptchaImage: SolveCaptchaImage
+                  postValidationPage: PostStringRequest'
+                  postCalendarPage: PostStringRequest' }
+
+            type BookRequestDeps =
                 { GetResponseDeps: GetResponseDeps
                   postConfirmationPage: PostStringRequest }
 

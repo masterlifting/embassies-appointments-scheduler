@@ -91,7 +91,7 @@ module Russian =
 
             let parseResponse = ResultAsync.bind Parser.Html.parseCalendarPage
 
-            let getAppointments = ResultAsync.bind Http.CalendarPage.getAppointments
+            let parseAppointments = ResultAsync.bind Http.CalendarPage.parseAppointments
 
             let createResult =
                 let createResult appointments = (appointments, formData)
@@ -101,15 +101,16 @@ module Russian =
             deps.HttpClient
             |> postRequest
             |> parseResponse
-            |> getAppointments
+            |> parseAppointments
             |> createResult
 
     let private processConfirmationPage (deps: Http.ConfirmationPage.Deps) =
         fun queryParamsId appointments formData option ->
 
             match Http.ConfirmationPage.chooseAppointment appointments option with
-            | None -> async { return Ok None }
+            | None -> async { return Error <| NotFound "Appointment to book." }
             | Some appointment ->
+
                 // define
                 let postRequest =
                     let formData =
@@ -122,10 +123,11 @@ module Russian =
 
                 let parseResponse = ResultAsync.bind Parser.Html.parseConfirmationPage
 
-                let getConfirmation = ResultAsync.bind Http.ConfirmationPage.getConfirmation
+                let parseConfirmation = ResultAsync.bind Http.ConfirmationPage.parseConfirmation
 
                 // pipe
-                deps.HttpClient |> postRequest |> parseResponse |> getConfirmation
+                deps.HttpClient |> postRequest |> parseResponse |> parseConfirmation
+
 
     let private getAppointments (deps: GetResponseDeps) =
         fun (credentials: Credentials) ->
@@ -162,10 +164,11 @@ module Russian =
                 let getAppointments =
                     processStartPage >> processValidationPage >> processCalendarPage
 
+                // run
                 getAppointments ())
 
-    let private setAppointment (deps: GetResponseDeps) =
-        fun (credentials: Credentials) (option: AppointmentOption) ->
+    let private bookAppointment (deps: BookRequestDeps) =
+        fun (option: AppointmentOption) (credentials: Credentials) ->
 
             let city, id, cd, ems = credentials.Value
             let queryParams = Http.createQueryParams id cd ems
@@ -176,11 +179,12 @@ module Russian =
 
                 // define
                 let processStartPage () =
-                    let startPageDeps = Http.StartPage.createDeps deps httpClient
+                    let startPageDeps = Http.StartPage.createDeps deps.GetResponseDeps httpClient
                     processStartPage startPageDeps queryParams
 
                 let processValidationPage =
-                    let validationPageDeps = Http.ValidationPage.createDeps deps httpClient
+                    let validationPageDeps =
+                        Http.ValidationPage.createDeps deps.GetResponseDeps httpClient
 
                     let process' formData =
                         processValidationPage validationPageDeps queryParams formData
@@ -188,7 +192,7 @@ module Russian =
                     ResultAsync.bind' process'
 
                 let processCalendarPage =
-                    let calendarPageDeps = Http.CalendarPage.createDeps deps httpClient
+                    let calendarPageDeps = Http.CalendarPage.createDeps deps.GetResponseDeps httpClient
 
                     let process' formData =
                         processCalendarPage calendarPageDeps queryParams formData
@@ -210,6 +214,7 @@ module Russian =
                     >> processCalendarPage
                     >> processConfirmationPage
 
+                // run
                 bookAppointment ())
 
     [<RequireQualifiedAccess>]
@@ -217,9 +222,11 @@ module Russian =
 
         let createGetResponseDeps = Http.createGetResponseDeps
 
+        let createBookRequestDeps = Http.createBookRequestDeps
+
         let getResponse deps =
 
-            let inline toResponse request (appointments: Set<Appointment>, _) =
+            let inline toResult request (appointments: Set<Appointment>, _) =
                 match appointments.IsEmpty with
                 | true -> None
                 | false -> Some <| (request |> Http.createResponse appointments)
@@ -231,9 +238,9 @@ module Russian =
                     url
                     |> createCredentials
                     |> ResultAsync.wrap (getAppointments deps)
-                    |> ResultAsync.map (toResponse request)
+                    |> ResultAsync.map (toResult request)
 
-        let tryGetResponse deps requests =
+        let tryGetResponse deps =
 
             let rec innerLoop requests error =
                 async {
@@ -257,4 +264,18 @@ module Russian =
                             | response -> return response
                 }
 
-            innerLoop requests None
+            fun requests -> innerLoop requests None
+
+        let bookRequest deps =
+
+            let inline toResult request description =
+                request |> Http.createConfirmation description
+
+            fun (request: Request) (option: AppointmentOption) ->
+                match request.Data |> Map.tryFind "url" with
+                | None -> async { return Error <| NotFound "Kdmid request url." }
+                | Some url ->
+                    url
+                    |> createCredentials
+                    |> ResultAsync.wrap (bookAppointment deps option)
+                    |> ResultAsync.map (toResult request)

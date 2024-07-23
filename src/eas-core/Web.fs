@@ -11,9 +11,6 @@ module internal Russian =
         open Web.Domain.Http
         open Web.Client
 
-        [<Literal>]
-        let private BasePath = "/queue/orderinfo.aspx?"
-
         let createHttpClient city =
             let headers =
                 Map
@@ -71,6 +68,10 @@ module internal Russian =
               postValidationPage = Http.Request.Post.waitString' ct
               postCalendarPage = Http.Request.Post.waitString' ct }
 
+        let createBookRequestDeps ct =
+            { GetResponseDeps = createGetResponseDeps ct
+              postConfirmationPage = Http.Request.Post.waitString ct }
+
         let createResponse appointments request =
             { Id = Guid.NewGuid() |> ResponseId
               Request = request
@@ -78,11 +79,29 @@ module internal Russian =
               Data = Map.empty
               Modified = DateTime.Now }
 
+        let createConfirmation description request =
+            { Id = Guid.NewGuid() |> ConfirmationId
+              Request = request
+              Description = description
+              Modified = DateTime.Now }
+
         module StartPage =
             open SkiaSharp
 
+            type Deps =
+                { HttpClient: Client
+                  getStartPage: GetStringRequest'
+                  getCaptchaImage: GetBytesRequest'
+                  solveCaptchaImage: SolveCaptchaImage }
+
+            let createDeps (deps: GetResponseDeps) httpClient =
+                { HttpClient = httpClient
+                  getStartPage = deps.getStartPage
+                  getCaptchaImage = deps.getCaptchaImage
+                  solveCaptchaImage = deps.solveCaptchaImage }
+
             let createRequest queryParams =
-                { Path = BasePath + queryParams
+                { Path = "/queue/orderinfo.aspx?" + queryParams
                   Headers = None }
 
             let createCaptchaImageRequest urlPath queryParams httpClient =
@@ -92,7 +111,7 @@ module internal Russian =
                 let headers =
                     Map
                         [ "Host", [ host ]
-                          "Referer", [ origin + BasePath + queryParams ]
+                          "Referer", [ origin + "/queue/orderinfo.aspx?" + queryParams ]
                           "Sec-Fetch-Site", [ "same-origin" ] ]
                     |> Some
 
@@ -132,23 +151,20 @@ module internal Russian =
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
+        module ValidationPage =
+
             type Deps =
                 { HttpClient: Client
-                  getStartPage: GetStringRequest
-                  getCaptchaImage: GetBytesRequest
-                  solveCaptchaImage: SolveCaptchaImage }
+                  postValidationPage: PostStringRequest' }
 
             let createDeps (deps: GetResponseDeps) httpClient =
                 { HttpClient = httpClient
-                  getStartPage = deps.getStartPage
-                  getCaptchaImage = deps.getCaptchaImage
-                  solveCaptchaImage = deps.solveCaptchaImage }
+                  postValidationPage = deps.postValidationPage }
 
-        module ValidationPage =
             let createRequest formData queryParams =
 
                 let request =
-                    { Path = BasePath + queryParams
+                    { Path = "/queue/orderinfo.aspx?" + queryParams
                       Headers = None }
 
                 let content =
@@ -166,21 +182,21 @@ module internal Russian =
                 |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
                 |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
+        module CalendarPage =
+            open Infrastructure.DSL
+
             type Deps =
                 { HttpClient: Client
-                  postValidationPage: PostStringRequest }
+                  postCalendarPage: PostStringRequest' }
 
             let createDeps (deps: GetResponseDeps) httpClient =
                 { HttpClient = httpClient
-                  postValidationPage = deps.postValidationPage }
-
-        module CalendarPage =
-            open Infrastructure.DSL
+                  postCalendarPage = deps.postCalendarPage }
 
             let createRequest formData queryParams =
 
                 let request =
-                    { Path = BasePath + queryParams
+                    { Path = "/queue/orderinfo.aspx?" + queryParams
                       Headers = None }
 
                 let content =
@@ -191,7 +207,7 @@ module internal Russian =
 
                 request, content
 
-            let getAppointments (data: Set<string>) =
+            let parseAppointments (data: Set<string>) =
 
                 let parse (value: string) =
                     //ASPCLNDR|2024-07-26T09:30:00|22|Окно 5
@@ -219,15 +235,15 @@ module internal Russian =
                 | true -> Ok Set.empty
                 | false -> data |> Set.map parse |> Seq.roe |> Result.map Set.ofSeq
 
+        module ConfirmationPage =
+
             type Deps =
                 { HttpClient: Client
-                  postCalendarPage: PostStringRequest }
+                  postConfirmationPage: PostStringRequest }
 
-            let createDeps (deps: GetResponseDeps) httpClient =
+            let createDeps (deps: BookRequestDeps) httpClient =
                 { HttpClient = httpClient
-                  postCalendarPage = deps.postCalendarPage }
-
-        module ConfirmationPage =
+                  postConfirmationPage = deps.postConfirmationPage }
 
             let chooseAppointment (appointments: Appointment Set) option =
                 match option with
@@ -251,13 +267,10 @@ module internal Russian =
             let prepareFormData data value =
                 data |> Map.add "ctl00$MainContent$TextBox1" value
 
-            type Deps =
-                { HttpClient: Client
-                  postValidationPage: PostStringRequest }
-
-            let createDeps (deps: GetResponseDeps) httpClient =
-                { HttpClient = httpClient
-                  postValidationPage = deps.postValidationPage }
+            let parseConfirmation (data: string) =
+                match data.Length = 0 with
+                | true -> Error <| NotFound "Confirmation data is empty."
+                | false -> Ok data
 
     module Parser =
         open Web.Parser.Client
@@ -388,5 +401,5 @@ module internal Russian =
                 |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
                 |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
 
-            let parseConfirmationPage (page, _) =
-                Html.load page |> Result.bind hasError |> Result.map (fun _ -> true)
+            let parseConfirmationPage page =
+                Html.load page |> Result.bind hasError |> Result.map (fun _ -> "")
