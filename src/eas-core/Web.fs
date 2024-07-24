@@ -160,7 +160,7 @@ module internal Russian =
                 | true -> Ok result
                 | false -> Error <| NotFound "Start Page headers.")
 
-        let createCaptchaImageRequest urlPath queryParams httpClient =
+        let createCaptchaRequest urlPath queryParams httpClient =
             let origin = httpClient |> Http.Route.toOrigin
             let host = httpClient |> Http.Route.toHost
 

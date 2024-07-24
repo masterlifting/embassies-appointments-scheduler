@@ -43,11 +43,11 @@ module Russian =
             storage |> Repository.Command.AppointmentsResponse.create ct response
 
         match response with
-        | None -> async { return Ok <| Info "No data." }
+        | None -> async { return Ok <| Info "No appointments found." }
         | Some response ->
             response
             |> saveResponse
-            |> ResultAsync.map (fun _ -> Success response.Appointments)
+            |> ResultAsync.map (fun _ -> Success $"\n{response.Appointments}")
 
     let private searchAppointments country =
         fun _ ct ->

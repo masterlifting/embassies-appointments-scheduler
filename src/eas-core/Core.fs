@@ -17,13 +17,13 @@ module Russian =
                 let request = StartPage.createRequest queryParams
                 deps.getStartPage request
 
-            let setResponseCookie = ResultAsync.bind (deps.HttpClient |> Http.setRequiredCookie)
+            let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setRequiredCookie)
             let parseResponse = ResultAsync.bind StartPage.parseResponse
 
             // pipe
             deps.HttpClient
             |> getRequest
-            |> setResponseCookie
+            |> setCookie
             |> parseResponse
             |> ResultAsync.bind' (fun pageData ->
                 match pageData |> Map.tryFind "captchaUrlPath" with
@@ -33,7 +33,7 @@ module Russian =
                     // define
                     let getCaptchaRequest =
                         let request =
-                            deps.HttpClient |> StartPage.createCaptchaImageRequest urlPath queryParams
+                            deps.HttpClient |> StartPage.createCaptchaRequest urlPath queryParams
 
                         deps.getCaptchaImage request
 
