@@ -104,11 +104,11 @@ module Internal =
         type PostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
 
         type GetAppointmentsDeps =
-            { getStartPage: GetStringRequest'
+            { getInitialPagePage: GetStringRequest'
               getCaptchaImage: GetBytesRequest'
               solveCaptchaImage: SolveCaptchaImage
               postValidationPage: PostStringRequest'
-              postCalendarPage: PostStringRequest' }
+              postAppointmentsPage: PostStringRequest' }
 
         type BookAppointmentDeps =
             { GetAppointmentsDeps: GetAppointmentsDeps

@@ -34,11 +34,11 @@ module Russian =
             |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
         let getAppointmentsDeps =
-            { getStartPage = fun _ _ -> loadHtml "start_page_response.html"
+            { getInitialPagePage = fun _ _ -> loadHtml "initial_page_response.html"
               getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
               solveCaptchaImage = fun _ -> async { return Ok 42 }
               postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
-              postCalendarPage = fun _ _ _ -> loadHtml "calendar_page_has_result_1.html" }
+              postAppointmentsPage = fun _ _ _ -> loadHtml "appointments_page_has_result_1.html" }
 
     open Fixture
 
@@ -76,29 +76,29 @@ module Russian =
             | error -> Expect.isTrue false $"Error should be {nameof Operation} type, but was {error}"
         }
 
-    let private ``calendar page should not have appointments`` =
-        testTheoryAsync "calendar page should not have appointments" [ 1; 2; 3; 4; 5; 6; 7 ]
+    let private ``appointments page should not have data`` =
+        testTheoryAsync "appointments page should not have data" [ 1; 2; 3; 4; 5; 6; 7 ]
         <| fun i ->
             async {
                 let! responseRes =
                     request
                     |> Russian.API.getAppointments
                         { getAppointmentsDeps with
-                            postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_empty_result_{i}.html" }
+                            postAppointmentsPage = fun _ _ _ -> loadHtml $"appointments_page_empty_result_{i}.html" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 Expect.isNone responseOpt "Response should not be Some"
             }
 
-    let private ``calendar page should have appointments`` =
-        testTheoryAsync "calendar page should have appointments" [ 1; 2; 3 ]
+    let private ``appointments page should have data`` =
+        testTheoryAsync "appointments page should have data" [ 1; 2; 3 ]
         <| fun i ->
             async {
                 let! responseRes =
                     request
                     |> Russian.API.getAppointments
                         { getAppointmentsDeps with
-                            postCalendarPage = fun _ _ _ -> loadHtml $"calendar_page_has_result_{i}.html" }
+                            postAppointmentsPage = fun _ _ _ -> loadHtml $"appointments_page_has_result_{i}.html" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 let response = Expect.wantSome responseOpt "Response should be Some"
@@ -110,5 +110,5 @@ module Russian =
             "Russian"
             [ ``validation page should have a confirmation request``
               ``validation page should have an error``
-              ``calendar page should not have appointments``
-              ``calendar page should have appointments`` ]
+              ``appointments page should not have data``
+              ``appointments page should have data`` ]

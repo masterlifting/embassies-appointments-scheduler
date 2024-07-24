@@ -11,11 +11,11 @@ module internal Russian =
     open EmbassyAccess.Domain.Core.Internal.Russian
 
     let createGetAppointmentsDeps ct =
-        { getStartPage = Http.Request.Get.string' ct
+        { getInitialPagePage = Http.Request.Get.string' ct
           getCaptchaImage = Http.Request.Get.bytes' ct
           solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
           postValidationPage = Http.Request.Post.waitString' ct
-          postCalendarPage = Http.Request.Post.waitString' ct }
+          postAppointmentsPage = Http.Request.Post.waitString' ct }
 
     let createBookAppointmentDeps ct =
         { GetAppointmentsDeps = createGetAppointmentsDeps ct
@@ -100,18 +100,18 @@ module internal Russian =
                           Code = Some ErrorCodes.PageHasError }
                 | _ -> Ok page)
 
-    module StartPage =
+    module InitialPage =
         open SkiaSharp
 
         type Deps =
             { HttpClient: Http.Client
-              getStartPage: GetStringRequest'
+              getInitialPagePage: GetStringRequest'
               getCaptchaImage: GetBytesRequest'
               solveCaptchaImage: SolveCaptchaImage }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
             { HttpClient = httpClient
-              getStartPage = deps.getStartPage
+              getInitialPagePage = deps.getInitialPagePage
               getCaptchaImage = deps.getCaptchaImage
               solveCaptchaImage = deps.solveCaptchaImage }
 
@@ -125,7 +125,7 @@ module internal Russian =
             |> Result.bind (Html.getNodes "//input | //img")
             |> Result.bind (fun nodes ->
                 match nodes with
-                | None -> Error <| NotFound "Nodes on the Start Page."
+                | None -> Error <| NotFound "Nodes on the Initial Page."
                 | Some nodes ->
                     nodes
                     |> Seq.choose (fun node ->
@@ -157,7 +157,7 @@ module internal Russian =
 
                 match requiredKeys.Count = result.Count with
                 | true -> Ok result
-                | false -> Error <| NotFound "Start Page headers.")
+                | false -> Error <| NotFound "Initial Page headers.")
 
         let createCaptchaRequest urlPath queryParams httpClient =
             let origin = httpClient |> Http.Route.toOrigin
@@ -285,11 +285,11 @@ module internal Russian =
     module AppointmentsPage =
         type Deps =
             { HttpClient: Http.Client
-              postCalendarPage: PostStringRequest' }
+              postAppointmentsPage: PostStringRequest' }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
             { HttpClient = httpClient
-              postCalendarPage = deps.postCalendarPage }
+              postAppointmentsPage = deps.postAppointmentsPage }
 
         let createRequest formData queryParams =
 
@@ -321,7 +321,7 @@ module internal Russian =
                     |> List.ofSeq
                     |> fun list ->
                         match list.Length = 0 with
-                        | true -> Error <| NotFound "Calendar Page appointments."
+                        | true -> Error <| NotFound "Appointments Page items."
                         | false -> list |> Map.ofList |> Ok)
             |> Result.map (Map.filter (fun _ value -> value = "ctl00$MainContent$RadioButtonList1"))
             |> Result.map (Seq.map (_.Key) >> Set.ofSeq)
