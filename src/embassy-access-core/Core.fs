@@ -14,7 +14,7 @@ module Russian =
             // define
             let getRequest =
                 let request = InitialPage.createRequest queryParams
-                deps.getInitialPagePage request
+                deps.getInitialPage request
 
             let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setRequiredCookie)
             let parseResponse = ResultAsync.bind InitialPage.parseResponse
@@ -31,13 +31,14 @@ module Russian =
 
                     // define
                     let getCaptchaRequest =
-                        let request = deps.HttpClient |> InitialPage.createCaptchaRequest urlPath queryParams
+                        let request =
+                            deps.HttpClient |> InitialPage.createCaptchaRequest urlPath queryParams
 
-                        deps.getCaptchaImage request
+                        deps.getCaptcha request
 
                     let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setSessionCookie)
                     let prepareResponse = ResultAsync.bind InitialPage.prepareCaptchaImage
-                    let solveCaptcha = ResultAsync.bind' deps.solveCaptchaImage
+                    let solveCaptcha = ResultAsync.bind' deps.solveCaptcha
                     let prepareFormData = ResultAsync.map' (pageData |> InitialPage.prepareFormData)
                     let buildFormData = ResultAsync.map' Http.buildFormData
 

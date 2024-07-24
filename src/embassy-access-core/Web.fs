@@ -11,9 +11,9 @@ module internal Russian =
     open EmbassyAccess.Domain.Core.Internal.Russian
 
     let createGetAppointmentsDeps ct =
-        { getInitialPagePage = Http.Request.Get.string' ct
-          getCaptchaImage = Http.Request.Get.bytes' ct
-          solveCaptchaImage = Web.Http.Captcha.AntiCaptcha.solveToInt ct
+        { getInitialPage = Http.Request.Get.string' ct
+          getCaptcha = Http.Request.Get.bytes' ct
+          solveCaptcha = Web.Http.Captcha.AntiCaptcha.solveToInt ct
           postValidationPage = Http.Request.Post.waitString' ct
           postAppointmentsPage = Http.Request.Post.waitString' ct }
 
@@ -105,15 +105,15 @@ module internal Russian =
 
         type Deps =
             { HttpClient: Http.Client
-              getInitialPagePage: GetStringRequest'
-              getCaptchaImage: GetBytesRequest'
-              solveCaptchaImage: SolveCaptchaImage }
+              getInitialPage: GetStringRequest'
+              getCaptcha: GetBytesRequest'
+              solveCaptcha: SolveCaptchaImage }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
             { HttpClient = httpClient
-              getInitialPagePage = deps.getInitialPagePage
-              getCaptchaImage = deps.getCaptchaImage
-              solveCaptchaImage = deps.solveCaptchaImage }
+              getInitialPage = deps.getInitialPage
+              getCaptcha = deps.getCaptcha
+              solveCaptcha = deps.solveCaptcha }
 
         let createRequest queryParams =
             { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams

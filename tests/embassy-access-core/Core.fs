@@ -34,9 +34,9 @@ module Russian =
             |> ResultAsync.map (fun data -> (data, requiredHeaders))
 
         let getAppointmentsDeps =
-            { getInitialPagePage = fun _ _ -> loadHtml "initial_page_response.html"
-              getCaptchaImage = fun _ _ -> loadImage "captcha_image.png"
-              solveCaptchaImage = fun _ -> async { return Ok 42 }
+            { getInitialPage = fun _ _ -> loadHtml "initial_page_response.html"
+              getCaptcha = fun _ _ -> loadImage "captcha.png"
+              solveCaptcha = fun _ -> async { return Ok 42 }
               postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
               postAppointmentsPage = fun _ _ _ -> loadHtml "appointments_page_has_result_1.html" }
 

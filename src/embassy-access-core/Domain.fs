@@ -104,9 +104,9 @@ module Internal =
         type PostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
 
         type GetAppointmentsDeps =
-            { getInitialPagePage: GetStringRequest'
-              getCaptchaImage: GetBytesRequest'
-              solveCaptchaImage: SolveCaptchaImage
+            { getInitialPage: GetStringRequest'
+              getCaptcha: GetBytesRequest'
+              solveCaptcha: SolveCaptchaImage
               postValidationPage: PostStringRequest'
               postAppointmentsPage: PostStringRequest' }
 
