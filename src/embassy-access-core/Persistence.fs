@@ -1,13 +1,10 @@
-﻿module Eas.Persistence
+﻿module EmbassyAccess.Persistence.Core
 
 open Infrastructure
-open Infrastructure.DSL.SerDe
-open Infrastructure.DSL.Threading
-open Infrastructure.Domain.Errors
 open Persistence.Domain.Core
 open Persistence.Storage
-open Domain
-open Mapper
+open EmbassyAccess.Domain.Core
+open EmbassyAccess.Mapper.Core
 
 module Filter =
     open System
@@ -399,9 +396,9 @@ module private InMemoryRepository =
 
                 }
 
+[<RequireQualifiedAccess>]
 module Repository =
     open Persistence.Storage.Core
-
 
     ///<summary>Creates a storage context</summary>
     /// <param name="storage">The storage context</param>
@@ -412,7 +409,6 @@ module Repository =
         | Some storage -> Ok storage
         | _ -> createStorage InMemory
 
-    [<RequireQualifiedAccess>]
     module Query =
 
         module Request =
@@ -451,7 +447,6 @@ module Repository =
                 | InMemoryStorage context -> context |> InMemoryRepository.Query.ConfirmationResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-    [<RequireQualifiedAccess>]
     module Command =
 
         module Request =

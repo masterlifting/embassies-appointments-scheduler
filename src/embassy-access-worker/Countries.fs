@@ -1,10 +1,10 @@
-﻿module internal Eas.Worker.Countries
+﻿module internal EmbassyAccess.Worker.Countries
 
+open Infrastructure
 open Infrastructure.Domain.Graph
-open Infrastructure.DSL
 open Worker.Domain.Internal
-open Eas.Domain.Internal
-open Eas.Persistence
+open EmbassyAccess.Domain.Core.Internal
+open EmbassyAccess.Persistence.Core
 
 module Serbia =
     open Persistence.Storage.Core

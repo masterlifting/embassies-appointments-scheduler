@@ -1,17 +1,16 @@
-﻿module internal Eas.Worker.Embassies
+﻿module internal EmbassyAccess.Worker.Embassies
 
-open Infrastructure.DSL
+open Infrastructure
 open Infrastructure.Domain.Graph
+open Persistence.Domain.Core
+open Persistence.Storage.Core
 open Worker.Domain.Internal
-open Eas.Core
-open Eas.Domain.Internal
-open Eas.Persistence.Filter
+open EmbassyAccess.Core
+open EmbassyAccess.Domain.Core.Internal
+open EmbassyAccess.Persistence.Core
+open EmbassyAccess.Persistence.Core.Filter
 
 module Russian =
-    open Persistence.Domain.Core
-    open Persistence.Storage.Core
-    open Eas.Persistence
-
     let private createRequests ct country storage =
         let filter =
             { Pagination =

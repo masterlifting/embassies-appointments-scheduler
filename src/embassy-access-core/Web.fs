@@ -1,15 +1,14 @@
-module Eas.Web
+module EmbassyAccess.Web.Core
 
 open System
-open Infrastructure.DSL.AP
-open Infrastructure.Domain.Errors
-open Eas.Domain.Internal
+open Infrastructure
+open EmbassyAccess.Domain.Core.Internal
 
 module internal Russian =
     open Web.Domain
     open Web.Client
     open Web.Parser.Client
-    open Eas.Domain.Internal.Embassies.Russian
+    open EmbassyAccess.Domain.Core.Internal.Russian
 
     let createGetAppointmentsDeps ct =
         { getStartPage = Http.Request.Get.string' ct
@@ -94,7 +93,7 @@ module internal Russian =
             | None -> Ok page
             | Some node ->
                 match node.InnerText with
-                | IsString text ->
+                | AP.IsString text ->
                     Error
                     <| Operation
                         { Message = text
@@ -239,7 +238,7 @@ module internal Russian =
                 | None -> Ok page
                 | Some node ->
                     match node.InnerText with
-                    | IsString text ->
+                    | AP.IsString text ->
                         match text.Contains "Ваша заявка требует подтверждения" with
                         | true ->
                             Error
@@ -284,8 +283,6 @@ module internal Russian =
             |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
     module AppointmentsPage =
-        open Infrastructure.DSL
-
         type Deps =
             { HttpClient: Http.Client
               postCalendarPage: PostStringRequest' }

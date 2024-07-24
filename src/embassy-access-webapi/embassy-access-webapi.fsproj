@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\submodules\fsharp-web\src\fsharp-web.fsproj" />
-    <ProjectReference Include="..\eas-core\eas-core.fsproj" />
+    <ProjectReference Include="..\embassy-access-core\embassy-access-core.fsproj" />
   </ItemGroup>
 
 </Project>

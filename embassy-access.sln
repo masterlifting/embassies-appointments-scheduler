@@ -1,0 +1,85 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C8A5F967-F46B-48D7-9E25-8799320C2F9C}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		.gitmodules = .gitmodules
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Submodules", "Submodules", "{1F2E46CB-3305-404D-8B70-D0EF6763D44F}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-infrastructure", "submodules\fsharp-infrastructure\src\fsharp-infrastructure.fsproj", "{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-persistence", "submodules\fsharp-persistence\src\fsharp-persistence.fsproj", "{2E157B25-AB55-4E0B-9D91-3134109DA1B7}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-worker", "submodules\fsharp-worker\src\fsharp-worker.fsproj", "{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "fsharp-web", "submodules\fsharp-web\src\fsharp-web.fsproj", "{B6222822-F5B1-45A9-BAB3-B3C07C65C237}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{B66C4DC6-74D0-4BD4-8BC5-748594619096}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "embassy-access-core-tests", "tests\embassy-access-core\embassy-access-core-tests.fsproj", "{A0D62350-AC71-4851-B4CB-8BB8B690A5C0}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "embassy-access-core", "src\embassy-access-core\embassy-access-core.fsproj", "{EAA58D38-B031-4CAD-BAA8-8560E8013E7C}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "embassy-access-webapi", "src\embassy-access-webapi\embassy-access-webapi.fsproj", "{40FE59F2-A4E8-4FDF-966D-688612F1766B}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "embassy-access-worker", "src\embassy-access-worker\embassy-access-worker.fsproj", "{45F26EBC-BE22-4C6E-B27A-8D4212826E33}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E157B25-AB55-4E0B-9D91-3134109DA1B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6222822-F5B1-45A9-BAB3-B3C07C65C237}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6222822-F5B1-45A9-BAB3-B3C07C65C237}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6222822-F5B1-45A9-BAB3-B3C07C65C237}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6222822-F5B1-45A9-BAB3-B3C07C65C237}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0D62350-AC71-4851-B4CB-8BB8B690A5C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0D62350-AC71-4851-B4CB-8BB8B690A5C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0D62350-AC71-4851-B4CB-8BB8B690A5C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0D62350-AC71-4851-B4CB-8BB8B690A5C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAA58D38-B031-4CAD-BAA8-8560E8013E7C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAA58D38-B031-4CAD-BAA8-8560E8013E7C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAA58D38-B031-4CAD-BAA8-8560E8013E7C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAA58D38-B031-4CAD-BAA8-8560E8013E7C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40FE59F2-A4E8-4FDF-966D-688612F1766B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40FE59F2-A4E8-4FDF-966D-688612F1766B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40FE59F2-A4E8-4FDF-966D-688612F1766B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40FE59F2-A4E8-4FDF-966D-688612F1766B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45F26EBC-BE22-4C6E-B27A-8D4212826E33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45F26EBC-BE22-4C6E-B27A-8D4212826E33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45F26EBC-BE22-4C6E-B27A-8D4212826E33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45F26EBC-BE22-4C6E-B27A-8D4212826E33}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{83C61746-FC1D-4FDF-BA1A-F2DF1E9B7F73} = {1F2E46CB-3305-404D-8B70-D0EF6763D44F}
+		{2E157B25-AB55-4E0B-9D91-3134109DA1B7} = {1F2E46CB-3305-404D-8B70-D0EF6763D44F}
+		{BFB9BBD0-55A7-4F8E-8640-A996F02C8ADC} = {1F2E46CB-3305-404D-8B70-D0EF6763D44F}
+		{B6222822-F5B1-45A9-BAB3-B3C07C65C237} = {1F2E46CB-3305-404D-8B70-D0EF6763D44F}
+		{A0D62350-AC71-4851-B4CB-8BB8B690A5C0} = {B66C4DC6-74D0-4BD4-8BC5-748594619096}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4AF520CC-E867-48B2-8CD7-256E3CF27B92}
+	EndGlobalSection
+EndGlobal

@@ -1,26 +1,25 @@
-module internal Eas.Worker.Persistence
+module internal EmbassyAccess.Worker.Task
 
 open Infrastructure
 open Infrastructure.Configuration
-open Infrastructure.Domain.Errors
 
 [<Literal>]
 let private sectionName = "Worker"
 
-let private getTasksGraph handlersGraph configuration =
+let private buildGraph handlersGraph configuration =
     configuration
     |> getSection<Worker.Domain.External.Task> sectionName
-    |> Option.map (fun graph -> Worker.Mapper.buildCoreGraph graph handlersGraph)
+    |> Option.map (fun graph -> Worker.Graph.build graph handlersGraph)
     |> Option.defaultValue (
         Error
         <| NotFound $"Section '%s{sectionName}' in the configuration."
     )
 
-let getTaskNode handlersGraph configuration =
+let getNode handlersGraph configuration =
     fun taskName ->
         async {
             return
-                getTasksGraph handlersGraph configuration
+                buildGraph handlersGraph configuration
                 |> Result.bind (fun graph ->
                     DSL.Graph.findNode taskName graph
                     |> Option.map Ok

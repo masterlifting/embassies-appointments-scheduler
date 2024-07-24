@@ -6,55 +6,51 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="test_data\start_page_response.html" >
+    <Content Include="test_data\start_page_response.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="test_data\captcha_image.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\validation_page_has_error.html" >
+    <Content Include="test_data\validation_page_has_error.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\validation_page_requires_confirmation.html" >
+    <Content Include="test_data\validation_page_requires_confirmation.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\validation_page_valid_response.html" >
+    <Content Include="test_data\validation_page_valid_response.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_1.html" >
+    <Content Include="test_data\calendar_page_empty_result_1.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_2.html" >
+    <Content Include="test_data\calendar_page_empty_result_2.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_3.html" >
+    <Content Include="test_data\calendar_page_empty_result_3.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_4.html" >
+    <Content Include="test_data\calendar_page_empty_result_4.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_5.html" >
+    <Content Include="test_data\calendar_page_empty_result_5.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_6.html" >
+    <Content Include="test_data\calendar_page_empty_result_6.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_empty_result_7.html" >
+    <Content Include="test_data\calendar_page_empty_result_7.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_has_result_1.html" >
+    <Content Include="test_data\calendar_page_has_result_1.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_has_result_2.html" >
+    <Content Include="test_data\calendar_page_has_result_2.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="test_data\calendar_page_has_result_3.html" >
+    <Content Include="test_data\calendar_page_has_result_3.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-      <ProjectReference Include="..\..\src\eas-core\eas-core.fsproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -64,6 +60,10 @@
 
   <ItemGroup>
     <PackageReference Include="Expecto" Version="10.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\embassy-access-core\embassy-access-core.fsproj" />
   </ItemGroup>
 
 </Project>

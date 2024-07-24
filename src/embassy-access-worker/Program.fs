@@ -1,6 +1,7 @@
 ﻿open Infrastructure
 open Infrastructure.Domain.Graph
 open Worker.Domain.Internal
+open EmbassyAccess.Worker
 
 [<EntryPoint>]
 let main _ =
@@ -15,18 +16,18 @@ let main _ =
     let handlersGraph =
         Node(
             rootNode,
-            [ Eas.Worker.Countries.Serbia.Node
-              Eas.Worker.Countries.Bosnia.Node
-              Eas.Worker.Countries.Montenegro.Node
-              Eas.Worker.Countries.Hungary.Node
-              Eas.Worker.Countries.Albania.Node ]
+            [ Countries.Serbia.Node
+              Countries.Bosnia.Node
+              Countries.Montenegro.Node
+              Countries.Hungary.Node
+              Countries.Albania.Node ]
         )
 
     let configuration = Configuration.get <| Configuration.File.Yaml "appsettings"
 
     Logging.useConsole configuration
 
-    let getTaskNode = Eas.Worker.Persistence.getTaskNode handlersGraph configuration
+    let getTaskNode = Task.getNode handlersGraph configuration
 
     Worker.Core.start <| workerName <| getTaskNode <| configuration
     |> Async.RunSynchronously

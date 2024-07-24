@@ -1,10 +1,10 @@
-﻿module Eas.Core.Program
+﻿module EmbassyAccess.Core.Program
 
 open System
 open Expecto
-open Eas.Core.Tests
+open EmbassyAccess.Core.Tests
 
-let private tests = testList "Tests" [ Embassies.Russian.tests ]
+let private tests = testList "Tests" [ Russian.tests ]
 
 [<EntryPoint>]
 let main args =

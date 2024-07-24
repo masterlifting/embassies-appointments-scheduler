@@ -1,13 +1,12 @@
-module Eas.Core
+module EmbassyAccess.Core
 
 open System
-open Infrastructure.DSL
-open Infrastructure.Domain.Errors
-open Eas.Domain.Internal
+open Infrastructure
+open EmbassyAccess.Domain.Core.Internal
 
 module Russian =
-    open Eas.Web.Russian
-    open Embassies.Russian
+    open EmbassyAccess.Web.Core.Russian
+    open EmbassyAccess.Domain.Core.Internal.Russian
 
     let private processStartPage (deps: StartPage.Deps) =
         fun queryParams ->
@@ -32,8 +31,7 @@ module Russian =
 
                     // define
                     let getCaptchaRequest =
-                        let request =
-                            deps.HttpClient |> StartPage.createCaptchaRequest urlPath queryParams
+                        let request = deps.HttpClient |> StartPage.createCaptchaRequest urlPath queryParams
 
                         deps.getCaptchaImage request
 
