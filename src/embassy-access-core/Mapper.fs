@@ -15,6 +15,11 @@ module Internal =
         | "Tirana" -> Ok <| Internal.Tirana
         | "Paris" -> Ok <| Internal.Paris
         | "Rome" -> Ok <| Internal.Rome
+        | "Ljubljana" -> Ok <| Internal.Ljubljana
+        | "Hague" -> Ok <| Internal.Hague
+        | "Helsinki" -> Ok <| Internal.Helsinki
+        | "Bern" -> Ok <| Internal.Bern
+        | "Dublin" -> Ok <| Internal.Dublin
         | _ -> Error <| NotSupported $"City {city.Name}."
 
     let toCountry (country: External.Country) : Result<Internal.Country, Error'> =
@@ -27,6 +32,12 @@ module Internal =
             | "Montenegro" -> Ok <| Internal.Montenegro city
             | "Albania" -> Ok <| Internal.Albania city
             | "Germany" -> Ok <| Internal.Germany city
+            | "France" -> Ok <| Internal.France city
+            | "Switzerland" -> Ok <| Internal.Switzerland city
+            | "Netherlands" -> Ok <| Internal.Netherlands city
+            | "Ireland" -> Ok <| Internal.Ireland city
+            | "Finland" -> Ok <| Internal.Finland city
+            | "Slovenia" -> Ok <| Internal.Slovenia city
             | _ -> Error <| NotSupported $"Country {country.Name}.")
 
     let toEmbassy (embassy: External.Embassy) : Result<Internal.Embassy, Error'> =
@@ -90,6 +101,11 @@ module External =
             | Internal.Tirana -> "Tirana"
             | Internal.Paris -> "Paris"
             | Internal.Rome -> "Rome"
+            | Internal.Ljubljana -> "Ljubljana"
+            | Internal.Hague -> "Hague"
+            | Internal.Helsinki -> "Helsinki"
+            | Internal.Bern -> "Bern"
+            | Internal.Dublin -> "Dublin"
 
         result
 
@@ -104,6 +120,13 @@ module External =
             | Internal.Hungary city -> "Hungary", city
             | Internal.Montenegro city -> "Montenegro", city
             | Internal.Albania city -> "Albania", city
+            | Internal.Finland city -> "Finland", city
+            | Internal.France city -> "France", city
+            | Internal.Slovenia city -> "Slovenia", city
+            | Internal.Switzerland city -> "Switzerland", city
+            | Internal.Netherlands city -> "Netherlands", city
+            | Internal.Ireland city -> "Ireland", city
+
 
         result.Name <- countryName
         result.City <- toCity city

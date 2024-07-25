@@ -16,7 +16,7 @@ module Russian =
             { Id = Guid.NewGuid() |> RequestId
               Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
               Attempt = 1
-              Embassy = Russian <| Serbia Belgrade
+              Embassy = Russian <| Germany Berlin
               Modified = DateTime.UtcNow }
 
         let requiredHeaders =

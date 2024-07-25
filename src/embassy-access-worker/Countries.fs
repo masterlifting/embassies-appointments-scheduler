@@ -1,36 +1,12 @@
 ﻿module internal EmbassyAccess.Worker.Countries
 
-open Infrastructure
 open Infrastructure.Domain.Graph
 open Worker.Domain.Internal
 open EmbassyAccess.Domain.Core.Internal
-open EmbassyAccess.Persistence.Core
 
 module Serbia =
-    open Persistence.Storage.Core
-    open Persistence.Domain.Core
-
-    let private createTestRequest =
-        fun _ ct ->
-            createStorage InMemory
-            |> ResultAsync.wrap (fun storage ->
-                let request =
-                    { Id = System.Guid.NewGuid() |> RequestId
-                      Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
-                      Attempt = 0
-                      Embassy = Russian <| Serbia Belgrade
-                      Modified = System.DateTime.UtcNow }
-
-                storage
-                |> Repository.Command.Request.create ct request
-                |> ResultAsync.map (fun _ -> Success "Test request was created."))
-
     let private Belgrade =
-        Node(
-            { Name = "Belgrade"
-              Handle = Some <| createTestRequest },
-            [ Embassies.Russian.createNode <| Serbia Belgrade ]
-        )
+        Node({ Name = "Belgrade"; Handle = None }, [ Embassies.Russian.createNode <| Serbia Belgrade ])
 
     let Node = Node({ Name = "Serbia"; Handle = None }, [ Belgrade ])
 
@@ -57,3 +33,9 @@ module Hungary =
         Node({ Name = "Budapest"; Handle = None }, [ Embassies.Russian.createNode <| Hungary Budapest ])
 
     let Node = Node({ Name = "Hungary"; Handle = None }, [ Budapest ])
+
+module Germany =
+    let private Berlin =
+        Node({ Name = "Berlin"; Handle = None }, [ Embassies.Russian.createNode <| Germany Berlin ])
+
+    let Node = Node({ Name = "Germany"; Handle = None }, [ Berlin ])

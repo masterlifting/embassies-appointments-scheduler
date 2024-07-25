@@ -34,6 +34,11 @@ module Internal =
         | Tirana
         | Paris
         | Rome
+        | Dublin
+        | Bern
+        | Helsinki
+        | Hague
+        | Ljubljana
 
     type Country =
         | Serbia of City
@@ -42,6 +47,12 @@ module Internal =
         | Montenegro of City
         | Albania of City
         | Hungary of City
+        | Ireland of City
+        | Switzerland of City
+        | Finland of City
+        | France of City
+        | Netherlands of City
+        | Slovenia of City
 
     type Embassy =
         | Russian of Country
@@ -138,6 +149,11 @@ module Internal =
                     | Paris -> ("paris", id, cd, ems)
                     | Rome -> ("rome", id, cd, ems)
                     | Berlin -> ("berlin", id, cd, ems)
+                    | Dublin -> ("dublin", id, cd, ems)
+                    | Bern -> ("bern", id, cd, ems)
+                    | Helsinki -> ("helsinki", id, cd, ems)
+                    | Hague -> ("hague", id, cd, ems)
+                    | Ljubljana -> ("ljubljana", id, cd, ems)
 
         let createCredentials url =
             url
@@ -155,6 +171,15 @@ module Internal =
                             | "budapest" -> Ok Budapest
                             | "sarajevo" -> Ok Sarajevo
                             | "berlin" -> Ok Berlin
+                            | "podgorica" -> Ok Podgorica
+                            | "tirana" -> Ok Tirana
+                            | "paris" -> Ok Paris
+                            | "rome" -> Ok Rome
+                            | "dublin" -> Ok Dublin
+                            | "bern" -> Ok Bern
+                            | "helsinki" -> Ok Helsinki
+                            | "hague" -> Ok Hague
+                            | "ljubljana" -> Ok Ljubljana
                             | _ -> Error $"City {hostParts[0]} is not supported"
 
                         let id =

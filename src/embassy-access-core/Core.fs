@@ -176,6 +176,30 @@ module Russian =
                 // run
                 bookAppointment ())
 
+    let private checkCredentials (request, credentials) =
+        let embassy = request.Embassy |> Mapper.Core.External.toEmbassy
+        let city = credentials.City |> Mapper.Core.External.toCity
+
+        match embassy.Country.City.Name = city.Name with
+        | true -> Ok(request, credentials)
+        | false ->
+            let error =
+                $"Embassy city '{embassy.Country.City.Name}' is not matched with the requested City '{city.Name}'."
+
+            Error <| NotSupported error
+
+    let private updateRequest (request: Request) =
+        let request =
+            { request with
+                Attempt = request.Attempt + 1
+                Modified = DateTime.UtcNow }
+
+        match request.Attempt = 20 with
+        | true ->
+            Error
+            <| Cancelled "The request was cancelled due to the maximum number of attempts."
+        | false -> Ok request
+
     [<RequireQualifiedAccess>]
     module API =
 
@@ -187,21 +211,18 @@ module Russian =
 
             // define
             let inline updateRequest request =
-                async {
-                    let request =
-                        { request with
-                            Attempt = request.Attempt + 1
-                            Modified = DateTime.UtcNow }
-
-                    match! deps.updateRequest request with
-                    | Error error -> return Error error
-                    | Ok() -> return Ok request
-                }
+                request
+                |> updateRequest
+                |> ResultAsync.wrap deps.updateRequest
+                |> ResultAsync.map (fun _ -> request)
 
             let createCredentials =
                 ResultAsync.bind (fun request ->
                     createCredentials request.Value
-                    |> Result.map (fun credentials -> request, credentials))
+                    |> Result.bind (fun credentials ->
+                        (request, credentials)
+                        |> checkCredentials
+                        |> Result.map (fun _ -> request, credentials)))
 
             let getAppointments =
                 ResultAsync.bind' (fun (request, credentials) ->
@@ -226,21 +247,18 @@ module Russian =
 
             // define
             let inline updateRequest (request, option) =
-                async {
-                    let request =
-                        { request with
-                            Attempt = request.Attempt + 1
-                            Modified = DateTime.UtcNow }
-
-                    match! deps.GetAppointmentsDeps.updateRequest request with
-                    | Error error -> return Error error
-                    | Ok() -> return Ok(request, option)
-                }
+                request
+                |> updateRequest
+                |> ResultAsync.wrap deps.GetAppointmentsDeps.updateRequest
+                |> ResultAsync.map (fun _ -> request, option)
 
             let createCredentials =
                 ResultAsync.bind (fun (request, option) ->
                     createCredentials request.Value
-                    |> Result.map (fun credentials -> request, option, credentials))
+                    |> Result.bind (fun credentials ->
+                        (request, credentials)
+                        |> checkCredentials
+                        |> Result.map (fun _ -> request, option, credentials)))
 
             let bookAppointment =
                 ResultAsync.bind' (fun (request, option, credentials) ->
