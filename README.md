@@ -28,7 +28,7 @@ The project is structured into several components, including core functionality,
   - `embassy-access-worker`: Background worker services.
 
 - **Tests**
-  - `embassy-access-core-tests`: Tests for the core functionalities.
+  - `embassy-access-tests`: Tests for the functionalities.
 
 ## Getting Started
 

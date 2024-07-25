@@ -15,7 +15,7 @@ let private buildGraph handlersGraph configuration =
         <| NotFound $"Section '%s{sectionName}' in the configuration."
     )
 
-let getNode handlersGraph configuration =
+let get handlersGraph configuration =
     fun taskName ->
         async {
             return

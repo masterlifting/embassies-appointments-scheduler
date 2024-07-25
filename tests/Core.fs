@@ -5,6 +5,7 @@ open Expecto
 open Infrastructure
 
 module Russian =
+    open Web.Domain.Http
     open EmbassyAccess.Domain.Core.Internal.Russian
 
     module private Fixture =
@@ -13,32 +14,44 @@ module Russian =
 
         let request =
             { Id = Guid.NewGuid() |> RequestId
+              Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
+              Attempt = 1
               Embassy = Russian <| Serbia Belgrade
-              Data = Map [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F" ]
               Modified = DateTime.UtcNow }
 
         let requiredHeaders =
             Some
             <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
 
-        let loadHtml fileName =
-            Environment.CurrentDirectory + "/test_data/" + fileName
+        let httpHetStringRequest fileName =
+            Environment.CurrentDirectory + "/test_data/" + fileName + ".html"
             |> FileSystem.Context.create
             |> ResultAsync.wrap FileSystem.Read.string
-            |> ResultAsync.map (fun data -> (data, requiredHeaders))
+            |> ResultAsync.map (fun data ->
+                { Content = data
+                  Headers = requiredHeaders
+                  StatusCode = 200 })
 
-        let loadImage fileName =
+        let httpPostStringRequest fileName =
+            Environment.CurrentDirectory + "/test_data/" + fileName + ".html"
+            |> FileSystem.Context.create
+            |> ResultAsync.wrap FileSystem.Read.string
+
+        let httpGetBytesRequest fileName =
             Environment.CurrentDirectory + "/test_data/" + fileName
             |> FileSystem.Context.create
             |> ResultAsync.wrap FileSystem.Read.bytes
-            |> ResultAsync.map (fun data -> (data, requiredHeaders))
+            |> ResultAsync.map (fun data ->
+                { Content = data
+                  Headers = requiredHeaders
+                  StatusCode = 200 })
 
         let getAppointmentsDeps =
-            { getInitialPage = fun _ _ -> loadHtml "initial_page_response.html"
-              getCaptcha = fun _ _ -> loadImage "captcha.png"
+            { getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
+              getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
               solveCaptcha = fun _ -> async { return Ok 42 }
-              postValidationPage = fun _ _ _ -> loadHtml "validation_page_valid_response.html"
-              postAppointmentsPage = fun _ _ _ -> loadHtml "appointments_page_has_result_1.html" }
+              postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"
+              postAppointmentsPage = fun _ _ _ -> httpPostStringRequest "appointments_page_has_result_1" }
 
     open Fixture
 
@@ -48,7 +61,7 @@ module Russian =
                 request
                 |> Russian.API.getAppointments
                     { getAppointmentsDeps with
-                        postValidationPage = fun _ _ _ -> loadHtml "validation_page_has_error.html" }
+                        postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_has_error" }
 
             match Expect.wantError responseRes "Response should have an error" with
             | Operation reason ->
@@ -65,7 +78,7 @@ module Russian =
                 request
                 |> Russian.API.getAppointments
                     { getAppointmentsDeps with
-                        postValidationPage = fun _ _ _ -> loadHtml "validation_page_requires_confirmation.html" }
+                        postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_requires_confirmation" }
 
             match Expect.wantError responseRes "Response should have an error" with
             | Operation reason ->
@@ -84,7 +97,8 @@ module Russian =
                     request
                     |> Russian.API.getAppointments
                         { getAppointmentsDeps with
-                            postAppointmentsPage = fun _ _ _ -> loadHtml $"appointments_page_empty_result_{i}.html" }
+                            postAppointmentsPage =
+                                fun _ _ _ -> httpPostStringRequest $"appointments_page_empty_result_{i}" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 Expect.isNone responseOpt "Response should not be Some"
@@ -98,7 +112,8 @@ module Russian =
                     request
                     |> Russian.API.getAppointments
                         { getAppointmentsDeps with
-                            postAppointmentsPage = fun _ _ _ -> loadHtml $"appointments_page_has_result_{i}.html" }
+                            postAppointmentsPage =
+                                fun _ _ _ -> httpPostStringRequest $"appointments_page_has_result_{i}" }
 
                 let responseOpt = Expect.wantOk responseRes "Response should be Ok"
                 let response = Expect.wantSome responseOpt "Response should be Some"

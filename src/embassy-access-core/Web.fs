@@ -7,19 +7,31 @@ open EmbassyAccess.Domain.Core.Internal
 module internal Russian =
     open Web.Domain
     open Web.Client
-    open Web.Parser.Client
+    open Infrastructure.Parser
     open EmbassyAccess.Domain.Core.Internal.Russian
 
     let createGetAppointmentsDeps ct =
-        { getInitialPage = Http.Request.Get.string' ct
-          getCaptcha = Http.Request.Get.bytes' ct
-          solveCaptcha = Web.Http.Captcha.AntiCaptcha.solveToInt ct
-          postValidationPage = Http.Request.Post.waitString' ct
-          postAppointmentsPage = Http.Request.Post.waitString' ct }
+        { getInitialPage = fun request client -> client |> Http.Request.get ct request |> Http.Response.String.read ct
+          getCaptcha = fun request client -> client |> Http.Request.get ct request |> Http.Response.Bytes.read ct
+          solveCaptcha = Web.Captcha.solveToInt ct
+          postValidationPage =
+            fun request content client ->
+                client
+                |> Http.Request.post ct request content
+                |> Http.Response.String.readContent ct
+          postAppointmentsPage =
+            fun request content client ->
+                client
+                |> Http.Request.post ct request content
+                |> Http.Response.String.readContent ct }
 
     let createBookAppointmentDeps ct =
         { GetAppointmentsDeps = createGetAppointmentsDeps ct
-          postConfirmationPage = Http.Request.Post.waitString ct }
+          postConfirmationPage =
+            fun request content client ->
+                client
+                |> Http.Request.post ct request content
+                |> Http.Response.String.readContent ct }
 
     let createAppointmentsResponse appointments request =
         { Id = Guid.NewGuid() |> ResponseId
@@ -64,19 +76,19 @@ module internal Russian =
             let headers = Map [ "Cookie", cookie ] |> Some
             httpClient |> Http.Headers.add headers
 
-        let setRequiredCookie httpClient (data: string, headers: Http.Headers) =
-            headers
+        let setRequiredCookie httpClient (response: Http.Response<string>) =
+            response.Headers
             |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
-                data)
+                response.Content)
 
-        let setSessionCookie httpClient (image: byte array, headers: Http.Headers) =
-            headers
+        let setSessionCookie httpClient (response: Http.Response<byte array>) =
+            response.Headers
             |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
             |> Result.map (fun cookie ->
                 httpClient |> setCookie cookie
-                image)
+                response.Content)
 
         let buildFormData data =
             data
@@ -105,8 +117,8 @@ module internal Russian =
 
         type Deps =
             { HttpClient: Http.Client
-              getInitialPage: GetStringRequest'
-              getCaptcha: GetBytesRequest'
+              getInitialPage: HttpGetStringRequest
+              getCaptcha: HttpGetBytesRequest
               solveCaptcha: SolveCaptchaImage }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
@@ -210,7 +222,7 @@ module internal Russian =
 
         type Deps =
             { HttpClient: Http.Client
-              postValidationPage: PostStringRequest' }
+              postValidationPage: HttpPostStringRequest }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
             { HttpClient = httpClient
@@ -248,7 +260,7 @@ module internal Russian =
                         | false -> Ok page
                     | _ -> Ok page)
 
-        let parseResponse (page, _) =
+        let parseResponse page =
             Html.load page
             |> Result.bind hasError
             |> Result.bind hasConfirmationRequest
@@ -285,7 +297,7 @@ module internal Russian =
     module AppointmentsPage =
         type Deps =
             { HttpClient: Http.Client
-              postAppointmentsPage: PostStringRequest' }
+              postAppointmentsPage: HttpPostStringRequest }
 
         let createDeps (deps: GetAppointmentsDeps) httpClient =
             { HttpClient = httpClient
@@ -305,7 +317,7 @@ module internal Russian =
 
             request, content
 
-        let parseResponse (page, _) =
+        let parseResponse page =
             Html.load page
             |> Result.bind hasError
             |> Result.bind (Html.getNodes "//input[@type='radio']")
@@ -359,7 +371,7 @@ module internal Russian =
 
         type Deps =
             { HttpClient: Http.Client
-              postConfirmationPage: PostStringRequest }
+              postConfirmationPage: HttpPostStringRequest }
 
         let createDeps (deps: BookAppointmentDeps) httpClient =
             { HttpClient = httpClient

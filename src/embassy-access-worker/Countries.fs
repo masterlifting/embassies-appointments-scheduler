@@ -16,8 +16,9 @@ module Serbia =
             |> ResultAsync.wrap (fun storage ->
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId
+                      Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
+                      Attempt = 1
                       Embassy = Russian <| Serbia Belgrade
-                      Data = Map [ "url", "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F" ]
                       Modified = System.DateTime.UtcNow }
 
                 storage

@@ -40,8 +40,9 @@ module Internal =
         toEmbassy request.Embassy
         |> Result.map (fun embassy ->
             { Id = Internal.RequestId request.Id
+              Value = request.Value
+              Attempt = request.Attempt
               Embassy = embassy
-              Data = request.Data |> Array.map (fun x -> x.Key, x.Value) |> Map.ofArray
               Modified = request.Modified })
 
     let toAppointment (appointment: External.Appointment) : Internal.Appointment =
@@ -131,17 +132,8 @@ module External =
 
         result.Id <- request.Id.Value
         result.Embassy <- toEmbassy request.Embassy
-
-        result.Data <-
-            request.Data
-            |> Map.toSeq
-            |> Seq.map (fun (key, value) ->
-                let data = External.RequestData()
-                data.Key <- key
-                data.Value <- value
-                data)
-            |> Seq.toArray
-
+        result.Value <- request.Value
+        result.Attempt <- request.Attempt
         result.Modified <- request.Modified
 
         result

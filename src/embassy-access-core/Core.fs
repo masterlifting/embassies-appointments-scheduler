@@ -191,13 +191,10 @@ module Russian =
                 | false -> Some <| (request |> createAppointmentsResponse appointments)
 
             fun (request: Request) ->
-                match request.Data |> Map.tryFind "url" with
-                | None -> async { return Error <| NotFound "Kdmid request url." }
-                | Some url ->
-                    url
-                    |> createCredentials
-                    |> ResultAsync.wrap (getAppointments deps)
-                    |> ResultAsync.map (toResult request)
+                request.Value
+                |> createCredentials
+                |> ResultAsync.wrap (getAppointments deps)
+                |> ResultAsync.map (toResult request)
 
         let tryGetAppointments deps =
 
@@ -213,6 +210,7 @@ module Russian =
 
                         let request: Request =
                             { request with
+                                Attempt = request.Attempt + 1
                                 Modified = DateTime.UtcNow }
 
                         match! deps.updateRequest request with
@@ -231,10 +229,7 @@ module Russian =
                 request |> createConfirmationResponse description
 
             fun (request: Request) (option: ConfirmationOption) ->
-                match request.Data |> Map.tryFind "url" with
-                | None -> async { return Error <| NotFound "Kdmid request url." }
-                | Some url ->
-                    url
-                    |> createCredentials
-                    |> ResultAsync.wrap (bookAppointment deps option)
-                    |> ResultAsync.map (toResult request)
+                request.Value
+                |> createCredentials
+                |> ResultAsync.wrap (bookAppointment deps option)
+                |> ResultAsync.map (toResult request)

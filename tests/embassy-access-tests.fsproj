@@ -63,7 +63,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\embassy-access-core\embassy-access-core.fsproj" />
+    <ProjectReference Include="..\src\embassy-access-core\embassy-access-core.fsproj" />
   </ItemGroup>
 
 </Project>

@@ -5,10 +5,12 @@ open EmbassyAccess.Worker
 
 [<EntryPoint>]
 let main _ =
-    let workerName = "Scheduler"
+
+    let configuration = Configuration.getYaml "appsettings"
+    Logging.useConsole configuration
 
     let rootNode =
-        { Name = workerName
+        { Name = "Scheduler"
           Handle =
             Some
             <| fun _ _ -> async { return Ok <| Success "Embassies Appointments Scheduler is running..." } }
@@ -23,13 +25,10 @@ let main _ =
               Countries.Albania.Node ]
         )
 
-    let configuration = Configuration.get <| Configuration.File.Yaml "appsettings"
-
-    Logging.useConsole configuration
-
-    let getTaskNode = Task.getNode handlersGraph configuration
-
-    Worker.Core.start <| workerName <| getTaskNode <| configuration
+    "Scheduler"
+    |> Worker.Core.start
+        { getTask = Task.get handlersGraph configuration
+          Configuration = configuration }
     |> Async.RunSynchronously
 
     0

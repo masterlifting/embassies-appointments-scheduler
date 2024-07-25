@@ -65,8 +65,9 @@ module Internal =
 
     type Request =
         { Id: RequestId
+          Value: string
+          Attempt: int
           Embassy: Embassy
-          Data: Map<string, string>
           Modified: DateTime }
 
     type AppointmentsResponse =
@@ -94,25 +95,21 @@ module Internal =
             [<Literal>]
             let NotConfirmed = "NotConfirmed"
 
-        type GetStringRequest' = Http.Request -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-        type GetBytesRequest' = Http.Request -> Http.Client -> Async<Result<byte array * Http.Headers, Error'>>
+        type HttpGetStringRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<string>, Error'>>
+        type HttpGetBytesRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<byte array>, Error'>>
+        type HttpPostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
         type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
 
-        type PostStringRequest' =
-            Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string * Http.Headers, Error'>>
-
-        type PostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
-
         type GetAppointmentsDeps =
-            { getInitialPage: GetStringRequest'
-              getCaptcha: GetBytesRequest'
+            { getInitialPage: HttpGetStringRequest
+              getCaptcha: HttpGetBytesRequest
               solveCaptcha: SolveCaptchaImage
-              postValidationPage: PostStringRequest'
-              postAppointmentsPage: PostStringRequest' }
+              postValidationPage: HttpPostStringRequest
+              postAppointmentsPage: HttpPostStringRequest }
 
         type BookAppointmentDeps =
             { GetAppointmentsDeps: GetAppointmentsDeps
-              postConfirmationPage: PostStringRequest }
+              postConfirmationPage: HttpPostStringRequest }
 
         type TryGetAppointmentsDeps =
             { updateRequest: Request -> Async<Result<unit, Error'>>
@@ -228,16 +225,12 @@ module External =
 
     type Request() =
         member val Id: Guid = Guid.Empty with get, set
+        member val Value: string = String.Empty with get, set
+        member val Attempt: int = 0 with get, set
         member val UserId: int = 0 with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
-        member val Data: RequestData array = [||] with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
-
-    and RequestData() =
-        member val Id: int = 0 with get, set
-        member val Key: string = String.Empty with get, set
-        member val Value: string = String.Empty with get, set
 
     type AppointmentsResponse() =
         member val Id: Guid = Guid.Empty with get, set
