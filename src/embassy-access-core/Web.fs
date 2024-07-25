@@ -9,9 +9,11 @@ module internal Russian =
     open Web.Client
     open Infrastructure.Parser
     open EmbassyAccess.Domain.Core.Internal.Russian
+    open EmbassyAccess.Persistence.Core
 
-    let createGetAppointmentsDeps ct =
-        { getInitialPage = fun request client -> client |> Http.Request.get ct request |> Http.Response.String.read ct
+    let createGetAppointmentsDeps ct storage =
+        { updateRequest = fun request -> storage |> Repository.Command.Request.update ct request
+          getInitialPage = fun request client -> client |> Http.Request.get ct request |> Http.Response.String.read ct
           getCaptcha = fun request client -> client |> Http.Request.get ct request |> Http.Response.Bytes.read ct
           solveCaptcha = Web.Captcha.solveToInt ct
           postValidationPage =
@@ -25,8 +27,8 @@ module internal Russian =
                 |> Http.Request.post ct request content
                 |> Http.Response.String.readContent ct }
 
-    let createBookAppointmentDeps ct =
-        { GetAppointmentsDeps = createGetAppointmentsDeps ct
+    let createBookAppointmentDeps ct storage =
+        { GetAppointmentsDeps = createGetAppointmentsDeps ct storage
           postConfirmationPage =
             fun request content client ->
                 client

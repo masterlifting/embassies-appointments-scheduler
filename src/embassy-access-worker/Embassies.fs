@@ -23,18 +23,9 @@ module Russian =
         storage |> Repository.Query.Request.get ct filter
 
     let private tryGetAppointments ct storage requests =
-
-        let deps = Russian.API.createGetAppointmentsDeps ct
-
+        let deps = Russian.API.createGetAppointmentsDeps ct storage
         let getAppointments = Russian.API.getAppointments deps
-
-        let updateRequest request =
-            storage |> Repository.Command.Request.update ct request
-
-        requests
-        |> Russian.API.tryGetAppointments
-            { updateRequest = updateRequest
-              getAppointments = getAppointments }
+        requests |> Russian.API.tryGetAppointments getAppointments
 
     let private handleAppointmentsResult ct storage response =
 

@@ -95,13 +95,15 @@ module Internal =
             [<Literal>]
             let NotConfirmed = "NotConfirmed"
 
+        type StorageUdateRequest = Request -> Async<Result<unit, Error'>>
         type HttpGetStringRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<string>, Error'>>
         type HttpGetBytesRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<byte array>, Error'>>
         type HttpPostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
         type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
 
         type GetAppointmentsDeps =
-            { getInitialPage: HttpGetStringRequest
+            { updateRequest: StorageUdateRequest 
+              getInitialPage: HttpGetStringRequest
               getCaptcha: HttpGetBytesRequest
               solveCaptcha: SolveCaptchaImage
               postValidationPage: HttpPostStringRequest
@@ -110,10 +112,6 @@ module Internal =
         type BookAppointmentDeps =
             { GetAppointmentsDeps: GetAppointmentsDeps
               postConfirmationPage: HttpPostStringRequest }
-
-        type TryGetAppointmentsDeps =
-            { updateRequest: Request -> Async<Result<unit, Error'>>
-              getAppointments: Request -> Async<Result<AppointmentsResponse option, Error'>> }
 
         type Id = private Id of int
         type Cd = private Cd of string

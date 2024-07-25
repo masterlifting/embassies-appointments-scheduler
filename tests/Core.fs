@@ -47,7 +47,8 @@ module Russian =
                   StatusCode = 200 })
 
         let getAppointmentsDeps =
-            { getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
+            { updateRequest = fun _ -> async { return Ok () }
+              getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
               getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
               solveCaptcha = fun _ -> async { return Ok 42 }
               postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"

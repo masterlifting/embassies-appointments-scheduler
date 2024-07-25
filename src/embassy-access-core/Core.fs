@@ -185,18 +185,80 @@ module Russian =
 
         let getAppointments deps =
 
-            let inline toResult request (appointments: Set<Appointment>, _) =
-                match appointments.IsEmpty with
-                | true -> None
-                | false -> Some <| (request |> createAppointmentsResponse appointments)
+            // define
+            let inline updateRequest request =
+                async {
+                    let request =
+                        { request with
+                            Attempt = request.Attempt + 1
+                            Modified = DateTime.UtcNow }
 
-            fun (request: Request) ->
-                request.Value
+                    match! deps.updateRequest request with
+                    | Error error -> return Error error
+                    | Ok() -> return Ok request
+                }
+
+            let createCredentials =
+                ResultAsync.bind (fun request ->
+                    createCredentials request.Value
+                    |> Result.map (fun credentials -> request, credentials))
+
+            let getAppointments =
+                ResultAsync.bind' (fun (request, credentials) ->
+                    getAppointments deps credentials
+                    |> ResultAsync.map (fun (appointments, _) -> request, appointments))
+
+            let createResult =
+                ResultAsync.map' (fun (request, appointments: Set<Appointment>) ->
+                    match appointments.IsEmpty with
+                    | true -> None
+                    | false -> Some <| (request |> createAppointmentsResponse appointments))
+
+            // pipe
+            fun request -> 
+                request 
+                |> updateRequest 
+                |> createCredentials 
+                |> getAppointments 
+                |> createResult
+
+        let bookAppointment deps =
+
+            // define
+            let inline updateRequest (request, option) =
+                async {
+                    let request =
+                        { request with
+                            Attempt = request.Attempt + 1
+                            Modified = DateTime.UtcNow }
+
+                    match! deps.GetAppointmentsDeps.updateRequest request with
+                    | Error error -> return Error error
+                    | Ok() -> return Ok(request, option)
+                }
+
+            let createCredentials =
+                ResultAsync.bind (fun (request, option) ->
+                    createCredentials request.Value
+                    |> Result.map (fun credentials -> request, option, credentials))
+
+            let bookAppointment =
+                ResultAsync.bind' (fun (request, option, credentials) ->
+                    bookAppointment deps option credentials
+                    |> ResultAsync.map (fun result -> request, result))
+
+            let createResult =
+                ResultAsync.map' (fun (request, result) -> request |> createConfirmationResponse result)
+
+            // pipe
+            fun request option ->
+                (request, option)
+                |> updateRequest
                 |> createCredentials
-                |> ResultAsync.wrap (getAppointments deps)
-                |> ResultAsync.map (toResult request)
+                |> bookAppointment
+                |> createResult
 
-        let tryGetAppointments deps =
+        let tryGetAppointments getAppointments =
 
             let rec innerLoop requests error =
                 async {
@@ -207,29 +269,9 @@ module Russian =
                             | Some error -> Error error
                             | None -> Ok None
                     | request :: requestsTail ->
-
-                        let request: Request =
-                            { request with
-                                Attempt = request.Attempt + 1
-                                Modified = DateTime.UtcNow }
-
-                        match! deps.updateRequest request with
-                        | Error error -> return Error error
-                        | _ ->
-                            match! deps.getAppointments request with
-                            | Error error -> return! innerLoop requestsTail (Some error)
-                            | response -> return response
+                        match! getAppointments request with
+                        | Error error -> return! innerLoop requestsTail (Some error)
+                        | response -> return response
                 }
 
             fun requests -> innerLoop requests None
-
-        let bookAppointment deps =
-
-            let inline toResult request description =
-                request |> createConfirmationResponse description
-
-            fun (request: Request) (option: ConfirmationOption) ->
-                request.Value
-                |> createCredentials
-                |> ResultAsync.wrap (bookAppointment deps option)
-                |> ResultAsync.map (toResult request)

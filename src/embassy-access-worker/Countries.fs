@@ -17,7 +17,7 @@ module Serbia =
                 let request =
                     { Id = System.Guid.NewGuid() |> RequestId
                       Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
-                      Attempt = 1
+                      Attempt = 0
                       Embassy = Russian <| Serbia Belgrade
                       Modified = System.DateTime.UtcNow }
 
