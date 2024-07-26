@@ -37,7 +37,7 @@ module Russian =
         | Some response ->
             response
             |> saveResponse
-            |> ResultAsync.map (fun _ -> Success $"\n{response.Appointments}")
+            |> ResultAsync.map (fun _ -> Success $"{response.Appointments.Count} appointments found.")
 
     let private searchAppointments country =
         fun _ ct ->
