@@ -80,17 +80,17 @@ module internal Russian =
 
         let setRequiredCookie httpClient (response: Http.Response<string>) =
             response.Headers
-            |> Http.Headers.find "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
-            |> Result.map (fun cookie ->
-                httpClient |> setCookie cookie
-                response.Content)
+            |> Http.Headers.tryFind "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
+            |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
+
+            Ok response.Content
 
         let setSessionCookie httpClient (response: Http.Response<byte array>) =
             response.Headers
-            |> Http.Headers.find "Set-Cookie" [ "ASP.NET_SessionId" ]
-            |> Result.map (fun cookie ->
-                httpClient |> setCookie cookie
-                response.Content)
+            |> Http.Headers.tryFind "Set-Cookie" [ "ASP.NET_SessionId" ]
+            |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
+
+            Ok response.Content
 
         let buildFormData data =
             data
@@ -169,7 +169,7 @@ module internal Russian =
 
                 let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
 
-                match requiredKeys.Count = result.Count with
+                match requiredKeys.Count >= result.Count with
                 | true -> Ok result
                 | false -> Error <| NotFound "Initial Page headers.")
 
