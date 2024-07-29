@@ -161,16 +161,20 @@ module internal Russian =
                     Set
                         [ "captchaUrlPath"
                           "__VIEWSTATE"
-                          "__VIEWSTATEGENERATOR"
                           "__EVENTVALIDATION"
                           "ctl00$MainContent$txtID"
                           "ctl00$MainContent$txtUniqueID"
                           "ctl00$MainContent$ButtonA" ]
 
-                let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+                let notRequiredKeys = Set [ "__VIEWSTATEGENERATOR" ]
 
-                match requiredKeys.Count >= result.Count with
-                | true -> Ok result
+                let requiredResult = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+
+                let notRequiredResult =
+                    result |> Map.filter (fun key _ -> notRequiredKeys.Contains key)
+
+                match requiredKeys.Count = requiredResult.Count with
+                | true -> Ok(requiredResult |> Map.combine <| notRequiredResult)
                 | false -> Error <| NotFound "Initial Page headers.")
 
         let createCaptchaRequest urlPath queryParams httpClient =
@@ -280,13 +284,17 @@ module internal Russian =
                     |> Map.ofSeq
                     |> Ok)
             |> Result.bind (fun result ->
-                let requiredKeys =
-                    Set [ "__VIEWSTATE"; "__VIEWSTATEGENERATOR"; "__EVENTVALIDATION" ]
+                let requiredKeys = Set [ "__VIEWSTATE"; "__EVENTVALIDATION" ]
 
-                let result = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+                let notRequiredKeys = Set [ "__VIEWSTATEGENERATOR" ]
 
-                match requiredKeys.Count = result.Count with
-                | true -> Ok result
+                let requiredResult = result |> Map.filter (fun key _ -> requiredKeys.Contains key)
+
+                let notRequiredResult =
+                    result |> Map.filter (fun key _ -> notRequiredKeys.Contains key)
+
+                match requiredKeys.Count = requiredResult.Count with
+                | true -> Ok(requiredResult |> Map.combine <| notRequiredResult)
                 | false -> Error <| NotFound "Validation Page headers.")
 
         let prepareFormData data =
