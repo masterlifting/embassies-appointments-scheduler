@@ -21,10 +21,10 @@ Worker:
                 - Name: Notify users
                   Schedule:
                     IsEnabled: true
-                    Delay: 00:00:10
+                    Delay: 00:01:00
               Schedule:
                 IsEnabled: true
-                Limit: 2
+                Limit: 5
                 Workdays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true
@@ -43,10 +43,10 @@ Worker:
                 - Name: Notify users
                   Schedule:
                     IsEnabled: true
-                    Delay: 00:00:10
+                    Delay: 00:01:00
               Schedule:
                 IsEnabled: true
-                Limit: 2
+                Limit: 5
                 Workdays: mon,tue,wed,thu,fri,sat,sun
           Schedule:
             IsEnabled: true

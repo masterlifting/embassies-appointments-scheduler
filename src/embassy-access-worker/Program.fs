@@ -34,9 +34,9 @@ let main _ =
             <| fun _ ct ->
                 async {
                     let! testRequests =
-                        [ ("https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F", Germany Berlin)
-                          ("https://belgrad.kdmid.ru/queue/orderinfo.aspx?id=72096&cd=7FE4D97C&ems=7EE040C9",
-                           Serbia Belgrade)
+                        [ //("https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F", Germany Berlin)
+                          // ("https://belgrad.kdmid.ru/queue/orderinfo.aspx?id=72096&cd=7FE4D97C&ems=7EE040C9",
+                          //  Serbia Belgrade)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38", Bosnia Sarajevo)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57", Bosnia Sarajevo)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=F23CB539", Bosnia Sarajevo)
