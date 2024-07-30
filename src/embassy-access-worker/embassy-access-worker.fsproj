@@ -6,19 +6,27 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="appsettings.yaml">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Compile Include="embassies\Russian.fs" />
+    <Compile Include="countries\Albania.fs" />
+    <Compile Include="countries\Bosnia.fs" />
+    <Compile Include="countries\Finland.fs" />
+    <Compile Include="countries\France.fs" />
+    <Compile Include="countries\Germany.fs" />
+    <Compile Include="countries\Hungary.fs" />
+    <Compile Include="countries\Ireland.fs" />
+    <Compile Include="countries\Montenegro.fs" />
+    <Compile Include="countries\Netherlands.fs" />
+    <Compile Include="countries\Serbia.fs" />
+    <Compile Include="countries\Slovenia.fs" />
+    <Compile Include="countries\Switzerland.fs" />
+    <Compile Include="TasksStorage.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   
   <ItemGroup>
-    <Compile Include="Task.fs" />
-    <Compile Include="Embassies.fs" />
-    <Compile Include="Countries.fs" />
-    <Compile Include="Program.fs" />
+    <Content Include="appsettings.yaml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   
   <ItemGroup>

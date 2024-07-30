@@ -5,8 +5,8 @@ open Persistence.Domain.Core
 open Worker.Domain.Internal
 open EmbassyAccess.Worker
 open EmbassyAccess.Worker.Countries
-open EmbassyAccess.Domain.Core.Internal
-open EmbassyAccess.Persistence.Core
+open EmbassyAccess.Domain.Internal
+open EmbassyAccess.Persistence
 
 let private createRussianTestRequest ct (value, country) =
     createStorage InMemory
@@ -85,7 +85,7 @@ let main _ =
 
     "Scheduler"
     |> Worker.Core.start
-        { getTask = Task.get handlersGraph configuration
+        { getTask = TasksStorage.getTask handlersGraph configuration
           Configuration = configuration }
     |> Async.RunSynchronously
 

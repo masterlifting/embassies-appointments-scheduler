@@ -1,8 +1,8 @@
-module EmbassyAccess.Mapper.Core
+module EmbassyAccess.Mapper
 
 open System
 open Infrastructure
-open EmbassyAccess.Domain.Core
+open EmbassyAccess.Domain
 
 module Internal =
     let toCity (city: External.City) : Result<Internal.City, Error'> =

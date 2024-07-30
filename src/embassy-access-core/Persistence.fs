@@ -1,10 +1,10 @@
-﻿module EmbassyAccess.Persistence.Core
+﻿module EmbassyAccess.Persistence
 
 open Infrastructure
 open Persistence.Domain.Core
 open Persistence.Storage
-open EmbassyAccess.Domain.Core
-open EmbassyAccess.Mapper.Core
+open EmbassyAccess.Domain
+open EmbassyAccess.Mapper
 
 module Filter =
     open System

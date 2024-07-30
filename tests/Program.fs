@@ -2,9 +2,8 @@
 
 open System
 open Expecto
-open EmbassyAccess.Core.Tests
 
-let private tests = testList "Tests" [ Russian.tests ]
+let private tests = testList "Tests" [ EmbassyAccess.Embassies.Russian.Tests.list ]
 
 [<EntryPoint>]
 let main args =
