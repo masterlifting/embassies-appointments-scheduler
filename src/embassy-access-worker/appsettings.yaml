@@ -2,7 +2,28 @@
 
 Logging:
   LogLevel:
-    Default: Information
+    Default: Success
+
+CommonStep: &CommonStep
+  Name: Russian
+  Parallel: true
+  Recursively: true
+  Steps:
+    - Name: Search Appointments
+      Duration: 00:03:00
+    - Name: Notify users
+      Schedule:
+        IsEnabled: true
+        Delay: 00:01:00
+  Schedule:
+    IsEnabled: true
+    Limit: 5
+    Workdays: mon,tue,wed,thu,fri,sat,sun
+
+CommonSchedule: &CommonSchedule
+  Schedule:
+    IsEnabled: true
+    Workdays: mon,tue,wed,thu,fri,sat,sun
 
 Worker:
   Name: Scheduler
@@ -12,42 +33,82 @@ Worker:
       Steps:
         - Name: Belgrade
           Steps:
-            - Name: Russian
-              Parallel: true
-              Recursively: true
-              Steps:
-                - Name: Search Appointments
-                  Duration: 00:03:00
-                - Name: Notify users
-                  Schedule:
-                    IsEnabled: true
-                    Delay: 00:01:00
-              Schedule:
-                IsEnabled: true
-                Limit: 5
-                Workdays: mon,tue,wed,thu,fri,sat,sun
-          Schedule:
-            IsEnabled: true
-            Workdays: mon,tue,wed,thu,fri,sat,sun
+            <<: *CommonStep
+          <<: *CommonSchedule
     - Name: Germany
       Parallel: true
       Steps:
         - Name: Berlin
           Steps:
-            - Name: Russian
-              Parallel: true
-              Recursively: true
-              Steps:
-                - Name: Search Appointments
-                  Duration: 00:03:00
-                - Name: Notify users
-                  Schedule:
-                    IsEnabled: true
-                    Delay: 00:01:00
-              Schedule:
-                IsEnabled: true
-                Limit: 5
-                Workdays: mon,tue,wed,thu,fri,sat,sun
-          Schedule:
-            IsEnabled: true
-            Workdays: mon,tue,wed,thu,fri,sat,sun
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: France
+      Parallel: true
+      Steps:
+        - Name: Paris
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Montenegro
+      Parallel: true
+      Steps:
+        - Name: Podgorica
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Ireland
+      Parallel: true
+      Steps:
+        - Name: Dublin
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Switzerland
+      Parallel: true
+      Steps:
+        - Name: Bern
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Finland
+      Parallel: true
+      Steps:
+        - Name: Helsinki
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Netherlands
+      Parallel: true
+      Steps:
+        - Name: Hague
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Albania
+      Parallel: true
+      Steps:
+        - Name: Tirana
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Slovenia
+      Parallel: true
+      Steps:
+        - Name: Ljubljana
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Bosnia
+      Parallel: true
+      Steps:
+        - Name: Sarajevo
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule
+    - Name: Hungary
+      Parallel: true
+      Steps:
+        - Name: Budapest
+          Steps:
+            <<: *CommonStep
+          <<: *CommonSchedule

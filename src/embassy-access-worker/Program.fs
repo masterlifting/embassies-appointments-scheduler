@@ -4,6 +4,7 @@ open Persistence.Storage.Core
 open Persistence.Domain.Core
 open Worker.Domain.Internal
 open EmbassyAccess.Worker
+open EmbassyAccess.Worker.Countries
 open EmbassyAccess.Domain.Core.Internal
 open EmbassyAccess.Persistence.Core
 
@@ -34,9 +35,9 @@ let main _ =
             <| fun _ ct ->
                 async {
                     let! testRequests =
-                        [ //("https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F", Germany Berlin)
-                          // ("https://belgrad.kdmid.ru/queue/orderinfo.aspx?id=72096&cd=7FE4D97C&ems=7EE040C9",
-                          //  Serbia Belgrade)
+                        [ ("https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F", Germany Berlin)
+                          ("https://belgrad.kdmid.ru/queue/orderinfo.aspx?id=72096&cd=7FE4D97C&ems=7EE040C9",
+                           Serbia Belgrade)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20779&cd=99CEBA38", Bosnia Sarajevo)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20780&cd=4FC17A57", Bosnia Sarajevo)
                           ("https://sarajevo.kdmid.ru/queue/orderinfo.aspx?id=20781&cd=F23CB539", Bosnia Sarajevo)
@@ -68,12 +69,18 @@ let main _ =
     let handlersGraph =
         Node(
             rootNode,
-            [ Countries.Serbia.Node
-              Countries.Bosnia.Node
-              Countries.Montenegro.Node
-              Countries.Hungary.Node
-              Countries.Albania.Node
-              Countries.Germany.Node ]
+            [ Albania.Node
+              Bosnia.Node
+              Finland.Node
+              France.Node
+              Germany.Node
+              Hungary.Node
+              Ireland.Node
+              Montenegro.Node
+              Netherlands.Node
+              Serbia.Node
+              Slovenia.Node
+              Switzerland.Node ]
         )
 
     "Scheduler"
