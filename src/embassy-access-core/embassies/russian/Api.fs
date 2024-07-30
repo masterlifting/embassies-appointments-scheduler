@@ -1,5 +1,5 @@
 ﻿[<RequireQualifiedAccess>]
-module EmbassyAccess.Embassies.Russian.Api
+module internal EmbassyAccess.Embassies.Russian.Api
 
 open Infrastructure
 open EmbassyAccess.Domain.Internal

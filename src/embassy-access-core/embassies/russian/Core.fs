@@ -2,14 +2,14 @@
 
 open System
 open Infrastructure
-open Web.Domain
-open Web.Client
 open Infrastructure.Parser
 open EmbassyAccess.Domain.Internal
 open EmbassyAccess.Embassies.Russian.Domain
 open EmbassyAccess.Persistence
 
 module Http =
+    open Web.Http.Domain
+    open Web.Http.Client
 
     let createHttpClient city =
         let headers =
@@ -29,7 +29,7 @@ module Http =
                   [ "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0" ] ]
             |> Some
 
-        Http.create $"https://%s{city}.kdmid.ru" headers
+        create $"https://%s{city}.kdmid.ru" headers
 
     let createQueryParams id cd ems =
         match ems with
@@ -38,18 +38,18 @@ module Http =
 
     let private setCookie cookie httpClient =
         let headers = Map [ "Cookie", cookie ] |> Some
-        httpClient |> Http.Headers.add headers
+        httpClient |> Headers.set headers
 
-    let setRequiredCookie httpClient (response: Http.Response<string>) =
+    let setRequiredCookie httpClient (response: Response<string>) =
         response.Headers
-        |> Http.Headers.tryFind "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
+        |> Headers.tryFind "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
         |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
 
         Ok response.Content
 
-    let setSessionCookie httpClient (response: Http.Response<byte array>) =
+    let setSessionCookie httpClient (response: Response<byte array>) =
         response.Headers
-        |> Http.Headers.tryFind "Set-Cookie" [ "ASP.NET_SessionId" ]
+        |> Headers.tryFind "Set-Cookie" [ "ASP.NET_SessionId" ]
         |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
 
         Ok response.Content
@@ -60,6 +60,7 @@ module Http =
         |> Map.add "__EVENTARGUMENT" ""
         |> Seq.map (fun x -> $"{Uri.EscapeDataString x.Key}={Uri.EscapeDataString x.Value}")
         |> String.concat "&"
+
 let private hasError page =
     page
     |> Html.getNode "//span[@id='ctl00_MainContent_lblCodeErr']"
@@ -79,7 +80,7 @@ module private InitialPage =
     open SkiaSharp
 
     type Deps =
-        { HttpClient: Http.Client
+        { HttpClient: Web.Http.Domain.Client
           getInitialPage: HttpGetStringRequest
           getCaptcha: HttpGetBytesRequest
           solveCaptcha: SolveCaptchaImage }
@@ -91,8 +92,8 @@ module private InitialPage =
           solveCaptcha = deps.solveCaptcha }
 
     let private createRequest queryParams =
-        { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
-          Http.Request.Headers = None }
+        { Web.Http.Domain.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+          Web.Http.Domain.Request.Headers = None }
 
     let private parseResponse page =
         Html.load page
@@ -139,8 +140,8 @@ module private InitialPage =
             | false -> Error <| NotFound "Initial Page headers.")
 
     let private createCaptchaRequest urlPath queryParams httpClient =
-        let origin = httpClient |> Http.Route.toOrigin
-        let host = httpClient |> Http.Route.toHost
+        let origin = httpClient |> Web.Http.Client.Route.toOrigin
+        let host = httpClient |> Web.Http.Client.Route.toHost
 
         let headers =
             Map
@@ -149,8 +150,8 @@ module private InitialPage =
                   "Sec-Fetch-Site", [ "same-origin" ] ]
             |> Some
 
-        { Http.Request.Path = $"/queue/{urlPath}"
-          Http.Request.Headers = headers }
+        { Web.Http.Domain.Request.Path = $"/queue/{urlPath}"
+          Web.Http.Domain.Request.Headers = headers }
 
     let private prepareCaptchaImage (image: byte array) =
         try
@@ -230,7 +231,7 @@ module private InitialPage =
 module private ValidationPage =
 
     type Deps =
-        { HttpClient: Http.Client
+        { HttpClient: Web.Http.Domain.Client
           postValidationPage: HttpPostStringRequest }
 
     let createDeps (deps: GetAppointmentsDeps) httpClient =
@@ -240,11 +241,11 @@ module private ValidationPage =
     let private createRequest formData queryParams =
 
         let request =
-            { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
-              Http.Request.Headers = None }
+            { Web.Http.Domain.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+              Web.Http.Domain.Request.Headers = None }
 
-        let content: Http.RequestContent =
-            Http.RequestContent.String
+        let content: Web.Http.Domain.RequestContent =
+            Web.Http.Domain.String
                 {| Data = formData
                    Encoding = Text.Encoding.ASCII
                    MediaType = "application/x-www-form-urlencoded" |}
@@ -323,7 +324,7 @@ module private ValidationPage =
 
 module private AppointmentsPage =
     type Deps =
-        { HttpClient: Http.Client
+        { HttpClient: Web.Http.Domain.Client
           postAppointmentsPage: HttpPostStringRequest }
 
     let createDeps (deps: GetAppointmentsDeps) httpClient =
@@ -333,11 +334,11 @@ module private AppointmentsPage =
     let private createRequest formData queryParams =
 
         let request =
-            { Http.Request.Path = "/queue/orderinfo.aspx?" + queryParams
-              Http.Request.Headers = None }
+            { Web.Http.Domain.Request.Path = "/queue/orderinfo.aspx?" + queryParams
+              Web.Http.Domain.Request.Headers = None }
 
-        let content: Http.RequestContent =
-            Http.RequestContent.String
+        let content: Web.Http.Domain.RequestContent =
+            Web.Http.Domain.String
                 {| Data = formData
                    Encoding = Text.Encoding.ASCII
                    MediaType = "application/x-www-form-urlencoded" |}
@@ -417,7 +418,7 @@ module private AppointmentsPage =
 module private ConfirmationPage =
 
     type Deps =
-        { HttpClient: Http.Client
+        { HttpClient: Web.Http.Domain.Client
           postConfirmationPage: HttpPostStringRequest }
 
     let createDeps (deps: BookAppointmentDeps) httpClient =
@@ -433,11 +434,11 @@ module private ConfirmationPage =
     let private createRequest formData queryParamsId =
 
         let request =
-            { Http.Request.Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
-              Http.Request.Headers = None }
+            { Web.Http.Domain.Request.Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
+              Web.Http.Domain.Request.Headers = None }
 
-        let content: Http.RequestContent =
-            Http.RequestContent.String
+        let content: Web.Http.Domain.RequestContent =
+            Web.Http.Domain.String
                 {| Data = formData
                    Encoding = Text.Encoding.ASCII
                    MediaType = "application/x-www-form-urlencoded" |}
@@ -478,27 +479,35 @@ module private ConfirmationPage =
 module internal Deps =
     let createGetAppointmentsDeps ct storage =
         { updateRequest = fun request -> storage |> Repository.Command.Request.update ct request
-          getInitialPage = fun request client -> client |> Http.Request.get ct request |> Http.Response.String.read ct
-          getCaptcha = fun request client -> client |> Http.Request.get ct request |> Http.Response.Bytes.read ct
+          getInitialPage =
+            fun request client ->
+                client
+                |> Web.Http.Client.Request.get ct request
+                |> Web.Http.Client.Response.String.read ct
+          getCaptcha =
+            fun request client ->
+                client
+                |> Web.Http.Client.Request.get ct request
+                |> Web.Http.Client.Response.Bytes.read ct
           solveCaptcha = Web.Captcha.solveToInt ct
           postValidationPage =
             fun request content client ->
                 client
-                |> Http.Request.post ct request content
-                |> Http.Response.String.readContent ct
+                |> Web.Http.Client.Request.post ct request content
+                |> Web.Http.Client.Response.String.readContent ct
           postAppointmentsPage =
             fun request content client ->
                 client
-                |> Http.Request.post ct request content
-                |> Http.Response.String.readContent ct }
+                |> Web.Http.Client.Request.post ct request content
+                |> Web.Http.Client.Response.String.readContent ct }
 
     let createBookAppointmentDeps ct storage =
         { GetAppointmentsDeps = createGetAppointmentsDeps ct storage
           postConfirmationPage =
             fun request content client ->
                 client
-                |> Http.Request.post ct request content
-                |> Http.Response.String.readContent ct }
+                |> Web.Http.Client.Request.post ct request content
+                |> Web.Http.Client.Response.String.readContent ct }
 
     let createTryGetAppointmentsDeps getAppointments = { getAppointments = getAppointments }
 

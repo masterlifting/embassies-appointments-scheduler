@@ -3,11 +3,11 @@
 open System
 open Expecto
 open Infrastructure
-open Web.Domain.Http
-open EmbassyAccess.Embassies.Russian
+open EmbassyAccess
 open EmbassyAccess.Embassies.Russian.Domain
 
 module private Fixture =
+    open Web.Http.Domain
     open Persistence.FileSystem
     open EmbassyAccess.Domain.Internal
 
@@ -27,7 +27,7 @@ module private Fixture =
         + "/embassies/russian/test_data/"
         + fileName
         + ".html"
-        |> Storage.Context.create
+        |> Storage.create
         |> ResultAsync.wrap Storage.Read.string
         |> ResultAsync.map (fun data ->
             { Content = data
@@ -39,12 +39,12 @@ module private Fixture =
         + "/embassies/russian/test_data/"
         + fileName
         + ".html"
-        |> Storage.Context.create
+        |> Storage.create
         |> ResultAsync.wrap Storage.Read.string
 
     let httpGetBytesRequest fileName =
         Environment.CurrentDirectory + "/embassies/russian/test_data/" + fileName
-        |> Storage.Context.create
+        |> Storage.create
         |> ResultAsync.wrap Storage.Read.bytes
         |> ResultAsync.map (fun data ->
             { Content = data
@@ -52,12 +52,13 @@ module private Fixture =
               StatusCode = 200 })
 
     let getAppointmentsDeps =
-        { updateRequest = fun _ -> async { return Ok() }
-          getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
-          getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
-          solveCaptcha = fun _ -> async { return Ok 42 }
-          postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"
-          postAppointmentsPage = fun _ _ _ -> httpPostStringRequest "appointments_page_has_result_1" }
+        Api.GetAppointmentsParams.Russian
+            { updateRequest = fun _ -> async { return Ok() }
+              getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
+              getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
+              solveCaptcha = fun _ -> async { return Ok 42 }
+              postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"
+              postAppointmentsPage = fun _ _ _ -> httpPostStringRequest "appointments_page_has_result_1" }
 
 open Fixture
 

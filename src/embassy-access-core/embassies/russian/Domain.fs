@@ -1,8 +1,7 @@
 ﻿module EmbassyAccess.Embassies.Russian.Domain
 
 open Infrastructure
-open Web.Client
-open Web.Domain
+open EmbassyAccess
 open EmbassyAccess.Domain.Internal
 
 module ErrorCodes =
@@ -13,10 +12,17 @@ module ErrorCodes =
     [<Literal>]
     let NotConfirmed = "NotConfirmed"
 
-type StorageUpdateRequest = Request -> Async<Result<unit, Error'>>
-type HttpGetStringRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<string>, Error'>>
-type HttpGetBytesRequest = Http.Request -> Http.Client -> Async<Result<Http.Response<byte array>, Error'>>
-type HttpPostStringRequest = Http.Request -> Http.RequestContent -> Http.Client -> Async<Result<string, Error'>>
+type StorageUpdateRequest = Domain.Internal.Request -> Async<Result<unit, Error'>>
+
+type HttpGetStringRequest =
+    Web.Http.Domain.Request -> Web.Http.Domain.Client -> Async<Result<Web.Http.Domain.Response<string>, Error'>>
+
+type HttpGetBytesRequest =
+    Web.Http.Domain.Request -> Web.Http.Domain.Client -> Async<Result<Web.Http.Domain.Response<byte array>, Error'>>
+
+type HttpPostStringRequest =
+    Web.Http.Domain.Request -> Web.Http.Domain.RequestContent -> Web.Http.Domain.Client -> Async<Result<string, Error'>>
+
 type SolveCaptchaImage = byte array -> Async<Result<int, Error'>>
 
 type GetAppointmentsDeps =
@@ -32,14 +38,14 @@ type BookAppointmentDeps =
       postConfirmationPage: HttpPostStringRequest }
 
 type TryGetAppointments =
-    { getAppointments: Request -> Async<Result<AppointmentsResponse option, Error'>> }
+    { getAppointments: Domain.Internal.Request -> Async<Result<Domain.Internal.AppointmentsResponse option, Error'>> }
 
 type Id = private Id of int
 type Cd = private Cd of string
 type Ems = private Ems of string option
 
 type Credentials =
-    { City: City
+    { City: Domain.Internal.City
       Id: Id
       Cd: Cd
       Ems: Ems }
@@ -67,13 +73,13 @@ type Credentials =
 
 let createCredentials url =
     url
-    |> Http.Route.toUri
+    |> Web.Http.Client.Route.toUri
     |> Result.bind (fun uri ->
         match uri.Host.Split '.' with
         | hostParts when hostParts.Length < 3 -> Error <| NotSupported $"Kdmid. City in {url}."
         | hostParts ->
             uri
-            |> Http.Route.toQueryParams
+            |> Web.Http.Client.Route.toQueryParams
             |> Result.bind (fun paramsMap ->
                 let city =
                     match hostParts[0] with

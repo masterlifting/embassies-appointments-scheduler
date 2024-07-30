@@ -415,24 +415,24 @@ module Repository =
 
             let get ct filter storage =
                 match storage with
-                | Storage.InMemory context -> context |> InMemoryRepository.Query.Request.get ct filter
+                | Storage.Type.InMemory context -> context |> InMemoryRepository.Query.Request.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct requestId storage =
                 match storage with
-                | Storage.InMemory context -> context |> InMemoryRepository.Query.Request.get' ct requestId
+                | Storage.Type.InMemory context -> context |> InMemoryRepository.Query.Request.get' ct requestId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module AppointmentsResponse =
 
             let get ct filter storage =
                 match storage with
-                | Storage.InMemory context -> context |> InMemoryRepository.Query.AppointmentsResponse.get ct filter
+                | Storage.Type.InMemory context -> context |> InMemoryRepository.Query.AppointmentsResponse.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | Storage.InMemory context ->
+                | Storage.Type.InMemory context ->
                     context |> InMemoryRepository.Query.AppointmentsResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
@@ -440,12 +440,12 @@ module Repository =
 
             let get ct filter storage =
                 match storage with
-                | Storage.InMemory context -> context |> InMemoryRepository.Query.ConfirmationResponse.get ct filter
+                | Storage.Type.InMemory context -> context |> InMemoryRepository.Query.ConfirmationResponse.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | Storage.InMemory context ->
+                | Storage.Type.InMemory context ->
                     context |> InMemoryRepository.Query.ConfirmationResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
@@ -455,7 +455,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | Storage.InMemory context -> context |> InMemoryRepository.Command.Request.execute ct command
+                | Storage.Type.InMemory context -> context |> InMemoryRepository.Command.Request.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let create ct request =
@@ -471,7 +471,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | Storage.InMemory context ->
+                | Storage.Type.InMemory context ->
                     context |> InMemoryRepository.Command.AppointmentsResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
@@ -488,7 +488,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | Storage.InMemory context ->
+                | Storage.Type.InMemory context ->
                     context |> InMemoryRepository.Command.ConfirmationResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 

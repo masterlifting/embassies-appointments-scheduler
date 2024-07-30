@@ -9,6 +9,7 @@
     <Compile Include="embassies\russian\Domain.fs" />
     <Compile Include="embassies\russian\Core.fs" />
     <Compile Include="embassies\russian\Api.fs" />
+    <Compile Include="Api.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SkiaSharp" Version="2.88.8" />
