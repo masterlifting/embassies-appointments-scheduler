@@ -1,8 +1,7 @@
 ﻿module EmbassyAccess.Persistence
 
 open Infrastructure
-open Persistence.Domain.Core
-open Persistence.Storage
+open Persistence.Domain
 open EmbassyAccess.Domain
 open EmbassyAccess.Mapper
 
@@ -60,10 +59,11 @@ module private Command =
         | Delete of Internal.ConfirmationResponse
 
 module private InMemoryRepository =
+    open Persistence.InMemory
 
     let private getEntities<'a> key context =
         context
-        |> InMemory.Query.get key
+        |> Storage.Query.get key
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
 
     module Query =
@@ -216,11 +216,11 @@ module private InMemoryRepository =
             if data.Length = 1 then
                 data
                 |> Json.serialize
-                |> Result.bind (fun value -> context |> InMemory.Command.add key value)
+                |> Result.bind (fun value -> context |> Storage.Command.add key value)
             else
                 data
                 |> Json.serialize
-                |> Result.bind (fun value -> context |> InMemory.Command.update key value)
+                |> Result.bind (fun value -> context |> Storage.Command.update key value)
 
         module Request =
 
@@ -398,7 +398,7 @@ module private InMemoryRepository =
 
 [<RequireQualifiedAccess>]
 module Repository =
-    open Persistence.Storage.Core
+    open Persistence
 
     ///<summary>Creates a storage context</summary>
     /// <param name="storage">The storage context</param>
@@ -407,7 +407,7 @@ module Repository =
     let createStorage storage =
         match storage with
         | Some storage -> Ok storage
-        | _ -> createStorage InMemory
+        | _ -> Storage.create InMemory
 
     module Query =
 
@@ -415,36 +415,38 @@ module Repository =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.Request.get ct filter
+                | Storage.InMemory context -> context |> InMemoryRepository.Query.Request.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct requestId storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.Request.get' ct requestId
+                | Storage.InMemory context -> context |> InMemoryRepository.Query.Request.get' ct requestId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module AppointmentsResponse =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.AppointmentsResponse.get ct filter
+                | Storage.InMemory context -> context |> InMemoryRepository.Query.AppointmentsResponse.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.AppointmentsResponse.get' ct responseId
+                | Storage.InMemory context ->
+                    context |> InMemoryRepository.Query.AppointmentsResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
         module ConfirmationResponse =
 
             let get ct filter storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.ConfirmationResponse.get ct filter
+                | Storage.InMemory context -> context |> InMemoryRepository.Query.ConfirmationResponse.get ct filter
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let get' ct responseId storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Query.ConfirmationResponse.get' ct responseId
+                | Storage.InMemory context ->
+                    context |> InMemoryRepository.Query.ConfirmationResponse.get' ct responseId
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
     module Command =
@@ -453,7 +455,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryStorage context -> context |> InMemoryRepository.Command.Request.execute ct command
+                | Storage.InMemory context -> context |> InMemoryRepository.Command.Request.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
             let create ct request =
@@ -469,7 +471,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryStorage context ->
+                | Storage.InMemory context ->
                     context |> InMemoryRepository.Command.AppointmentsResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
@@ -486,7 +488,7 @@ module Repository =
 
             let private execute ct command storage =
                 match storage with
-                | InMemoryStorage context ->
+                | Storage.InMemory context ->
                     context |> InMemoryRepository.Command.ConfirmationResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 

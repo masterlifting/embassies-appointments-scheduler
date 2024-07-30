@@ -8,7 +8,7 @@ open EmbassyAccess.Embassies.Russian
 open EmbassyAccess.Embassies.Russian.Domain
 
 module private Fixture =
-    open Persistence.Storage
+    open Persistence.FileSystem
     open EmbassyAccess.Domain.Internal
 
     let request =
@@ -23,23 +23,29 @@ module private Fixture =
         <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
 
     let httpHetStringRequest fileName =
-        Environment.CurrentDirectory + "/embassies/russian/test_data/" + fileName + ".html"
-        |> FileSystem.Context.create
-        |> ResultAsync.wrap FileSystem.Read.string
+        Environment.CurrentDirectory
+        + "/embassies/russian/test_data/"
+        + fileName
+        + ".html"
+        |> Storage.Context.create
+        |> ResultAsync.wrap Storage.Read.string
         |> ResultAsync.map (fun data ->
             { Content = data
               Headers = requiredHeaders
               StatusCode = 200 })
 
     let httpPostStringRequest fileName =
-        Environment.CurrentDirectory + "/embassies/russian/test_data/" + fileName + ".html"
-        |> FileSystem.Context.create
-        |> ResultAsync.wrap FileSystem.Read.string
+        Environment.CurrentDirectory
+        + "/embassies/russian/test_data/"
+        + fileName
+        + ".html"
+        |> Storage.Context.create
+        |> ResultAsync.wrap Storage.Read.string
 
     let httpGetBytesRequest fileName =
         Environment.CurrentDirectory + "/embassies/russian/test_data/" + fileName
-        |> FileSystem.Context.create
-        |> ResultAsync.wrap FileSystem.Read.bytes
+        |> Storage.Context.create
+        |> ResultAsync.wrap Storage.Read.bytes
         |> ResultAsync.map (fun data ->
             { Content = data
               Headers = requiredHeaders

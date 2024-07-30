@@ -1,7 +1,7 @@
 ﻿open Infrastructure
 open Infrastructure.Domain.Graph
-open Persistence.Storage.Core
-open Persistence.Domain.Core
+open Persistence
+open Persistence.Domain
 open Worker.Domain.Internal
 open EmbassyAccess.Worker
 open EmbassyAccess.Worker.Countries
@@ -9,7 +9,7 @@ open EmbassyAccess.Domain.Internal
 open EmbassyAccess.Persistence
 
 let private createRussianTestRequest ct (value, country) =
-    createStorage InMemory
+    Storage.create InMemory
     |> ResultAsync.wrap (fun storage ->
         let request =
             { Id = System.Guid.NewGuid() |> RequestId

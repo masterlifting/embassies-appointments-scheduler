@@ -2,8 +2,8 @@
 
 open Infrastructure
 open Infrastructure.Domain.Graph
-open Persistence.Domain.Core
-open Persistence.Storage.Core
+open Persistence
+open Persistence.Domain
 open Worker.Domain.Internal
 open EmbassyAccess.Domain.Internal
 open EmbassyAccess.Persistence
@@ -42,7 +42,7 @@ let private handleAppointmentsResult ct storage response =
 
 let private searchAppointments country =
     fun _ ct ->
-        createStorage InMemory
+        Storage.create InMemory
         |> ResultAsync.wrap (fun storage ->
             storage
             |> createRequests ct country
