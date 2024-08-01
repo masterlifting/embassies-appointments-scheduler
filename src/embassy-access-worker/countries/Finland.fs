@@ -1,11 +1,11 @@
 ﻿module internal EmbassyAccess.Worker.Countries.Finland
 
-open Infrastructure.Domain.Graph
-open Worker.Domain.Internal
-open EmbassyAccess.Domain.Internal
+open Infrastructure.Domain
+open Worker.Domain
+open EmbassyAccess.Domain
 open EmbassyAccess.Worker.Embassies
 
 let private Helsinki =
-    Node({ Name = "Helsinki"; Handle = None }, [ Russian.createNode <| Finland Helsinki ])
+    Graph.Node({ Name = "Helsinki"; Handle = None }, [ Russian.createNode <| Finland Helsinki ])
 
-let Node = Node({ Name = "Finland"; Handle = None }, [ Helsinki ])
+let Node = Graph.Node({ Name = "Finland"; Handle = None }, [ Helsinki ])

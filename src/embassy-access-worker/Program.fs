@@ -1,11 +1,10 @@
 ﻿open Infrastructure
-open Infrastructure.Domain.Graph
 open Persistence
 open Persistence.Domain
-open Worker.Domain.Internal
+open Worker.Domain
 open EmbassyAccess.Worker
 open EmbassyAccess.Worker.Countries
-open EmbassyAccess.Domain.Internal
+open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
 
 let private createRussianTestRequest ct (value, country) =
@@ -67,7 +66,7 @@ let main _ =
                 } }
 
     let handlersGraph =
-        Node(
+        Graph.Node(
             rootNode,
             [ Albania.Node
               Bosnia.Node

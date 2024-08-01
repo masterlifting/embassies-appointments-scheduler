@@ -2,96 +2,94 @@
 
 open System
 
-module Internal =
+type RequestId =
+    | RequestId of Guid
 
-    type RequestId =
-        | RequestId of Guid
+    member this.Value =
+        match this with
+        | RequestId id -> id
 
-        member this.Value =
-            match this with
-            | RequestId id -> id
+type ResponseId =
+    | ResponseId of Guid
 
-    type ResponseId =
-        | ResponseId of Guid
+    member this.Value =
+        match this with
+        | ResponseId id -> id
 
-        member this.Value =
-            match this with
-            | ResponseId id -> id
+type AppointmentId =
+    | AppointmentId of Guid
 
-    type AppointmentId =
-        | AppointmentId of Guid
+    member this.Value =
+        match this with
+        | AppointmentId id -> id
 
-        member this.Value =
-            match this with
-            | AppointmentId id -> id
+type City =
+    | Belgrade
+    | Berlin
+    | Budapest
+    | Sarajevo
+    | Podgorica
+    | Tirana
+    | Paris
+    | Rome
+    | Dublin
+    | Bern
+    | Helsinki
+    | Hague
+    | Ljubljana
 
-    type City =
-        | Belgrade
-        | Berlin
-        | Budapest
-        | Sarajevo
-        | Podgorica
-        | Tirana
-        | Paris
-        | Rome
-        | Dublin
-        | Bern
-        | Helsinki
-        | Hague
-        | Ljubljana
+type Country =
+    | Serbia of City
+    | Germany of City
+    | Bosnia of City
+    | Montenegro of City
+    | Albania of City
+    | Hungary of City
+    | Ireland of City
+    | Switzerland of City
+    | Finland of City
+    | France of City
+    | Netherlands of City
+    | Slovenia of City
 
-    type Country =
-        | Serbia of City
-        | Germany of City
-        | Bosnia of City
-        | Montenegro of City
-        | Albania of City
-        | Hungary of City
-        | Ireland of City
-        | Switzerland of City
-        | Finland of City
-        | France of City
-        | Netherlands of City
-        | Slovenia of City
+type Embassy =
+    | Russian of Country
+    | Spanish of Country
+    | Italian of Country
+    | French of Country
+    | German of Country
+    | British of Country
 
-    type Embassy =
-        | Russian of Country
-        | Spanish of Country
-        | Italian of Country
-        | French of Country
-        | German of Country
-        | British of Country
+type Appointment =
+    { Id: AppointmentId
+      Value: string
+      Date: DateOnly
+      Time: TimeOnly
+      Description: string option }
 
-    type Appointment =
-        { Id: AppointmentId
-          Value: string
-          Date: DateOnly
-          Time: TimeOnly
-          Description: string option }
+type ConfirmationOption =
+    | FirstAvailable
+    | Range of DateTime * DateTime
+    | Appointment of Appointment
 
-    type ConfirmationOption =
-        | FirstAvailable
-        | Range of DateTime * DateTime
-        | Appointment of Appointment
+type Request =
+    { Id: RequestId
+      Value: string
+      Attempt: int
+      Embassy: Embassy
+      Modified: DateTime }
 
-    type Request =
-        { Id: RequestId
-          Value: string
-          Attempt: int
-          Embassy: Embassy
-          Modified: DateTime }
+type AppointmentsResponse =
+    { Id: ResponseId
+      Request: Request
+      Appointments: Set<Appointment>
+      Modified: DateTime }
 
-    type AppointmentsResponse =
-        { Id: ResponseId
-          Request: Request
-          Appointments: Set<Appointment>
-          Modified: DateTime }
-
-    type ConfirmationResponse =
-        { Id: ResponseId
-          Request: Request
-          Description: string
-          Modified: DateTime }
+type ConfirmationResponse =
+    { Id: ResponseId
+      Request: Request
+      Description: string
+      Modified: DateTime }
 
 module External =
 

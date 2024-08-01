@@ -3,9 +3,8 @@
 open System
 open Infrastructure
 open Infrastructure.Parser
-open EmbassyAccess.Domain.Internal
+open EmbassyAccess.Domain
 open EmbassyAccess.Embassies.Russian.Domain
-open EmbassyAccess.Persistence
 
 module Http =
     open Web.Http.Domain
@@ -475,41 +474,6 @@ module private ConfirmationPage =
 
                 // pipe
                 deps.HttpClient |> postRequest |> parseResponse |> parseConfirmation
-
-module internal Deps =
-    let createGetAppointmentsDeps ct storage =
-        { updateRequest = fun request -> storage |> Repository.Command.Request.update ct request
-          getInitialPage =
-            fun request client ->
-                client
-                |> Web.Http.Client.Request.get ct request
-                |> Web.Http.Client.Response.String.read ct
-          getCaptcha =
-            fun request client ->
-                client
-                |> Web.Http.Client.Request.get ct request
-                |> Web.Http.Client.Response.Bytes.read ct
-          solveCaptcha = Web.Captcha.solveToInt ct
-          postValidationPage =
-            fun request content client ->
-                client
-                |> Web.Http.Client.Request.post ct request content
-                |> Web.Http.Client.Response.String.readContent ct
-          postAppointmentsPage =
-            fun request content client ->
-                client
-                |> Web.Http.Client.Request.post ct request content
-                |> Web.Http.Client.Response.String.readContent ct }
-
-    let createBookAppointmentDeps ct storage =
-        { GetAppointmentsDeps = createGetAppointmentsDeps ct storage
-          postConfirmationPage =
-            fun request content client ->
-                client
-                |> Web.Http.Client.Request.post ct request content
-                |> Web.Http.Client.Response.String.readContent ct }
-
-    let createTryGetAppointmentsDeps getAppointments = { getAppointments = getAppointments }
 
 module internal Helpers =
     let createAppointmentsResponse appointments request =

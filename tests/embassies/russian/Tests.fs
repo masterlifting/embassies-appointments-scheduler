@@ -9,7 +9,7 @@ open EmbassyAccess.Embassies.Russian.Domain
 module private Fixture =
     open Web.Http.Domain
     open Persistence.FileSystem
-    open EmbassyAccess.Domain.Internal
+    open EmbassyAccess.Domain
 
     let request =
         { Id = Guid.NewGuid() |> RequestId
@@ -23,10 +23,7 @@ module private Fixture =
         <| Map [ "Set-Cookie", [ "ASP.NET_SessionId=1"; " AlteonP=1"; " __ddg1_=1" ] ]
 
     let httpHetStringRequest fileName =
-        Environment.CurrentDirectory
-        + "/embassies/russian/test_data/"
-        + fileName
-        + ".html"
+        Environment.CurrentDirectory + $"/embassies/russian/test_data/{fileName}.html"
         |> Storage.create
         |> ResultAsync.wrap Storage.Read.string
         |> ResultAsync.map (fun data ->
@@ -35,10 +32,7 @@ module private Fixture =
               StatusCode = 200 })
 
     let httpPostStringRequest fileName =
-        Environment.CurrentDirectory
-        + "/embassies/russian/test_data/"
-        + fileName
-        + ".html"
+        Environment.CurrentDirectory + $"/embassies/russian/test_data/{fileName}.html"
         |> Storage.create
         |> ResultAsync.wrap Storage.Read.string
 
@@ -52,23 +46,23 @@ module private Fixture =
               StatusCode = 200 })
 
     let getAppointmentsDeps =
-        Api.GetAppointmentsParams.Russian
-            { updateRequest = fun _ -> async { return Ok() }
-              getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
-              getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
-              solveCaptcha = fun _ -> async { return Ok 42 }
-              postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"
-              postAppointmentsPage = fun _ _ _ -> httpPostStringRequest "appointments_page_has_result_1" }
+        { updateRequest = fun _ -> async { return Ok() }
+          getInitialPage = fun _ _ -> httpHetStringRequest "initial_page_response"
+          getCaptcha = fun _ _ -> httpGetBytesRequest "captcha.png"
+          solveCaptcha = fun _ -> async { return Ok 42 }
+          postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_valid_response"
+          postAppointmentsPage = fun _ _ _ -> httpPostStringRequest "appointments_page_has_result_1" }
 
 open Fixture
 
 let private ``validation page should have an error`` =
     testAsync "validation page should have an error" {
-        let! responseRes =
-            request
-            |> Api.getAppointments
+        let deps =
+            Api.GetAppointmentsDeps.Russian
                 { getAppointmentsDeps with
                     postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_has_error" }
+
+        let! responseRes = request |> Api.getAppointments deps
 
         match Expect.wantError responseRes "Response should have an error" with
         | Operation reason ->
@@ -78,11 +72,12 @@ let private ``validation page should have an error`` =
 
 let private ``validation page should have a confirmation request`` =
     testAsync "validation page should have a confirmation request" {
-        let! responseRes =
-            request
-            |> Api.getAppointments
+        let deps =
+            Api.GetAppointmentsDeps.Russian
                 { getAppointmentsDeps with
                     postValidationPage = fun _ _ _ -> httpPostStringRequest "validation_page_requires_confirmation" }
+
+        let! responseRes = request |> Api.getAppointments deps
 
         match Expect.wantError responseRes "Response should have an error" with
         | Operation reason ->
@@ -94,12 +89,12 @@ let private ``appointments page should not have data`` =
     testTheoryAsync "appointments page should not have data" [ 1; 2; 3; 4; 5; 6; 7 ]
     <| fun i ->
         async {
-            let! responseRes =
-                request
-                |> Api.getAppointments
+            let deps =
+                Api.GetAppointmentsDeps.Russian
                     { getAppointmentsDeps with
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_empty_result_{i}" }
 
+            let! responseRes = request |> Api.getAppointments deps
             let responseOpt = Expect.wantOk responseRes "Response should be Ok"
             Expect.isNone responseOpt "Response should not be Some"
         }
@@ -108,12 +103,12 @@ let private ``appointments page should have data`` =
     testTheoryAsync "appointments page should have data" [ 1; 2; 3 ]
     <| fun i ->
         async {
-            let! responseRes =
-                request
-                |> Api.getAppointments
+            let deps =
+                Api.GetAppointmentsDeps.Russian
                     { getAppointmentsDeps with
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_has_result_{i}" }
 
+            let! responseRes = request |> Api.getAppointments deps
             let responseOpt = Expect.wantOk responseRes "Response should be Ok"
             let response = Expect.wantSome responseOpt "Response should be Some"
             Expect.isTrue (not response.Appointments.IsEmpty) "Appointments should not be empty"

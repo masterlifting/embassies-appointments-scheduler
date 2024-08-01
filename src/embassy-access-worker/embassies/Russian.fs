@@ -1,32 +1,31 @@
 ﻿module internal EmbassyAccess.Worker.Embassies.Russian
 
 open Infrastructure
-open Infrastructure.Domain.Graph
-open Persistence
 open Persistence.Domain
-open Worker.Domain.Internal
-open EmbassyAccess.Domain.Internal
+open Worker.Domain
+open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
-open EmbassyAccess.Persistence.Filter
 open EmbassyAccess.Embassies.Russian
-open EmbassyAccess.Embassies.Russian.Domain
 
 let private createRequests ct country storage =
-    let filter =
+    let filter: Filter.Request =
         { Pagination =
             { Page = 1
               PageSize = 5
-              SortBy = Desc(Date(_.Modified)) }
+              SortBy = Filter.Desc(Filter.Date(_.Modified)) }
           Embassy = Some <| Russian country
           Modified = None }
 
     storage |> Repository.Query.Request.get ct filter
 
 let private tryGetAppointments ct storage requests =
-    let deps = Api.createGetAppointmentsDeps ct storage
-    let getAppointments = Api.getAppointments deps
-    let deps = { getAppointments = getAppointments }
-    requests |> Api.tryGetAppointments deps
+
+    let deps =
+        Deps.createGetAppointmentsDeps ct storage
+        |> EmbassyAccess.Api.GetAppointmentsDeps.Russian
+
+    let getAppointments = EmbassyAccess.Api.getAppointments deps
+    requests |> EmbassyAccess.Api.tryGetAppointments getAppointments
 
 let private handleAppointmentsResult ct storage response =
 
@@ -42,7 +41,7 @@ let private handleAppointmentsResult ct storage response =
 
 let private searchAppointments country =
     fun _ ct ->
-        Storage.create InMemory
+        Persistence.Storage.create InMemory
         |> ResultAsync.wrap (fun storage ->
             storage
             |> createRequests ct country
@@ -50,9 +49,9 @@ let private searchAppointments country =
             |> ResultAsync.bind' (handleAppointmentsResult ct storage))
 
 let createNode country =
-    Node(
+    Graph.Node(
         { Name = "Russian"; Handle = None },
-        [ Node(
+        [ Graph.Node(
               { Name = "Search Appointments"
                 Handle = Some <| searchAppointments country },
               []

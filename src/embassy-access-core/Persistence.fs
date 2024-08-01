@@ -5,6 +5,7 @@ open Persistence.Domain
 open EmbassyAccess.Domain
 open EmbassyAccess.Mapper
 
+[<RequireQualifiedAccess>]
 module Filter =
     open System
 
@@ -27,36 +28,36 @@ module Filter =
           SortBy: SortBy<'a> }
 
     type Request =
-        { Pagination: Pagination<Internal.Request>
-          Embassy: Internal.Embassy option
+        { Pagination: Pagination<Domain.Request>
+          Embassy: Embassy option
           Modified: Predicate<DateTime> option }
 
     type AppointmentsResponse =
-        { Pagination: Pagination<Internal.AppointmentsResponse>
-          Request: Internal.Request option
+        { Pagination: Pagination<AppointmentsResponse>
+          Request: Domain.Request option
           Modified: Predicate<DateTime> option }
 
     type ConfirmationResponse =
-        { Pagination: Pagination<Internal.ConfirmationResponse>
-          Request: Internal.Request option
+        { Pagination: Pagination<ConfirmationResponse>
+          Request: Domain.Request option
           Modified: Predicate<DateTime> option }
 
 module private Command =
 
     type Request =
-        | Create of Internal.Request
-        | Update of Internal.Request
-        | Delete of Internal.Request
+        | Create of Domain.Request
+        | Update of Domain.Request
+        | Delete of Domain.Request
 
     type AppointmentsResponse =
-        | Create of Internal.AppointmentsResponse
-        | Update of Internal.AppointmentsResponse
-        | Delete of Internal.AppointmentsResponse
+        | Create of Domain.AppointmentsResponse
+        | Update of Domain.AppointmentsResponse
+        | Delete of Domain.AppointmentsResponse
 
     type ConfirmationResponse =
-        | Create of Internal.ConfirmationResponse
-        | Update of Internal.ConfirmationResponse
-        | Delete of Internal.ConfirmationResponse
+        | Create of Domain.ConfirmationResponse
+        | Update of Domain.ConfirmationResponse
+        | Delete of Domain.ConfirmationResponse
 
 module private InMemoryRepository =
     open Persistence.InMemory
@@ -67,25 +68,23 @@ module private InMemoryRepository =
         |> Result.bind (Json.deserialize<'a array> |> Option.map >> Option.defaultValue (Ok [||]))
 
     module Query =
-        open Filter
-
-        let paginate<'a> (data: 'a list) (pagination: Pagination<'a>) =
+        let paginate<'a> (data: 'a list) (pagination: Filter.Pagination<'a>) =
             data
             |> match pagination.SortBy with
-               | Asc sortBy ->
+               | Filter.Asc sortBy ->
                    match sortBy with
-                   | Date getValue -> List.sortBy <| getValue
-                   | String getValue -> List.sortBy <| getValue
-                   | Int getValue -> List.sortBy <| getValue
-                   | Bool getValue -> List.sortBy <| getValue
-                   | Guid getValue -> List.sortBy <| getValue
-               | Desc sortBy ->
+                   | Filter.Date getValue -> List.sortBy <| getValue
+                   | Filter.String getValue -> List.sortBy <| getValue
+                   | Filter.Int getValue -> List.sortBy <| getValue
+                   | Filter.Bool getValue -> List.sortBy <| getValue
+                   | Filter.Guid getValue -> List.sortBy <| getValue
+               | Filter.Desc sortBy ->
                    match sortBy with
-                   | Date getValue -> List.sortByDescending <| getValue
-                   | String getValue -> List.sortByDescending <| getValue
-                   | Int getValue -> List.sortByDescending <| getValue
-                   | Bool getValue -> List.sortByDescending <| getValue
-                   | Guid getValue -> List.sortByDescending <| getValue
+                   | Filter.Date getValue -> List.sortByDescending <| getValue
+                   | Filter.String getValue -> List.sortByDescending <| getValue
+                   | Filter.Int getValue -> List.sortByDescending <| getValue
+                   | Filter.Bool getValue -> List.sortByDescending <| getValue
+                   | Filter.Guid getValue -> List.sortByDescending <| getValue
             |> List.skip (pagination.PageSize * (pagination.Page - 1))
             |> List.truncate pagination.PageSize
 
@@ -94,12 +93,12 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "requests"
 
-            let get ct filter context =
+            let get ct (filter: Filter.Request) context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
-                            let filter (requests: Internal.Request list) =
+                            let filter (requests: Request list) =
                                 requests
                                 |> List.filter (fun x ->
                                     filter.Embassy
@@ -113,7 +112,7 @@ module private InMemoryRepository =
 
                             context
                             |> getEntities<External.Request> key
-                            |> Result.bind (Seq.map Internal.toRequest >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toRequest >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.Request.get"
                 }
@@ -125,7 +124,7 @@ module private InMemoryRepository =
                         | true ->
                             context
                             |> getEntities<External.Request> key
-                            |> Result.bind (Seq.map Internal.toRequest >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toRequest >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = requestId))
                         | _ -> Error <| Cancelled "Query.Request.get'"
                 }
@@ -135,12 +134,12 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "appointmentsResponses"
 
-            let get ct filter context =
+            let get ct (filter: Filter.AppointmentsResponse) context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
-                            let filter (responses: Internal.AppointmentsResponse list) =
+                            let filter (responses: AppointmentsResponse list) =
                                 responses
                                 |> List.filter (fun x ->
                                     filter.Request
@@ -153,7 +152,7 @@ module private InMemoryRepository =
 
                             context
                             |> getEntities<External.AppointmentsResponse> key
-                            |> Result.bind (Seq.map Internal.toAppointmentsResponse >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toAppointmentsResponse >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.AppointmentsResponse.get"
                 }
@@ -165,7 +164,7 @@ module private InMemoryRepository =
                         | true ->
                             context
                             |> getEntities<External.AppointmentsResponse> key
-                            |> Result.bind (Seq.map Internal.toAppointmentsResponse >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toAppointmentsResponse >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = responseId))
                         | _ -> Error <| Cancelled "Query.AppointmentsResponse.get'"
                 }
@@ -175,12 +174,12 @@ module private InMemoryRepository =
             [<Literal>]
             let private key = "confirmationResponses"
 
-            let get ct filter context =
+            let get ct (filter: Filter.ConfirmationResponse) context =
                 async {
                     return
                         match ct |> notCanceled with
                         | true ->
-                            let filter (responses: Internal.ConfirmationResponse list) =
+                            let filter (responses: ConfirmationResponse list) =
                                 responses
                                 |> List.filter (fun x ->
                                     filter.Request
@@ -193,7 +192,7 @@ module private InMemoryRepository =
 
                             context
                             |> getEntities<External.ConfirmationResponse> key
-                            |> Result.bind (Seq.map Internal.toConfirmationResponse >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toConfirmationResponse >> DSL.Seq.roe)
                             |> Result.map filter
                         | _ -> Error <| Cancelled "Query.ConfirmationResponse.get"
                 }
@@ -205,7 +204,7 @@ module private InMemoryRepository =
                         | true ->
                             context
                             |> getEntities<External.ConfirmationResponse> key
-                            |> Result.bind (Seq.map Internal.toConfirmationResponse >> DSL.Seq.roe)
+                            |> Result.bind (Seq.map toConfirmationResponse >> DSL.Seq.roe)
                             |> Result.map (List.tryFind (fun x -> x.Id = responseId))
                         | _ -> Error <| Cancelled "Query.ConfirmationResponse.get'"
                 }
@@ -224,7 +223,7 @@ module private InMemoryRepository =
 
         module Request =
 
-            let private add (request: Internal.Request) (requests: External.Request array) =
+            let private add (request: Request) (requests: External.Request array) =
                 match requests |> Array.tryFind (fun x -> x.Id = request.Id.Value) with
                 | Some _ ->
                     Error
@@ -233,7 +232,7 @@ module private InMemoryRepository =
                           Code = Some ErrorCodes.AlreadyExists }
                 | _ -> Ok(requests |> Array.append [| External.toRequest request |])
 
-            let private update (request: Internal.Request) (requests: External.Request array) =
+            let private update (request: Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
                 | None ->
                     Error
@@ -246,7 +245,7 @@ module private InMemoryRepository =
                         |> Array.mapi (fun i x -> if i = index then External.toRequest request else x)
                     )
 
-            let private delete (request: Internal.Request) (requests: External.Request array) =
+            let private delete (request: Request) (requests: External.Request array) =
                 match requests |> Array.tryFindIndex (fun x -> x.Id = request.Id.Value) with
                 | None ->
                     Error
@@ -275,7 +274,7 @@ module private InMemoryRepository =
 
         module AppointmentsResponse =
 
-            let private add (response: Internal.AppointmentsResponse) (responses: External.AppointmentsResponse array) =
+            let private add (response: AppointmentsResponse) (responses: External.AppointmentsResponse array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
                 | Some _ ->
                     Error
@@ -285,7 +284,7 @@ module private InMemoryRepository =
                 | _ -> Ok(responses |> Array.append [| External.toAppointmentsResponse response |])
 
             let private update
-                (response: Internal.AppointmentsResponse)
+                (response: AppointmentsResponse)
                 (responses: External.AppointmentsResponse array)
                 =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
@@ -305,7 +304,7 @@ module private InMemoryRepository =
                     )
 
             let private delete
-                (response: Internal.AppointmentsResponse)
+                (response: AppointmentsResponse)
                 (responses: External.AppointmentsResponse array)
                 =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
@@ -336,7 +335,7 @@ module private InMemoryRepository =
 
         module ConfirmationResponse =
 
-            let private add (response: Internal.ConfirmationResponse) (responses: External.ConfirmationResponse array) =
+            let private add (response: ConfirmationResponse) (responses: External.ConfirmationResponse array) =
                 match responses |> Array.tryFind (fun x -> x.Id = response.Id.Value) with
                 | Some _ ->
                     Error
@@ -346,7 +345,7 @@ module private InMemoryRepository =
                 | _ -> Ok(responses |> Array.append [| External.toConfirmationResponse response |])
 
             let private update
-                (response: Internal.ConfirmationResponse)
+                (response: ConfirmationResponse)
                 (responses: External.ConfirmationResponse array)
                 =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with
@@ -366,7 +365,7 @@ module private InMemoryRepository =
                     )
 
             let private delete
-                (response: Internal.ConfirmationResponse)
+                (response: ConfirmationResponse)
                 (responses: External.ConfirmationResponse array)
                 =
                 match responses |> Array.tryFindIndex (fun x -> x.Id = response.Id.Value) with

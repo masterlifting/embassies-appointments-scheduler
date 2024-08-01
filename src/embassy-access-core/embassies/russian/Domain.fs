@@ -2,7 +2,6 @@
 
 open Infrastructure
 open EmbassyAccess
-open EmbassyAccess.Domain.Internal
 
 module ErrorCodes =
 
@@ -12,7 +11,7 @@ module ErrorCodes =
     [<Literal>]
     let NotConfirmed = "NotConfirmed"
 
-type StorageUpdateRequest = Domain.Internal.Request -> Async<Result<unit, Error'>>
+type StorageUpdateRequest = Domain.Request -> Async<Result<unit, Error'>>
 
 type HttpGetStringRequest =
     Web.Http.Domain.Request -> Web.Http.Domain.Client -> Async<Result<Web.Http.Domain.Response<string>, Error'>>
@@ -38,14 +37,14 @@ type BookAppointmentDeps =
       postConfirmationPage: HttpPostStringRequest }
 
 type TryGetAppointments =
-    { getAppointments: Domain.Internal.Request -> Async<Result<Domain.Internal.AppointmentsResponse option, Error'>> }
+    { getAppointments: Domain.Request -> Async<Result<Domain.AppointmentsResponse option, Error'>> }
 
 type Id = private Id of int
 type Cd = private Cd of string
 type Ems = private Ems of string option
 
 type Credentials =
-    { City: Domain.Internal.City
+    { City: Domain.City
       Id: Id
       Cd: Cd
       Ems: Ems }
@@ -57,19 +56,19 @@ type Credentials =
             Cd = Cd cd
             Ems = Ems ems } ->
             match city with
-            | Belgrade -> ("belgrad", id, cd, ems)
-            | Budapest -> ("budapest", id, cd, ems)
-            | Sarajevo -> ("sarajevo", id, cd, ems)
-            | Podgorica -> ("podgorica", id, cd, ems)
-            | Tirana -> ("tirana", id, cd, ems)
-            | Paris -> ("paris", id, cd, ems)
-            | Rome -> ("rome", id, cd, ems)
-            | Berlin -> ("berlin", id, cd, ems)
-            | Dublin -> ("dublin", id, cd, ems)
-            | Bern -> ("bern", id, cd, ems)
-            | Helsinki -> ("helsinki", id, cd, ems)
-            | Hague -> ("hague", id, cd, ems)
-            | Ljubljana -> ("ljubljana", id, cd, ems)
+            | Domain.Belgrade -> ("belgrad", id, cd, ems)
+            | Domain.Budapest -> ("budapest", id, cd, ems)
+            | Domain.Sarajevo -> ("sarajevo", id, cd, ems)
+            | Domain.Podgorica -> ("podgorica", id, cd, ems)
+            | Domain.Tirana -> ("tirana", id, cd, ems)
+            | Domain.Paris -> ("paris", id, cd, ems)
+            | Domain.Rome -> ("rome", id, cd, ems)
+            | Domain.Berlin -> ("berlin", id, cd, ems)
+            | Domain.Dublin -> ("dublin", id, cd, ems)
+            | Domain.Bern -> ("bern", id, cd, ems)
+            | Domain.Helsinki -> ("helsinki", id, cd, ems)
+            | Domain.Hague -> ("hague", id, cd, ems)
+            | Domain.Ljubljana -> ("ljubljana", id, cd, ems)
 
 let createCredentials url =
     url
@@ -83,19 +82,19 @@ let createCredentials url =
             |> Result.bind (fun paramsMap ->
                 let city =
                     match hostParts[0] with
-                    | "belgrad" -> Ok Belgrade
-                    | "budapest" -> Ok Budapest
-                    | "sarajevo" -> Ok Sarajevo
-                    | "berlin" -> Ok Berlin
-                    | "podgorica" -> Ok Podgorica
-                    | "tirana" -> Ok Tirana
-                    | "paris" -> Ok Paris
-                    | "rome" -> Ok Rome
-                    | "dublin" -> Ok Dublin
-                    | "bern" -> Ok Bern
-                    | "helsinki" -> Ok Helsinki
-                    | "hague" -> Ok Hague
-                    | "ljubljana" -> Ok Ljubljana
+                    | "belgrad" -> Ok Domain.Belgrade
+                    | "budapest" -> Ok Domain.Budapest
+                    | "sarajevo" -> Ok Domain.Sarajevo
+                    | "berlin" -> Ok Domain.Berlin
+                    | "podgorica" -> Ok Domain.Podgorica
+                    | "tirana" -> Ok Domain.Tirana
+                    | "paris" -> Ok Domain.Paris
+                    | "rome" -> Ok Domain.Rome
+                    | "dublin" -> Ok Domain.Dublin
+                    | "bern" -> Ok Domain.Bern
+                    | "helsinki" -> Ok Domain.Helsinki
+                    | "hague" -> Ok Domain.Hague
+                    | "ljubljana" -> Ok Domain.Ljubljana
                     | _ -> Error $"City {hostParts[0]} is not supported"
 
                 let id =

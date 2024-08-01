@@ -1,11 +1,11 @@
 ﻿module internal EmbassyAccess.Worker.Countries.Switzerland
 
-open Infrastructure.Domain.Graph
-open Worker.Domain.Internal
-open EmbassyAccess.Domain.Internal
+open Infrastructure.Domain
+open Worker.Domain
+open EmbassyAccess.Domain
 open EmbassyAccess.Worker.Embassies
 
 let private Bern =
-    Node({ Name = "Bern"; Handle = None }, [ Russian.createNode <| Switzerland Bern ])
+    Graph.Node({ Name = "Bern"; Handle = None }, [ Russian.createNode <| Switzerland Bern ])
 
-let Node = Node({ Name = "Switzerland"; Handle = None }, [ Bern ])
+let Node = Graph.Node({ Name = "Switzerland"; Handle = None }, [ Bern ])

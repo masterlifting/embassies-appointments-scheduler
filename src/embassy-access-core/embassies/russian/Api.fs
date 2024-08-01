@@ -2,15 +2,9 @@
 module internal EmbassyAccess.Embassies.Russian.Api
 
 open Infrastructure
-open EmbassyAccess.Domain.Internal
+open EmbassyAccess.Domain
 open EmbassyAccess.Embassies.Russian.Domain
 open EmbassyAccess.Embassies.Russian.Core
-
-let createGetAppointmentsDeps = Deps.createGetAppointmentsDeps
-
-let createBookAppointmentDeps = Deps.createBookAppointmentDeps
-
-let createTryGetAppointmentsDeps = Deps.createTryGetAppointmentsDeps
 
 let getAppointments deps =
 
@@ -74,27 +68,9 @@ let bookAppointment deps =
         ResultAsync.map' (fun (request, result) -> request |> Helpers.createConfirmationResponse result)
 
     // pipe
-    fun request option ->
+    fun option request ->
         (request, option)
         |> updateRequest
         |> createCredentials
         |> bookAppointment
         |> createResult
-
-let tryGetAppointments deps =
-
-    let rec innerLoop requests error =
-        async {
-            match requests with
-            | [] ->
-                return
-                    match error with
-                    | Some error -> Error error
-                    | None -> Ok None
-            | request :: requestsTail ->
-                match! deps.getAppointments request with
-                | Error error -> return! innerLoop requestsTail (Some error)
-                | response -> return response
-        }
-
-    fun requests -> innerLoop requests None

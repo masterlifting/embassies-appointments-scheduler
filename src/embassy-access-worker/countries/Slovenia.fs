@@ -1,11 +1,11 @@
 ﻿module internal EmbassyAccess.Worker.Countries.Slovenia
 
-open Infrastructure.Domain.Graph
-open Worker.Domain.Internal
-open EmbassyAccess.Domain.Internal
+open Infrastructure.Domain
+open Worker.Domain
+open EmbassyAccess.Domain
 open EmbassyAccess.Worker.Embassies
 
 let private Ljubljana =
-    Node({ Name = "Ljubljana"; Handle = None }, [ Russian.createNode <| Slovenia Ljubljana ])
+    Graph.Node({ Name = "Ljubljana"; Handle = None }, [ Russian.createNode <| Slovenia Ljubljana ])
 
-let Node = Node({ Name = "Slovenia"; Handle = None }, [ Ljubljana ])
+let Node = Graph.Node({ Name = "Slovenia"; Handle = None }, [ Ljubljana ])
