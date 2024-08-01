@@ -20,9 +20,20 @@ let tryGetAppointments getAppointments =
                 return
                     match errors with
                     | Some errors ->
-                        let msg = errors |> List.map (_.Message) |> String.concat "; \n"
-                        let error = Operation { Message = msg; Code = None }
-                        Error error
+                        match errors.Length with
+                        | 1 -> Error errors[0]
+                        | _ ->
+                            let msg =
+                                errors
+                                |> List.mapi (fun i error -> $"{i+1}.{error.Message}")
+                                |> String.concat "\n"
+
+                            let error =
+                                Operation
+                                    { Message = $"Multiple errors: \n{msg}"
+                                      Code = None }
+
+                            Error error
                     | None -> Ok None
             | request :: requestsTail ->
                 match! getAppointments request with
@@ -38,7 +49,7 @@ let tryGetAppointments getAppointments =
                 | response -> return response
         }
 
-    fun requests -> innerLoop requests None 0u
+    fun requests -> innerLoop requests None 1u
 
 let bookAppointment deps option request =
     match deps with

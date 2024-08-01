@@ -142,12 +142,7 @@ module private InitialPage =
         let origin = httpClient |> Web.Http.Client.Route.toOrigin
         let host = httpClient |> Web.Http.Client.Route.toHost
 
-        let headers =
-            Map
-                [ "Host", [ host ]
-                  "Referer", [ origin + "/queue/orderinfo.aspx?" + queryParams ]
-                  "Sec-Fetch-Site", [ "same-origin" ] ]
-            |> Some
+        let headers = Map [ "Host", [ host ]; "Sec-Fetch-Site", [ "same-origin" ] ] |> Some
 
         { Web.Http.Domain.Request.Path = $"/queue/{urlPath}"
           Web.Http.Domain.Request.Headers = headers }
