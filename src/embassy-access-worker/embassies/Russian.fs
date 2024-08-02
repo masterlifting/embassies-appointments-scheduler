@@ -6,7 +6,7 @@ open Worker.Domain
 open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
 
-let private createRequests ct country storage =
+let private getRequests ct country storage =
     let filter: Filter.Request =
         { Pagination =
             { Page = 1
@@ -23,11 +23,11 @@ let private tryGetAppointments ct storage requests =
     |> EmbassyAccess.Api.getAppointments
     |> EmbassyAccess.Api.tryGetAppointments requests
 
-let private handleAppointmentsResult ct storage response =
+let private handleAppointmentsResponse ct storage response =
 
     let saveResponse response =
-        storage |> Repository.Command.AppointmentsResponse.create ct response
-
+        storage |> Repository.Command.AppointmentsResponse.save ct response
+    
     match response with
     | None -> async { return Ok <| Info "No appointments found." }
     | Some response ->
@@ -40,9 +40,9 @@ let private searchAppointments country =
         Persistence.Storage.create InMemory
         |> ResultAsync.wrap (fun storage ->
             storage
-            |> createRequests ct country
+            |> getRequests ct country
             |> ResultAsync.bind' (tryGetAppointments ct storage)
-            |> ResultAsync.bind' (handleAppointmentsResult ct storage))
+            |> ResultAsync.bind' (handleAppointmentsResponse ct storage))
 
 let createNode country =
     Graph.Node(

@@ -1,4 +1,4 @@
-﻿module EmbassyAccess.Embassies.Russian.Tests
+﻿module EmbassyAccess.Embassies.Russian.Test
 
 open System
 open Expecto

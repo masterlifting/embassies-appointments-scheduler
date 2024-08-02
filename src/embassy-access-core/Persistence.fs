@@ -474,7 +474,7 @@ module Repository =
                     context |> InMemoryRepository.Command.AppointmentsResponse.execute ct command
                 | _ -> async { return Error <| NotSupported $"Storage {storage}" }
 
-            let create ct response =
+            let save ct response =
                 Command.AppointmentsResponse.Create response |> execute ct
 
             let update ct response =
