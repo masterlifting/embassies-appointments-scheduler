@@ -27,15 +27,3 @@ type Request =
       Ids: Domain.RequestId list
       Embassy: Domain.Embassy option
       Modified: Predicate<DateTime> option }
-
-type AppointmentsResponse =
-    { Pagination: Pagination<Domain.AppointmentsResponse> option
-      Ids: Domain.ResponseId list
-      Request: Domain.Request option
-      Modified: Predicate<DateTime> option }
-
-type ConfirmationResponse =
-    { Pagination: Pagination<Domain.ConfirmationResponse> option
-      Ids: Domain.ResponseId list
-      Request: Domain.Request option
-      Modified: Predicate<DateTime> option }

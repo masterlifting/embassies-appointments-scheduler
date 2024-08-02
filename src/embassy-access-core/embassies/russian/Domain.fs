@@ -36,9 +36,6 @@ type BookAppointmentDeps =
     { GetAppointmentsDeps: GetAppointmentsDeps
       postConfirmationPage: HttpPostStringRequest }
 
-type TryGetAppointments =
-    { getAppointments: Domain.Request -> Async<Result<Domain.AppointmentsResponse option, Error'>> }
-
 type Id = private Id of int
 type Cd = private Cd of string
 type Ems = private Ems of string option

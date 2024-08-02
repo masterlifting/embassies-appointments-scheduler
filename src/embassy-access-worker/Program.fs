@@ -13,6 +13,7 @@ let private createRussianTestRequest ct (value, country) =
             { Id = System.Guid.NewGuid() |> RequestId
               Value = value
               Attempt = 0
+              Appointments = Set.empty
               Embassy = Russian <| country
               Modified = System.DateTime.UtcNow }
 

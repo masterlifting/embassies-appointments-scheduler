@@ -373,10 +373,10 @@ module private AppointmentsPage =
                 match date, time with
                 | (true, date), (true, time) ->
                     Ok
-                    <| { Id = Guid.NewGuid() |> AppointmentId
-                         Value = value
+                    <| { Value = value
                          Date = date
                          Time = time
+                         IsConfirmed = false
                          Description = Some window }
                 | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
             | _ -> Error <| NotSupported $"Appointment row: {value}."
@@ -418,7 +418,7 @@ module private ConfirmationPage =
     let private chooseAppointment (appointments: Appointment Set) option =
         match option with
         | FirstAvailable -> appointments |> Seq.tryHead
-        | Appointment appointment -> appointments |> Seq.tryFind (fun x -> x.Id = appointment.Id)
+        | Appointment appointment -> appointments |> Seq.tryFind (fun x -> x.Value = appointment.Value)
         | _ -> None
 
     let private createRequest formData queryParamsId =
@@ -446,6 +446,11 @@ module private ConfirmationPage =
         | true -> Error <| NotFound "Confirmation data is empty."
         | false -> Ok data
 
+    let private updateAppointment (appointment: Appointment) description =
+        { appointment with
+            IsConfirmed = true
+            Description = Some description }
+
     let handle (deps: Deps) =
         fun queryParamsId option (appointments, formData) ->
 
@@ -462,22 +467,29 @@ module private ConfirmationPage =
 
                 let parseResponse = ResultAsync.bind parseResponse
                 let parseConfirmation = ResultAsync.bind parseConfirmation
+                let createResult = ResultAsync.map (updateAppointment appointment)
 
                 // pipe
-                deps.HttpClient |> postRequest |> parseResponse |> parseConfirmation
+                deps.HttpClient
+                |> postRequest
+                |> parseResponse
+                |> parseConfirmation
+                |> createResult
 
 module internal Helpers =
-    let createAppointmentsResponse appointments request =
-        { Id = Guid.NewGuid() |> ResponseId
-          Request = request
-          Appointments = appointments
-          Modified = DateTime.Now }
+    let createAppointmentsResult (appointments,request) =
+        { request with
+            Appointments = appointments
+            Modified = DateTime.UtcNow }
 
-    let createConfirmationResponse description request =
-        { Id = Guid.NewGuid() |> ResponseId
-          Request = request
-          Description = description
-          Modified = DateTime.Now }
+    let createConfirmationResult (request, (appointment: Appointment)) =
+        let appointments =
+            request.Appointments
+            |> Set.map (fun x -> if x.Value = appointment.Value then appointment else x)
+
+        { request with
+            Appointments = appointments
+            Modified = DateTime.UtcNow }
 
     let checkCredentials (request, credentials) =
         let embassy = request.Embassy |> EmbassyAccess.Mapper.External.toEmbassy

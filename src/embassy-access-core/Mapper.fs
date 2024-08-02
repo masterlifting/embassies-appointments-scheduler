@@ -146,17 +146,16 @@ module External =
         let result = External.Request()
         let embassy = toEmbassy request.Embassy
 
-        let appointments =
-            request.Appointments
-            |> Seq.map toAppointment
-
-        
-
         result.Id <- request.Id.Value
         result.EmbassyId <- embassy.Id
         result.Embassy <- embassy
         result.Value <- request.Value
         result.Attempt <- request.Attempt
         result.Modified <- request.Modified
+        result.Appointments <- request.Appointments |> Seq.map toAppointment |> Seq.toArray
+
+        for appointment in result.Appointments do
+            appointment.RequestId <- result.Id
+            appointment.Request <- result
 
         result

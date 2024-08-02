@@ -15,6 +15,7 @@ module private Fixture =
         { Id = Guid.NewGuid() |> RequestId
           Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
           Attempt = 1
+          Appointments = Set.empty
           Embassy = Russian <| Germany Berlin
           Modified = DateTime.UtcNow }
 

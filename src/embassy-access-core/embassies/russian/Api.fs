@@ -32,15 +32,10 @@ let getAppointments deps =
         ResultAsync.map' (fun (request, appointments: Set<Appointment>) ->
             match appointments.IsEmpty with
             | true -> None
-            | false -> Some <| (request |> Helpers.createAppointmentsResponse appointments))
+            | false -> Some <| (Helpers.createAppointmentsResult (appointments, request)))
 
     // pipe
-    fun request ->
-        request
-        |> updateRequest
-        |> createCredentials
-        |> getAppointments
-        |> createResult
+    fun request -> request |> updateRequest |> createCredentials |> getAppointments |> createResult
 
 let bookAppointment deps =
 
@@ -64,8 +59,7 @@ let bookAppointment deps =
             bookAppointment deps option credentials
             |> ResultAsync.map (fun result -> request, result))
 
-    let createResult =
-        ResultAsync.map' (fun (request, result) -> request |> Helpers.createConfirmationResponse result)
+    let createResult = ResultAsync.map' Helpers.createConfirmationResult
 
     // pipe
     fun option request ->
