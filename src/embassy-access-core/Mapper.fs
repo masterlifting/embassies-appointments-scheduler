@@ -1,4 +1,4 @@
-module EmbassyAccess.Mapper
+module internal EmbassyAccess.Mapper
 
 open System
 open Infrastructure

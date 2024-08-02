@@ -113,7 +113,6 @@ module External =
         member val Id: Guid = Guid.Empty with get, set
         member val Value: string = String.Empty with get, set
         member val Attempt: int = 0 with get, set
-        member val UserId: int = 0 with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set

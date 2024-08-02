@@ -5,7 +5,10 @@
   <ItemGroup>
     <Compile Include="Domain.fs" />
     <Compile Include="Mapper.fs" />
-    <Compile Include="Persistence.fs" />
+    <Compile Include="persistence\Filter.fs" />
+    <Compile Include="persistence\Command.fs" />
+    <Compile Include="persistence\InMemoryRepository.fs" />
+    <Compile Include="persistence\Repository.fs" />
     <Compile Include="embassies\russian\Domain.fs" />
     <Compile Include="embassies\russian\Core.fs" />
     <Compile Include="embassies\russian\Deps.fs" />
