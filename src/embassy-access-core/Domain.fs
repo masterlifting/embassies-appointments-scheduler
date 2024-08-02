@@ -2,27 +2,6 @@
 
 open System
 
-type RequestId =
-    | RequestId of Guid
-
-    member this.Value =
-        match this with
-        | RequestId id -> id
-
-type ResponseId =
-    | ResponseId of Guid
-
-    member this.Value =
-        match this with
-        | ResponseId id -> id
-
-type AppointmentId =
-    | AppointmentId of Guid
-
-    member this.Value =
-        match this with
-        | AppointmentId id -> id
-
 type City =
     | Belgrade
     | Berlin
@@ -60,11 +39,18 @@ type Embassy =
     | German of Country
     | British of Country
 
+type RequestId =
+    | RequestId of Guid
+
+    member this.Value =
+        match this with
+        | RequestId id -> id
+
 type Appointment =
-    { Id: AppointmentId
-      Value: string
+    { Value: string
       Date: DateOnly
       Time: TimeOnly
+      IsConfirmed: bool
       Description: string option }
 
 type ConfirmationOption =
@@ -77,18 +63,7 @@ type Request =
       Value: string
       Attempt: int
       Embassy: Embassy
-      Modified: DateTime }
-
-type AppointmentsResponse =
-    { Id: ResponseId
-      Request: Request
       Appointments: Set<Appointment>
-      Modified: DateTime }
-
-type ConfirmationResponse =
-    { Id: ResponseId
-      Request: Request
-      Description: string
       Modified: DateTime }
 
 module External =
@@ -115,24 +90,14 @@ module External =
         member val Attempt: int = 0 with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
-        member val Modified: DateTime = DateTime.UtcNow with get, set
-
-    type AppointmentsResponse() =
-        member val Id: Guid = Guid.Empty with get, set
-        member val RequestId: Guid = Guid.Empty with get, set
-        member val Request: Request = Request() with get, set
         member val Appointments: Appointment array = [||] with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set
 
     and Appointment() =
         member val Id: Guid = Guid.Empty with get, set
-        member val Value: string = String.Empty with get, set
-        member val DateTime: DateTime = DateTime.UtcNow with get, set
-        member val Description: string = String.Empty with get, set
-
-    type ConfirmationResponse() =
-        member val Id: Guid = Guid.Empty with get, set
         member val RequestId: Guid = Guid.Empty with get, set
         member val Request: Request = Request() with get, set
+        member val Value: string = String.Empty with get, set
+        member val IsConfirmed: bool = false with get, set
+        member val DateTime: DateTime = DateTime.UtcNow with get, set
         member val Description: string = String.Empty with get, set
-        member val Modified: DateTime = DateTime.UtcNow with get, set

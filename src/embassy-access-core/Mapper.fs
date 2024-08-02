@@ -46,6 +46,16 @@ let toEmbassy (embassy: External.Embassy) : Result<Embassy, Error'> =
         | "Russian" -> Ok <| Russian country
         | _ -> Error <| NotSupported $"Embassy {embassy.Name}.")
 
+let toAppointment (appointment: External.Appointment) : Appointment =
+    { Value = appointment.Value
+      Date = DateOnly.FromDateTime(appointment.DateTime)
+      Time = TimeOnly.FromDateTime(appointment.DateTime)
+      IsConfirmed = appointment.IsConfirmed
+      Description =
+        match appointment.Description with
+        | "" -> None
+        | x -> Some x }
+
 let toRequest (request: External.Request) : Result<Request, Error'> =
     toEmbassy request.Embassy
     |> Result.map (fun embassy ->
@@ -53,33 +63,9 @@ let toRequest (request: External.Request) : Result<Request, Error'> =
           Value = request.Value
           Attempt = request.Attempt
           Embassy = embassy
+          Appointments = request.Appointments |> Seq.map toAppointment |> Set.ofSeq
           Modified = request.Modified })
 
-let toAppointment (appointment: External.Appointment) : Appointment =
-    { Id = AppointmentId appointment.Id
-      Value = appointment.Value
-      Date = DateOnly.FromDateTime(appointment.DateTime)
-      Time = TimeOnly.FromDateTime(appointment.DateTime)
-      Description =
-        match appointment.Description with
-        | "" -> None
-        | x -> Some x }
-
-let toAppointmentsResponse (response: External.AppointmentsResponse) : Result<AppointmentsResponse, Error'> =
-    toRequest response.Request
-    |> Result.map (fun request ->
-        { Id = ResponseId response.Id
-          Request = request
-          Appointments = response.Appointments |> Array.map toAppointment |> set
-          Modified = response.Modified })
-
-let toConfirmationResponse (response: External.ConfirmationResponse) : Result<ConfirmationResponse, Error'> =
-    toRequest response.Request
-    |> Result.map (fun request ->
-        { Id = ResponseId response.Id
-          Request = request
-          Description = response.Description
-          Modified = response.Modified })
 
 module External =
 
@@ -145,44 +131,32 @@ module External =
 
         result
 
-    let toRequest (request: Request) : External.Request =
-        let result = External.Request()
-
-        result.Id <- request.Id.Value
-        result.Embassy <- toEmbassy request.Embassy
-        result.Value <- request.Value
-        result.Attempt <- request.Attempt
-        result.Modified <- request.Modified
-
-        result
-
     let toAppointment (appointment: Appointment) : External.Appointment =
         let result = External.Appointment()
 
-        result.Id <- appointment.Id.Value
+        result.Id <- Guid.NewGuid()
+        result.Value <- appointment.Value
+        result.IsConfirmed <- appointment.IsConfirmed
         result.DateTime <- appointment.Date.ToDateTime(appointment.Time)
         result.Description <- appointment.Description |> Option.defaultValue ""
 
         result
 
-    let toAppointmentsResponse (response: AppointmentsResponse) : External.AppointmentsResponse =
-        let result = External.AppointmentsResponse()
+    let toRequest (request: Request) : External.Request =
+        let result = External.Request()
+        let embassy = toEmbassy request.Embassy
 
-        result.Id <- response.Id.Value
-        result.RequestId <- response.Request.Id.Value
-        result.Request <- toRequest response.Request
-        result.Appointments <- response.Appointments |> Seq.map toAppointment |> Seq.toArray
-        result.Modified <- response.Modified
+        let appointments =
+            request.Appointments
+            |> Seq.map toAppointment
 
-        result
+        
 
-    let toConfirmationResponse (response: ConfirmationResponse) : External.ConfirmationResponse =
-        let result = External.ConfirmationResponse()
-
-        result.Id <- response.Id.Value
-        result.RequestId <- response.Request.Id.Value
-        result.Request <- toRequest response.Request
-        result.Description <- response.Description
-        result.Modified <- response.Modified
+        result.Id <- request.Id.Value
+        result.EmbassyId <- embassy.Id
+        result.Embassy <- embassy
+        result.Value <- request.Value
+        result.Attempt <- request.Attempt
+        result.Modified <- request.Modified
 
         result
