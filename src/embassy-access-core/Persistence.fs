@@ -399,15 +399,6 @@ module private InMemoryRepository =
 module Repository =
     open Persistence
 
-    ///<summary>Creates a storage context</summary>
-    /// <param name="storage">The storage context</param>
-    /// <returns>The storage context</returns>
-    /// <remarks>Default is InMemory</remarks>
-    let createStorage storage =
-        match storage with
-        | Some storage -> Ok storage
-        | _ -> Storage.create InMemory
-
     module Query =
 
         module Request =
