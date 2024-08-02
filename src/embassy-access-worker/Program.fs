@@ -3,7 +3,6 @@ open Persistence
 open Persistence.Domain
 open Worker.Domain
 open EmbassyAccess.Worker
-open EmbassyAccess.Worker.Countries
 open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
 
@@ -62,24 +61,24 @@ let main _ =
                     return
                         testRequests
                         |> Seq.roe
-                        |> Result.map (fun _ -> Success "Test requests were created. Sceduler has started...")
+                        |> Result.map (fun _ -> Success "Test requests were created. Scheduler has started...")
                 } }
 
     let handlersGraph =
         Graph.Node(
             rootNode,
-            [ Albania.Node
-              Bosnia.Node
-              Finland.Node
-              France.Node
-              Germany.Node
-              Hungary.Node
-              Ireland.Node
-              Montenegro.Node
-              Netherlands.Node
-              Serbia.Node
-              Slovenia.Node
-              Switzerland.Node ]
+            [ Countries.Albania.Node
+              Countries.Bosnia.Node
+              Countries.Finland.Node
+              Countries.France.Node
+              Countries.Germany.Node
+              Countries.Hungary.Node
+              Countries.Ireland.Node
+              Countries.Montenegro.Node
+              Countries.Netherlands.Node
+              Countries.Serbia.Node
+              Countries.Slovenia.Node
+              Countries.Switzerland.Node ]
         )
 
     "Scheduler"

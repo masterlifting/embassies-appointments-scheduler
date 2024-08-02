@@ -2,7 +2,7 @@
 
 Logging:
   LogLevel:
-    Default: Success
+    Default: Information
 
 CommonStep: &CommonStep
   Name: Russian

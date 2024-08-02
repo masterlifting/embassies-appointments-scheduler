@@ -6,14 +6,15 @@ open EmbassyAccess.Domain
 
 type GetAppointmentsDeps = Russian of Embassies.Russian.Domain.GetAppointmentsDeps
 
-type BookAppointmentApiDeps = Russian of Embassies.Russian.Domain.BookAppointmentDeps
+type BookAppointmentDeps = Russian of Embassies.Russian.Domain.BookAppointmentDeps
+
 
 let getAppointments deps request =
     match deps with
     | GetAppointmentsDeps.Russian deps -> request |> Embassies.Russian.Api.getAppointments deps
 
-let tryGetAppointments getAppointments =
-    let rec innerLoop (requests: Request list) (errors: Error' list option) attempt =
+let tryGetAppointments requests getAppointments =
+    let rec innerLoop (requests: Request list) (errors: Error' list option) =
         async {
             match requests with
             | [] ->
@@ -25,7 +26,7 @@ let tryGetAppointments getAppointments =
                         | _ ->
                             let msg =
                                 errors
-                                |> List.mapi (fun i error -> $"{i+1}.{error.Message}")
+                                |> List.mapi (fun i error -> $"{i + 1}.{error.Message}")
                                 |> String.concat "\n"
 
                             let error =
@@ -44,13 +45,12 @@ let tryGetAppointments getAppointments =
                         | Some errors -> errors @ [ requestError ]
                         |> Some
 
-                    let attempt = attempt + 1u
-                    return! innerLoop requestsTail errors attempt
+                    return! innerLoop requestsTail errors
                 | response -> return response
         }
 
-    fun requests -> innerLoop requests None 1u
+    innerLoop requests None
 
 let bookAppointment deps option request =
     match deps with
-    | BookAppointmentApiDeps.Russian deps -> request |> Embassies.Russian.Api.bookAppointment deps option
+    | BookAppointmentDeps.Russian deps -> request |> Embassies.Russian.Api.bookAppointment deps option

@@ -5,7 +5,6 @@ open Persistence.Domain
 open Worker.Domain
 open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
-open EmbassyAccess.Embassies.Russian
 
 let private createRequests ct country storage =
     let filter: Filter.Request =
@@ -19,13 +18,10 @@ let private createRequests ct country storage =
     storage |> Repository.Query.Request.get ct filter
 
 let private tryGetAppointments ct storage requests =
-
-    let deps =
-        Deps.createGetAppointmentsDeps ct storage
-        |> EmbassyAccess.Api.GetAppointmentsDeps.Russian
-
-    let getAppointments = EmbassyAccess.Api.getAppointments deps
-    requests |> EmbassyAccess.Api.tryGetAppointments getAppointments
+    (storage, ct)
+    |> EmbassyAccess.Deps.Russian.getAppointments
+    |> EmbassyAccess.Api.getAppointments
+    |> EmbassyAccess.Api.tryGetAppointments requests
 
 let private handleAppointmentsResult ct storage response =
 

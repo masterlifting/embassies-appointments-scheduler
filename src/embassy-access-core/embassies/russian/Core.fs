@@ -11,9 +11,12 @@ module Http =
     open Web.Http.Client
 
     let createHttpClient city =
+        let host = $"%s{city}.kdmid.ru"
+
         let headers =
             Map
-                [ "Accept",
+                [ "Host", [ host ]
+                  "Accept",
                   [ "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7" ]
                   "Accept-Language", [ "en-US,en;q=0.9,ru;q=0.8" ]
                   "Cache-Control", [ "max-age=0" ]
@@ -22,13 +25,14 @@ module Http =
                   "Sec-Ch-Ua-Platform", [ "\"Windows\"" ]
                   "Sec-Fetch-Dest", [ "document" ]
                   "Sec-Fetch-Mode", [ "navigate" ]
+                  "Sec-Fetch-Site", [ "same-origin" ]
                   "Sec-Fetch-User", [ "?1" ]
                   "Upgrade-Insecure-Requests", [ "1" ]
                   "User-Agent",
                   [ "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.0.0" ] ]
             |> Some
 
-        create $"https://%s{city}.kdmid.ru" headers
+        create $"https://{host}" headers
 
     let createQueryParams id cd ems =
         match ems with
@@ -42,16 +46,14 @@ module Http =
     let setRequiredCookie httpClient (response: Response<string>) =
         response.Headers
         |> Headers.tryFind "Set-Cookie" [ "AlteonP"; "__ddg1_" ]
-        |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
-
-        Ok response.Content
+        |> Option.map (fun cookie -> httpClient |> setCookie cookie |> Result.map (fun _ -> response.Content))
+        |> Option.defaultValue (Ok response.Content)
 
     let setSessionCookie httpClient (response: Response<byte array>) =
         response.Headers
         |> Headers.tryFind "Set-Cookie" [ "ASP.NET_SessionId" ]
-        |> Option.iter (fun cookie -> httpClient |> setCookie cookie)
-
-        Ok response.Content
+        |> Option.map (fun cookie -> httpClient |> setCookie cookie |> Result.map (fun _ -> response.Content))
+        |> Option.defaultValue (Ok response.Content)
 
     let buildFormData data =
         data
@@ -138,14 +140,9 @@ module private InitialPage =
             | true -> Ok(requiredResult |> Map.combine <| notRequiredResult)
             | false -> Error <| NotFound "Initial Page headers.")
 
-    let private createCaptchaRequest urlPath queryParams httpClient =
-        let origin = httpClient |> Web.Http.Client.Route.toOrigin
-        let host = httpClient |> Web.Http.Client.Route.toHost
-
-        let headers = Map [ "Host", [ host ]; "Sec-Fetch-Site", [ "same-origin" ] ] |> Some
-
+    let private createCaptchaRequest urlPath =
         { Web.Http.Domain.Request.Path = $"/queue/{urlPath}"
-          Web.Http.Domain.Request.Headers = headers }
+          Web.Http.Domain.Request.Headers = None }
 
     let private prepareCaptchaImage (image: byte array) =
         try
@@ -203,8 +200,7 @@ module private InitialPage =
 
                     // define
                     let getCaptchaRequest =
-                        let request = deps.HttpClient |> createCaptchaRequest urlPath queryParams
-
+                        let request = createCaptchaRequest urlPath
                         deps.getCaptcha request
 
                     let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setSessionCookie)
