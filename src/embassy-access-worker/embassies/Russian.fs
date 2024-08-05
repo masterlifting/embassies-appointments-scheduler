@@ -6,52 +6,90 @@ open Worker.Domain
 open EmbassyAccess.Domain
 open EmbassyAccess.Persistence
 
-let private getRequests ct country storage =
-    let filter: Filter.Request =
-        { Pagination =
-            Some
-            <| { Page = 1
-                 PageSize = 5
-                 SortBy = Filter.Desc(Filter.Date(_.Modified)) }
-          Ids = []
-          Embassy = Some <| Russian country
-          Modified = None }
+module private SearchAppointments =
 
-    storage |> Repository.Query.Request.get ct filter
+    let private getRequests ct country storage =
+        let filter: Filter.Request =
+            { Pagination =
+                Some
+                <| { Page = 1
+                     PageSize = 5
+                     SortBy = Filter.Desc(Filter.Date(_.Modified)) }
+              Ids = []
+              Embassy = Some <| Russian country
+              Modified = None }
 
-let private tryGetAppointments ct storage requests =
-    (storage, ct)
-    |> EmbassyAccess.Deps.Russian.getAppointments
-    |> EmbassyAccess.Api.getAppointments
-    |> EmbassyAccess.Api.tryGetAppointments requests
+        storage |> Repository.Query.Request.get ct filter
 
-let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request option) =
+    let private tryGetAppointments ct storage requests =
+        let getAppointments =
+            (storage, ct)
+            |> EmbassyAccess.Deps.Russian.getAppointments
+            |> EmbassyAccess.Api.getAppointments
 
-    let updateRequest request =
-        storage |> Repository.Command.Request.update ct request
+        let rec innerLoop (requests: Request list) (errors: Error' list option) =
+            async {
+                match requests with
+                | [] ->
+                    return
+                        match errors with
+                        | Some errors ->
+                            match errors.Length with
+                            | 1 -> Error errors[0]
+                            | _ ->
+                                let msg =
+                                    errors
+                                    |> List.mapi (fun i error -> $"{i + 1}.{error.Message}")
+                                    |> String.concat "\n"
 
-    match request with
-    | None -> async { return Ok <| Info "No appointments found." }
-    | Some request -> 
-        request 
-        |> updateRequest
-        |> ResultAsync.map(fun _ -> Success $"{request.Appointments.Count} appointments found.")
+                                let error =
+                                    Operation
+                                        { Message = $"Multiple errors: \n{msg}"
+                                          Code = None }
 
-let private searchAppointments country =
-    fun _ ct ->
-        Persistence.Storage.create InMemory
-        |> ResultAsync.wrap (fun storage ->
-            storage
-            |> getRequests ct country
-            |> ResultAsync.bind' (tryGetAppointments ct storage)
-            |> ResultAsync.bind' (handleAppointmentsResponse ct storage))
+                                Error error
+                        | None -> Ok None
+                | request :: requestsTail ->
+                    match! getAppointments request with
+                    | Error requestError ->
+                        let errors =  errors @ [ requestError ]
+                        return! innerLoop requestsTail errors
+                    | Ok response -> return response
+            }
+
+        innerLoop requests None
+
+    let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request) =
+
+        let request = 
+            { request with
+                Modified = System.DateTime.UtcNow }
+
+        let updateRequest request =
+            storage |> Repository.Command.Request.update ct request
+
+        match request.Appointments.IsEmpty with
+        | true -> async { return Ok <| Info "No appointments found." }
+        | false ->
+            request
+            |> updateRequest
+            |> ResultAsync.map (fun _ -> Success $"{request.Appointments.Count} appointments found.")
+
+    let run country =
+        fun _ ct ->
+            Persistence.Storage.create InMemory
+            |> ResultAsync.wrap (fun storage ->
+                storage
+                |> getRequests ct country
+                |> ResultAsync.bind' (tryGetAppointments ct storage)
+                |> ResultAsync.bind' (handleAppointmentsResponse ct storage))
 
 let createNode country =
     Graph.Node(
         { Name = "Russian"; Handle = None },
         [ Graph.Node(
               { Name = "Search Appointments"
-                Handle = Some <| searchAppointments country },
+                Handle = Some <| SearchAppointments.run country },
               []
           ) ]
     )

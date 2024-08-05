@@ -62,6 +62,7 @@ type Request =
     { Id: RequestId
       Value: string
       Attempt: int
+      IsRunning: bool
       Embassy: Embassy
       Appointments: Set<Appointment>
       Modified: DateTime }
@@ -88,6 +89,7 @@ module External =
         member val Id: Guid = Guid.Empty with get, set
         member val Value: string = String.Empty with get, set
         member val Attempt: int = 0 with get, set
+        member val IsRunning: bool = false with get, set
         member val EmbassyId: int = 0 with get, set
         member val Embassy: Embassy = Embassy() with get, set
         member val Appointments: Appointment array = [||] with get, set

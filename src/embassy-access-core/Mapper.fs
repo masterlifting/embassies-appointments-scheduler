@@ -62,6 +62,7 @@ let toRequest (request: External.Request) : Result<Request, Error'> =
         { Id = RequestId request.Id
           Value = request.Value
           Attempt = request.Attempt
+          IsRunning = request.IsRunning
           Embassy = embassy
           Appointments = request.Appointments |> Seq.map toAppointment |> Set.ofSeq
           Modified = request.Modified })
@@ -151,6 +152,7 @@ module External =
         result.Embassy <- embassy
         result.Value <- request.Value
         result.Attempt <- request.Attempt
+        result.IsRunning <- request.IsRunning
         result.Modified <- request.Modified
         result.Appointments <- request.Appointments |> Seq.map toAppointment |> Seq.toArray
 

@@ -477,10 +477,9 @@ module private ConfirmationPage =
                 |> createResult
 
 module internal Helpers =
-    let createAppointmentsResult (appointments,request) =
+    let createAppointmentsResult (request, appointments) =
         { request with
-            Appointments = appointments
-            Modified = DateTime.UtcNow }
+            Appointments = appointments }
 
     let createConfirmationResult (request, (appointment: Appointment)) =
         let appointments =
@@ -489,8 +488,7 @@ module internal Helpers =
             |> Set.add appointment
 
         { request with
-            Appointments = appointments
-            Modified = DateTime.UtcNow }
+            Appointments = appointments }
 
     let checkCredentials (request, credentials) =
         let embassy = request.Embassy |> EmbassyAccess.Mapper.External.toEmbassy

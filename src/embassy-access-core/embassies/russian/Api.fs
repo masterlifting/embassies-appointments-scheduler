@@ -28,11 +28,7 @@ let getAppointments deps =
             getAppointments deps credentials
             |> ResultAsync.map (fun (appointments, _) -> request, appointments))
 
-    let createResult =
-        ResultAsync.map' (fun (request, appointments: Set<Appointment>) ->
-            match appointments.IsEmpty with
-            | true -> None
-            | false -> Some <| (Helpers.createAppointmentsResult (appointments, request)))
+    let createResult = ResultAsync.map' Helpers.createAppointmentsResult
 
     // pipe
     fun request -> request |> updateRequest |> createCredentials |> getAppointments |> createResult
