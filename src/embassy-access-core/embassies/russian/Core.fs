@@ -485,7 +485,8 @@ module internal Helpers =
     let createConfirmationResult (request, (appointment: Appointment)) =
         let appointments =
             request.Appointments
-            |> Set.map (fun x -> if x.Value = appointment.Value then appointment else x)
+            |> Set.filter (fun x -> x.Value <> appointment.Value)
+            |> Set.add appointment
 
         { request with
             Appointments = appointments

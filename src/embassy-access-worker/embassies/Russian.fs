@@ -27,9 +27,15 @@ let private tryGetAppointments ct storage requests =
 
 let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request option) =
 
+    let updateRequest request =
+        storage |> Repository.Command.Request.update ct request
+
     match request with
     | None -> async { return Ok <| Info "No appointments found." }
-    | Some request -> async { return Ok <| Success $"{request.Appointments.Count} appointments found." }
+    | Some request -> 
+        request 
+        |> updateRequest
+        |> ResultAsync.map(fun _ -> Success $"{request.Appointments.Count} appointments found.")
 
 let private searchAppointments country =
     fun _ ct ->
