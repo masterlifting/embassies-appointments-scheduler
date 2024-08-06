@@ -15,6 +15,7 @@ module private Fixture =
         { Id = Guid.NewGuid() |> RequestId
           Value = "https://berlin.kdmid.ru/queue/orderinfo.aspx?id=290383&cd=B714253F"
           Attempt = 1
+          State = Created 
           Appointments = Set.empty
           Embassy = Russian <| Germany Berlin
           Modified = DateTime.UtcNow }
@@ -96,8 +97,8 @@ let private ``appointments page should not have data`` =
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_empty_result_{i}" }
 
             let! responseRes = request |> Api.getAppointments deps
-            let responseOpt = Expect.wantOk responseRes "Response should be Ok"
-            Expect.isNone responseOpt "Response should not be Some"
+            let appointments = Expect.wantOk responseRes "Appointments should be Ok"
+            Expect.isEmpty appointments "Appointments should not be Some"
         }
 
 let private ``appointments page should have data`` =
@@ -110,9 +111,8 @@ let private ``appointments page should have data`` =
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_has_result_{i}" }
 
             let! responseRes = request |> Api.getAppointments deps
-            let responseOpt = Expect.wantOk responseRes "Response should be Ok"
-            let response = Expect.wantSome responseOpt "Response should be Some"
-            Expect.isTrue (not response.Appointments.IsEmpty) "Appointments should not be empty"
+            let appointments = Expect.wantOk responseRes "Appointments should be Ok"
+            Expect.isTrue (not appointments.IsEmpty) "Appointments should be not empty"
         }
 
 let list =

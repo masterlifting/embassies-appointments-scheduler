@@ -10,9 +10,10 @@ let private createRussianTestRequest ct (value, country) =
     Storage.create InMemory
     |> ResultAsync.wrap (fun storage ->
         let request =
-            { Id = System.Guid.NewGuid() |> RequestId
+            { Id = RequestId.New
               Value = value
               Attempt = 0
+              State = Created
               Appointments = Set.empty
               Embassy = Russian <| country
               Modified = System.DateTime.UtcNow }

@@ -1,9 +1,6 @@
 ﻿[<RequireQualifiedAccess>]
 module EmbassyAccess.Api
 
-open Infrastructure
-open EmbassyAccess.Domain
-
 type GetAppointmentsDeps = Russian of Embassies.Russian.Domain.GetAppointmentsDeps
 
 type BookAppointmentDeps = Russian of Embassies.Russian.Domain.BookAppointmentDeps

@@ -376,7 +376,7 @@ module private AppointmentsPage =
                     <| { Value = value
                          Date = date
                          Time = time
-                         IsConfirmed = false
+                         Confirmation = None
                          Description = Some window }
                 | _ -> Error <| NotSupported $"Appointment date: {dateTime}."
             | _ -> Error <| NotSupported $"Appointment row: {value}."
@@ -444,12 +444,11 @@ module private ConfirmationPage =
     let private parseConfirmation (data: string) =
         match data.Length = 0 with
         | true -> Error <| NotFound "Confirmation data is empty."
-        | false -> Ok data
+        | false -> Ok { Description = data }
 
-    let private updateAppointment (appointment: Appointment) description =
+    let private createResult appointment confirmation =
         { appointment with
-            IsConfirmed = true
-            Description = Some description }
+            Confirmation = Some confirmation }
 
     let handle (deps: Deps) =
         fun queryParamsId option (appointments, formData) ->
@@ -467,7 +466,7 @@ module private ConfirmationPage =
 
                 let parseResponse = ResultAsync.bind parseResponse
                 let parseConfirmation = ResultAsync.bind parseConfirmation
-                let createResult = ResultAsync.map (updateAppointment appointment)
+                let createResult = ResultAsync.map (createResult appointment)
 
                 // pipe
                 deps.HttpClient
@@ -477,20 +476,17 @@ module private ConfirmationPage =
                 |> createResult
 
 module internal Helpers =
-    let createAppointmentsResult (request, appointments) =
-        { request with
-            Appointments = appointments }
-
-    let createConfirmationResult (request, (appointment: Appointment)) =
-        let appointments =
-            request.Appointments
-            |> Set.filter (fun x -> x.Value <> appointment.Value)
-            |> Set.add appointment
-
-        { request with
-            Appointments = appointments }
+    // let createConfirmationResult (request, (appointment: Appointment)) =
+    //     let appointments =
+    //         request.Appointments
+    //         |> Set.filter (fun x -> x.Value <> appointment.Value)
+    //         |> Set.add appointment
+    //
+    //     { request with
+    //         Appointments = appointments }
 
     let checkCredentials (request, credentials) =
+        let embassy = request.Embassy.Country.City.Name
         let embassy = request.Embassy |> EmbassyAccess.Mapper.External.toEmbassy
         let city = credentials.City |> EmbassyAccess.Mapper.External.toCity
 
@@ -545,7 +541,7 @@ let getAppointments (deps: GetAppointmentsDeps) =
             getAppointments ())
 
 let bookAppointment (deps: BookAppointmentDeps) =
-    fun (option: ConfirmationOption) (credentials: Credentials) ->
+    fun (option: ConfirmationOption, credentials: Credentials) ->
 
         let city, id, cd, ems = credentials.Value
         let queryParams = Http.createQueryParams id cd ems

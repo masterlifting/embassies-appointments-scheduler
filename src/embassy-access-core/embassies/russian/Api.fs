@@ -18,20 +18,13 @@ let getAppointments deps =
     let createCredentials =
         ResultAsync.bind (fun request ->
             createCredentials request.Value
-            |> Result.bind (fun credentials ->
-                (request, credentials)
-                |> Helpers.checkCredentials
-                |> Result.map (fun _ -> request, credentials)))
+            |> Result.bind (fun credentials -> (request, credentials) |> Helpers.checkCredentials |> Result.map snd))
 
     let getAppointments =
-        ResultAsync.bind' (fun (request, credentials) ->
-            getAppointments deps credentials
-            |> ResultAsync.map (fun (appointments, _) -> request, appointments))
-
-    let createResult = ResultAsync.map' Helpers.createAppointmentsResult
+        ResultAsync.bind' (getAppointments deps >> ResultAsync.map fst)
 
     // pipe
-    fun request -> request |> updateRequest |> createCredentials |> getAppointments |> createResult
+    fun request -> request |> updateRequest |> createCredentials |> getAppointments
 
 let bookAppointment deps =
 
@@ -48,19 +41,9 @@ let bookAppointment deps =
             |> Result.bind (fun credentials ->
                 (request, credentials)
                 |> Helpers.checkCredentials
-                |> Result.map (fun _ -> request, option, credentials)))
+                |> Result.map (fun _ -> option, credentials)))
 
-    let bookAppointment =
-        ResultAsync.bind' (fun (request, option, credentials) ->
-            bookAppointment deps option credentials
-            |> ResultAsync.map (fun result -> request, result))
-
-    let createResult = ResultAsync.map' Helpers.createConfirmationResult
+    let bookAppointment = ResultAsync.bind' (bookAppointment deps)
 
     // pipe
-    fun option request ->
-        (request, option)
-        |> updateRequest
-        |> createCredentials
-        |> bookAppointment
-        |> createResult
+    fun option request -> (request, option) |> updateRequest |> createCredentials |> bookAppointment

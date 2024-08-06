@@ -27,41 +27,43 @@ module private SearchAppointments =
             |> EmbassyAccess.Deps.Russian.getAppointments
             |> EmbassyAccess.Api.getAppointments
 
-        let rec innerLoop (requests: Request list) (errors: Error' list option) =
+        let rec innerLoop (requests: Request list) (errors: Error' list) =
             async {
                 match requests with
                 | [] ->
                     return
-                        match errors with
-                        | Some errors ->
-                            match errors.Length with
-                            | 1 -> Error errors[0]
-                            | _ ->
-                                let msg =
-                                    errors
-                                    |> List.mapi (fun i error -> $"{i + 1}.{error.Message}")
-                                    |> String.concat "\n"
+                        match errors.Length with
+                        | 0 -> Ok None
+                        | _ ->
+                            let msg =
+                                errors
+                                |> List.mapi (fun i error -> $"{i + 1}.{error.Message}")
+                                |> String.concat "\n"
 
-                                let error =
-                                    Operation
-                                        { Message = $"Multiple errors: \n{msg}"
-                                          Code = None }
+                            let error =
+                                Operation
+                                    { Message = $"Multiple errors: \n{msg}"
+                                      Code = None }
 
-                                Error error
-                        | None -> Ok None
+                            Error error
                 | request :: requestsTail ->
                     match! getAppointments request with
-                    | Error requestError ->
-                        let errors =  errors @ [ requestError ]
+                    | Error error' ->
+                        let errors = errors @ [ error' ]
                         return! innerLoop requestsTail errors
-                    | Ok response -> return response
+                    | Ok appointments ->
+                        let request =
+                            { request with
+                                Appointments = appointments }
+
+                        Some request
             }
 
-        innerLoop requests None
+        let a =innerLoop requests []
 
     let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request) =
 
-        let request = 
+        let request =
             { request with
                 Modified = System.DateTime.UtcNow }
 
