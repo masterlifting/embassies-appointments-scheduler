@@ -485,30 +485,41 @@ module internal Helpers =
     //     { request with
     //         Appointments = appointments }
 
-    let checkCredentials (request, credentials) =
-        let embassy = request.Embassy.Country.City.Name
-        let embassy = request.Embassy |> EmbassyAccess.Mapper.External.toEmbassy
-        let city = credentials.City |> EmbassyAccess.Mapper.External.toCity
-
-        match embassy.Country.City.Name = city.Name with
+    let validateCredentials (request, credentials) =
+        match request.Embassy.Country.City.Name = credentials.City.Name with
         | true -> Ok(request, credentials)
         | false ->
-            let error =
-                $"Embassy city '{embassy.Country.City.Name}' is not matched with the requested City '{city.Name}'."
-
-            Error <| NotSupported error
-
-    let updateRequest (request: Request) =
-        match (request.Attempt +1) = 20 with
-        | true ->
             Error
-            <| Cancelled "The request was cancelled due to the maximum number of attempts."
-        | false ->
+            <| NotSupported
+                $"Embassy city '{request.Embassy.Country.City.Name}' is not matched with the requested City '{credentials.City.Name}'."
+
+    let prepareRequest request =
+        match request.Modified.DayOfYear = DateTime.Today.DayOfYear, request.Attempt > 20 with
+        | true, true ->
+            Error
+            <| Cancelled "The request was cancelled due to the maximum number of attempts for today."
+        | false, true ->
+            Ok
+            <| { request with
+                   Attempt = 1
+                   State = Running
+                   Modified = DateTime.UtcNow }
+        | _ ->
             Ok
             <| { request with
                    Attempt = request.Attempt + 1
                    State = Running
                    Modified = DateTime.UtcNow }
+
+    let completeRequest request =
+        { request with
+            State = Completed
+            Modified = DateTime.UtcNow }
+
+    let failedRequest request =
+        { request with
+            State = Failed
+            Modified = DateTime.UtcNow }
 
 let getAppointments (deps: GetAppointmentsDeps) =
     fun (credentials: Credentials) ->

@@ -26,6 +26,9 @@ module private SearchAppointments =
             (storage, ct)
             |> EmbassyAccess.Deps.Russian.getAppointments
             |> EmbassyAccess.Api.getAppointments
+            
+        let updateRequest request =
+            storage |> Repository.Command.Request.update ct request
 
         let rec innerLoop (requests: Request list) (errors: Error' list) =
             async {
@@ -51,11 +54,11 @@ module private SearchAppointments =
                         let errors = errors @ [ error' ]
                         return! innerLoop requestsTail errors
                     | Ok appointments ->
-                        return
+                        let result =
                             { request with
                                 Appointments = appointments
-                                State = State.Completed
-                                Modified = System.DateTime.UtcNow } |> Some |> Ok
+                                State = RequestState.Completed
+                                Modified = System.DateTime.UtcNow }
             }
 
         innerLoop requests []
