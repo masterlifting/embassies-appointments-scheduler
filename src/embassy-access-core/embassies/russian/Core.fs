@@ -499,16 +499,16 @@ module internal Helpers =
             Error <| NotSupported error
 
     let updateRequest (request: Request) =
-        let request =
-            { request with
-                Attempt = request.Attempt + 1
-                Modified = DateTime.UtcNow }
-
-        match request.Attempt = 20 with
+        match (request.Attempt +1) = 20 with
         | true ->
             Error
             <| Cancelled "The request was cancelled due to the maximum number of attempts."
-        | false -> Ok request
+        | false ->
+            Ok
+            <| { request with
+                   Attempt = request.Attempt + 1
+                   State = Running
+                   Modified = DateTime.UtcNow }
 
 let getAppointments (deps: GetAppointmentsDeps) =
     fun (credentials: Credentials) ->

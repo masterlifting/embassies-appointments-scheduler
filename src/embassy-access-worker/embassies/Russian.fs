@@ -40,32 +40,27 @@ module private SearchAppointments =
                                 |> List.mapi (fun i error -> $"{i + 1}.{error.Message}")
                                 |> String.concat "\n"
 
-                            let error =
+                            Error <|
                                 Operation
                                     { Message = $"Multiple errors: \n{msg}"
                                       Code = None }
 
-                            Error error
                 | request :: requestsTail ->
                     match! getAppointments request with
                     | Error error' ->
                         let errors = errors @ [ error' ]
                         return! innerLoop requestsTail errors
                     | Ok appointments ->
-                        let request =
+                        return
                             { request with
-                                Appointments = appointments }
-
-                        Some request
+                                Appointments = appointments
+                                State = State.Completed
+                                Modified = System.DateTime.UtcNow } |> Some |> Ok
             }
 
-        let a =innerLoop requests []
+        innerLoop requests []
 
-    let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request) =
-
-        let request =
-            { request with
-                Modified = System.DateTime.UtcNow }
+    let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request option) =
 
         let updateRequest request =
             storage |> Repository.Command.Request.update ct request
