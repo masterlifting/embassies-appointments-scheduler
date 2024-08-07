@@ -92,9 +92,35 @@ module private InitialPage =
           getCaptcha = deps.getCaptcha
           solveCaptcha = deps.solveCaptcha }
 
+    let validateCredentials request credentials =
+        match request.Embassy.Country.City.Name = credentials.City.Name with
+        | true -> Ok credentials
+        | false ->
+            Error
+            <| NotSupported
+                $"Embassy city '{request.Embassy.Country.City.Name}' is not matched with the requested City '{credentials.City.Name}'."
+
     let private createRequest queryParams =
         { Web.Http.Domain.Request.Path = "/queue/orderinfo.aspx?" + queryParams
           Web.Http.Domain.Request.Headers = None }
+
+    let prepareRequest request =
+        match request.Modified.DayOfYear = DateTime.Today.DayOfYear, request.Attempt > 20 with
+        | true, true ->
+            Error
+            <| Cancelled "The request was cancelled due to the maximum number of attempts for today."
+        | false, true ->
+            Ok
+            <| { request with
+                   Attempt = 1
+                   State = Running
+                   Modified = DateTime.UtcNow }
+        | _ ->
+            Ok
+            <| { request with
+                   Attempt = request.Attempt + 1
+                   State = Running
+                   Modified = DateTime.UtcNow }
 
     let private parseResponse page =
         Html.load page
@@ -485,32 +511,6 @@ module internal Helpers =
     //     { request with
     //         Appointments = appointments }
 
-    let validateCredentials (request, credentials) =
-        match request.Embassy.Country.City.Name = credentials.City.Name with
-        | true -> Ok(request, credentials)
-        | false ->
-            Error
-            <| NotSupported
-                $"Embassy city '{request.Embassy.Country.City.Name}' is not matched with the requested City '{credentials.City.Name}'."
-
-    let prepareRequest request =
-        match request.Modified.DayOfYear = DateTime.Today.DayOfYear, request.Attempt > 20 with
-        | true, true ->
-            Error
-            <| Cancelled "The request was cancelled due to the maximum number of attempts for today."
-        | false, true ->
-            Ok
-            <| { request with
-                   Attempt = 1
-                   State = Running
-                   Modified = DateTime.UtcNow }
-        | _ ->
-            Ok
-            <| { request with
-                   Attempt = request.Attempt + 1
-                   State = Running
-                   Modified = DateTime.UtcNow }
-
     let completeRequest request =
         { request with
             State = Completed
@@ -522,34 +522,53 @@ module internal Helpers =
             Modified = DateTime.UtcNow }
 
 let getAppointments (deps: GetAppointmentsDeps) =
-    fun (credentials: Credentials) ->
+    fun (request: EmbassyAccess.Domain.Request) ->
+        
+        // define
 
-        let city, id, cd, ems = credentials.Value
-        let queryParams = Http.createQueryParams id cd ems
+        let prepareRequest ()=
+            request 
+            |> InitialPage.prepareRequest 
+            |> ResultAsync.wrap deps.updateRequest
+            |> ResultAsync.map (fun _ -> request)
 
-        city
-        |> Http.createHttpClient
-        |> ResultAsync.wrap (fun httpClient ->
+        let createCredentials =
+            ResultAsync.bind (fun request ->
+                createCredentials request.Value
+                |> Result.bind (InitialPage.validateCredentials request))
 
-            // define
-            let processInitialPage () =
+        let createHttpClient =
+            ResultAsync.bind(fun (credentials: Credentials) ->
+                credentials.City.Name
+                |> Http.createHttpClient
+                |> Result.map (fun httpClient -> httpClient, credentials))
+
+        let processInitialPage =
+            ResultAsync.bind' (fun (httpClient, credentials) ->
                 let deps = InitialPage.createDeps deps httpClient
+                let queryParams = Http.createQueryParams credentials.Id credentials.Cd credentials.Ems
                 InitialPage.handle deps queryParams
+                |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
 
-            let processValidationPage =
+        let processValidationPage =
+            ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
                 let deps = ValidationPage.createDeps deps httpClient
-                ResultAsync.bind' (ValidationPage.handle deps queryParams)
+                ValidationPage.handle deps queryParams formData
+                |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
 
-            let processAppointmentsPage =
+        let processAppointmentsPage =
+            ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
                 let deps = AppointmentsPage.createDeps deps httpClient
-                ResultAsync.bind' (AppointmentsPage.handle deps queryParams)
+                AppointmentsPage.handle deps queryParams formData
+                |> ResultAsync.map (fun (appointments, formData) -> appointments, formData))
 
-            // pipe
-            let getAppointments =
-                processInitialPage >> processValidationPage >> processAppointmentsPage
-
-            // run
-            getAppointments ())
+        // pipe
+        prepareRequest
+        >> createCredentials
+        >> createHttpClient
+        >> processInitialPage
+        >> processValidationPage
+        >> processAppointmentsPage
 
 let bookAppointment (deps: BookAppointmentDeps) =
     fun (option: ConfirmationOption, credentials: Credentials) ->

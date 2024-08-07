@@ -22,8 +22,8 @@ let getAppointments deps =
 
     let getAppointments =
         ResultAsync.bind' (fun (request, credentials) ->
-            credentials
-            |> getAppointments deps
+            request
+            |> getAppointments deps credentials
             |> ResultAsync.map (fun (appointments, _) -> (request, appointments)))
 
     let completeRequest =
