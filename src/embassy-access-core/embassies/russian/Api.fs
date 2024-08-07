@@ -29,14 +29,14 @@ let getAppointments deps =
     let completeRequest =
         ResultAsync.bind' (fun (request, appointments) ->
             request
-            |> Helpers.completeRequest
+            |> Common.completeRequest
             |> deps.updateRequest
             |> ResultAsync.map (fun _ -> appointments))
         
     let completeRequestError request=
         ResultAsync.mapError' (fun error ->
             request
-            |> Helpers.failedRequest
+            |> Common.failedRequest
             |> deps.updateRequest
             |> ResultAsync.bind (fun _ -> Error error))
 
@@ -75,14 +75,14 @@ let bookAppointment deps =
     let completeRequest =
         ResultAsync.bind' (fun (request, appointment) ->
             request
-            |> Helpers.completeRequest
+            |> Common.completeRequest
             |> deps.GetAppointmentsDeps.updateRequest
             |> ResultAsync.map (fun _ -> appointment))
         
     let completeRequestError request=
          ResultAsync.mapError' (fun error ->
             request
-            |> Helpers.failedRequest
+            |> Common.failedRequest
             |> deps.GetAppointmentsDeps.updateRequest
             |> ResultAsync.map (fun _ -> error))
         
