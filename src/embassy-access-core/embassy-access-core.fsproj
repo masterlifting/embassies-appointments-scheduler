@@ -12,7 +12,6 @@
     <Compile Include="embassies\russian\Domain.fs" />
     <Compile Include="embassies\russian\Core.fs" />
     <Compile Include="embassies\russian\Deps.fs" />
-    <Compile Include="embassies\russian\Api.fs" />
     <Compile Include="Api.fs" />
     <Compile Include="Deps.fs" />
   </ItemGroup>

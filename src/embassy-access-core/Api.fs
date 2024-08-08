@@ -8,8 +8,8 @@ type BookAppointmentDeps = Russian of Embassies.Russian.Domain.BookAppointmentDe
 
 let getAppointments deps request =
     match deps with
-    | GetAppointmentsDeps.Russian deps -> request |> Embassies.Russian.Api.getAppointments deps
+    | GetAppointmentsDeps.Russian deps -> request |> Embassies.Russian.Core.getAppointments deps
 
 let bookAppointment deps option request =
     match deps with
-    | BookAppointmentDeps.Russian deps -> request |> Embassies.Russian.Api.bookAppointment deps option
+    | BookAppointmentDeps.Russian deps -> request |> Embassies.Russian.Core.bookAppointment deps option

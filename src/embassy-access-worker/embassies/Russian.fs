@@ -27,9 +27,6 @@ module private SearchAppointments =
             |> EmbassyAccess.Deps.Russian.getAppointments
             |> EmbassyAccess.Api.getAppointments
             
-        let updateRequest request =
-            storage |> Repository.Command.Request.update ct request
-
         let rec innerLoop (requests: Request list) (errors: Error' list) =
             async {
                 match requests with
@@ -53,27 +50,23 @@ module private SearchAppointments =
                     | Error error' ->
                         let errors = errors @ [ error' ]
                         return! innerLoop requestsTail errors
-                    | Ok appointments ->
-                        let result =
-                            { request with
-                                Appointments = appointments
-                                State = RequestState.Completed
-                                Modified = System.DateTime.UtcNow }
+                    | Ok request -> return Ok <| Some request
             }
 
         innerLoop requests []
 
-    let private handleAppointmentsResponse ct storage (request: EmbassyAccess.Domain.Request option) =
-
-        let updateRequest request =
-            storage |> Repository.Command.Request.update ct request
-
-        match request.Appointments.IsEmpty with
-        | true -> async { return Ok <| Info "No appointments found." }
-        | false ->
-            request
-            |> updateRequest
-            |> ResultAsync.map (fun _ -> Success $"{request.Appointments.Count} appointments found.")
+    let private handleAppointmentsResponse request =
+        match request with
+        | None -> Ok <| Info "No appointments found."
+        | Some request ->
+            match request.State with
+            | Failed -> 
+                let error = request.Description |> Option.defaultValue "Unknown error."
+                Error <| Operation { Message = error; Code = None }
+            | _ ->
+                match request.Appointments.Count with
+                | 0 -> Ok <| Info "No appointments found."
+                | count -> Ok <| Info $"Found {count} appointments."
 
     let run country =
         fun _ ct ->
@@ -82,7 +75,7 @@ module private SearchAppointments =
                 storage
                 |> getRequests ct country
                 |> ResultAsync.bind' (tryGetAppointments ct storage)
-                |> ResultAsync.bind' (handleAppointmentsResponse ct storage))
+                |> ResultAsync.bind handleAppointmentsResponse)
 
 let createNode country =
     Graph.Node(

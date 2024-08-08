@@ -16,6 +16,7 @@ let private createRussianTestRequest ct (value, country) =
               State = Created
               Appointments = Set.empty
               Embassy = Russian <| country
+              Description = None
               Modified = System.DateTime.UtcNow }
 
         storage

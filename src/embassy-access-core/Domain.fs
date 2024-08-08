@@ -106,6 +106,7 @@ type Request =
       State: RequestState
       Embassy: Embassy
       Appointments: Set<Appointment>
+      Description: string option
       Modified: DateTime }
 
 module External =
@@ -137,4 +138,5 @@ module External =
         member val State: string = String.Empty with get, set
         member val Embassy: Embassy = Embassy() with get, set
         member val Appointments: Appointment array = [||] with get, set
+        member val Description: string = String.Empty with get, set
         member val Modified: DateTime = DateTime.UtcNow with get, set

@@ -18,6 +18,7 @@ module private Fixture =
           State = Created 
           Appointments = Set.empty
           Embassy = Russian <| Germany Berlin
+          Description = None
           Modified = DateTime.UtcNow }
 
     let requiredHeaders =
@@ -97,8 +98,8 @@ let private ``appointments page should not have data`` =
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_empty_result_{i}" }
 
             let! responseRes = request |> Api.getAppointments deps
-            let appointments = Expect.wantOk responseRes "Appointments should be Ok"
-            Expect.isEmpty appointments "Appointments should not be Some"
+            let request = Expect.wantOk responseRes "Appointments should be Ok"
+            Expect.isEmpty request.Appointments "Appointments should not be Some"
         }
 
 let private ``appointments page should have data`` =
@@ -111,8 +112,8 @@ let private ``appointments page should have data`` =
                         postAppointmentsPage = fun _ _ _ -> httpPostStringRequest $"appointments_page_has_result_{i}" }
 
             let! responseRes = request |> Api.getAppointments deps
-            let appointments = Expect.wantOk responseRes "Appointments should be Ok"
-            Expect.isTrue (not appointments.IsEmpty) "Appointments should be not empty"
+            let request = Expect.wantOk responseRes "Appointments should be Ok"
+            Expect.isTrue (not request.Appointments.IsEmpty) "Appointments should be not empty"
         }
 
 let list =

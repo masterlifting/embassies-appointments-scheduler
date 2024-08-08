@@ -39,6 +39,15 @@ module Http =
         | Some ems -> $"id=%i{id}&cd=%s{cd}&ems=%s{ems}"
         | None -> $"id=%i{id}&cd=%s{cd}"
 
+    let getQueryParamsId queryParams =
+        queryParams
+        |> Route.fromQueryParams
+        |> Result.map (Map.tryFind "id")
+        |> Result.bind (fun id ->
+            match id with
+            | Some id -> Ok id
+            | None -> Error <| NotFound "Query parameter 'id'.")
+
     let private setCookie cookie httpClient =
         let headers = Map [ "Cookie", cookie ] |> Some
         httpClient |> Headers.set headers
@@ -91,14 +100,6 @@ module private InitialPage =
           getInitialPage = deps.getInitialPage
           getCaptcha = deps.getCaptcha
           solveCaptcha = deps.solveCaptcha }
-
-    let validateCredentials request credentials =
-        match request.Embassy.Country.City.Name = credentials.City.Name with
-        | true -> Ok credentials
-        | false ->
-            Error
-            <| NotSupported
-                $"Embassy city '{request.Embassy.Country.City.Name}' is not matched with the requested City '{credentials.City.Name}'."
 
     let private createRequest queryParams =
         { Web.Http.Domain.Request.Path = "/queue/orderinfo.aspx?" + queryParams
@@ -185,46 +186,45 @@ module private InitialPage =
         |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
         |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
-    let handle (deps: Deps) =
-        fun queryParams ->
+    let handle (deps, queryParams) =
 
-            // define
-            let getRequest =
-                let request = createRequest queryParams
-                deps.getInitialPage request
+        // define
+        let getRequest =
+            let request = createRequest queryParams
+            deps.getInitialPage request
 
-            let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setRequiredCookie)
-            let parseResponse = ResultAsync.bind parseResponse
+        let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setRequiredCookie)
+        let parseResponse = ResultAsync.bind parseResponse
 
-            // pipe
-            deps.HttpClient
-            |> getRequest
-            |> setCookie
-            |> parseResponse
-            |> ResultAsync.bind' (fun pageData ->
-                match pageData |> Map.tryFind "captchaUrlPath" with
-                | None -> async { return Error <| NotFound "Captcha information on the Initial Page." }
-                | Some urlPath ->
+        // pipe
+        deps.HttpClient
+        |> getRequest
+        |> setCookie
+        |> parseResponse
+        |> ResultAsync.bind' (fun pageData ->
+            match pageData |> Map.tryFind "captchaUrlPath" with
+            | None -> async { return Error <| NotFound "Captcha information on the Initial Page." }
+            | Some urlPath ->
 
-                    // define
-                    let getCaptchaRequest =
-                        let request = createCaptchaRequest urlPath
-                        deps.getCaptcha request
+                // define
+                let getCaptchaRequest =
+                    let request = createCaptchaRequest urlPath
+                    deps.getCaptcha request
 
-                    let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setSessionCookie)
-                    let prepareResponse = ResultAsync.bind prepareCaptchaImage
-                    let solveCaptcha = ResultAsync.bind' deps.solveCaptcha
-                    let prepareFormData = ResultAsync.map' (pageData |> prepareFormData)
-                    let buildFormData = ResultAsync.map' Http.buildFormData
+                let setCookie = ResultAsync.bind (deps.HttpClient |> Http.setSessionCookie)
+                let prepareResponse = ResultAsync.bind prepareCaptchaImage
+                let solveCaptcha = ResultAsync.bind' deps.solveCaptcha
+                let prepareFormData = ResultAsync.map' (pageData |> prepareFormData)
+                let buildFormData = ResultAsync.map' Http.buildFormData
 
-                    // pipe
-                    deps.HttpClient
-                    |> getCaptchaRequest
-                    |> setCookie
-                    |> prepareResponse
-                    |> solveCaptcha
-                    |> prepareFormData
-                    |> buildFormData)
+                // pipe
+                deps.HttpClient
+                |> getCaptchaRequest
+                |> setCookie
+                |> prepareResponse
+                |> solveCaptcha
+                |> prepareFormData
+                |> buildFormData)
 
 module private ValidationPage =
 
@@ -306,19 +306,18 @@ module private ValidationPage =
         |> Map.add "ctl00$MainContent$FeedbackClientID" "0"
         |> Map.add "ctl00$MainContent$FeedbackOrderID" "0"
 
-    let handle (deps: Deps) =
-        fun queryParams formData ->
+    let handle (deps,queryParams,formData) =
 
-            // define
-            let postRequest =
-                let request, content = createRequest formData queryParams
-                deps.postValidationPage request content
+        // define
+        let postRequest =
+            let request, content = createRequest formData queryParams
+            deps.postValidationPage request content
 
-            let parseResponse = ResultAsync.bind parseResponse
-            let prepareFormData = ResultAsync.map' prepareFormData
+        let parseResponse = ResultAsync.bind parseResponse
+        let prepareFormData = ResultAsync.map' prepareFormData
 
-            // pipe
-            deps.HttpClient |> postRequest |> parseResponse |> prepareFormData
+        // pipe
+        deps.HttpClient |> postRequest |> parseResponse |> prepareFormData
 
 module private AppointmentsPage =
     type Deps =
@@ -393,25 +392,24 @@ module private AppointmentsPage =
         | true -> Ok Set.empty
         | false -> data |> Set.map parse |> Seq.roe |> Result.map Set.ofSeq
 
-    let handle (deps: Deps) =
-        fun queryParams formData ->
+    let handle (deps,queryParams,formData) =
 
-            // define
-            let postRequest =
-                let formData = Http.buildFormData formData
-                let request, content = createRequest formData queryParams
-                deps.postAppointmentsPage request content
+        // define
+        let postRequest =
+            let formData = Http.buildFormData formData
+            let request, content = createRequest formData queryParams
+            deps.postAppointmentsPage request content
 
-            let parseResponse = ResultAsync.bind parseResponse
-            let parseAppointments = ResultAsync.bind parseAppointments
-            let createResult = ResultAsync.map (fun appointments -> appointments, formData)
+        let parseResponse = ResultAsync.bind parseResponse
+        let parseAppointments = ResultAsync.bind parseAppointments
+        let createResult = ResultAsync.map (fun appointments -> appointments, formData)
 
-            // pipe
-            deps.HttpClient
-            |> postRequest
-            |> parseResponse
-            |> parseAppointments
-            |> createResult
+        // pipe
+        deps.HttpClient
+        |> postRequest
+        |> parseResponse
+        |> parseAppointments
+        |> createResult
 
 module private ConfirmationPage =
 
@@ -432,7 +430,7 @@ module private ConfirmationPage =
     let private createRequest formData queryParamsId =
 
         let request =
-            { Web.Http.Domain.Request.Path = $"/queue/spcalendar.aspx?bjo=%i{queryParamsId}"
+            { Web.Http.Domain.Request.Path = $"/queue/spcalendar.aspx?bjo=%s{queryParamsId}"
               Web.Http.Domain.Request.Headers = None }
 
         let content: Web.Http.Domain.RequestContent =
@@ -458,47 +456,46 @@ module private ConfirmationPage =
         { appointment with
             Confirmation = Some confirmation }
 
-    let handle (deps: Deps) =
-        fun queryParamsId option (appointments, formData) ->
+    let handle (deps, queryParamsId, option, appointments, formData) =
 
-            match chooseAppointment appointments option with
-            | None -> async { return Error <| NotFound "Appointment to book." }
-            | Some appointment ->
+        match chooseAppointment appointments option with
+        | None -> async { return Error <| NotFound "Appointment to book." }
+        | Some appointment ->
 
-                // define
-                let postRequest =
-                    let formData = appointment.Value |> prepareFormData formData |> Http.buildFormData
+            // define
+            let postRequest =
+                let formData = appointment.Value |> prepareFormData formData |> Http.buildFormData
 
-                    let request, content = createRequest formData queryParamsId
-                    deps.postConfirmationPage request content
+                let request, content = createRequest formData queryParamsId
+                deps.postConfirmationPage request content
 
-                let parseResponse = ResultAsync.bind parseResponse
-                let parseConfirmation = ResultAsync.bind parseConfirmation
-                let createResult = ResultAsync.map (createResult appointment)
+            let parseResponse = ResultAsync.bind parseResponse
+            let parseConfirmation = ResultAsync.bind parseConfirmation
+            let createResult = ResultAsync.map (createResult appointment)
 
-                // pipe
-                deps.HttpClient
-                |> postRequest
-                |> parseResponse
-                |> parseConfirmation
-                |> createResult
+            // pipe
+            deps.HttpClient
+            |> postRequest
+            |> parseResponse
+            |> parseConfirmation
+            |> createResult
 
-module private Common =
-    // let createConfirmationResult (request, (appointment: Appointment)) =
-    //     let appointments =
-    //         request.Appointments
-    //         |> Set.filter (fun x -> x.Value <> appointment.Value)
-    //         |> Set.add appointment
-    //
-    //     { request with
-    //         Appointments = appointments }
+module private Request =
+    
+    let validateCredentials request credentials =
+        match request.Embassy.Country.City.Name = credentials.City.Name with
+        | true -> Ok credentials
+        | false ->
+            Error
+            <| NotSupported
+                $"Embassy city '{request.Embassy.Country.City.Name}' is not matched with the requested City '{credentials.City.Name}'."
 
-    let startRequest request =
+    let define request =
         { request with
             State = Running
             Modified = DateTime.UtcNow }
 
-    let setRequestAttempt request =
+    let setAttempt request =
         match request.Modified.DayOfYear = DateTime.Today.DayOfYear, request.Attempt > 20 with
         | true, true ->
             Error
@@ -514,30 +511,36 @@ module private Common =
                    Attempt = request.Attempt + 1
                    Modified = DateTime.UtcNow }
 
-    let completeRequest appointments request =
+    let complete appointments request =
         { request with
             State = Completed
             Appointments = appointments
             Modified = DateTime.UtcNow }
 
-    let failedRequest error request =
+    let fail (error: Error') request =
         { request with
             State = Failed
+            Description = Some error.Message
             Modified = DateTime.UtcNow }
+
+    let filterAppointments (appointment: Appointment) request =
+        request.Appointments
+        |> Set.filter (fun x -> x.Value <> appointment.Value)
+        |> Set.add appointment
 
 let getAppointments deps request =
 
     // define
     let startRequest () =
         request
-        |> Common.startRequest
+        |> Request.define
         |> deps.updateRequest
         |> ResultAsync.map (fun _ -> request)
 
     let createCredentials =
         ResultAsync.bind (fun request ->
             createCredentials request.Value
-            |> Result.bind (InitialPage.validateCredentials request))
+            |> Result.bind (Request.validateCredentials request))
 
     let createHttpClient =
         ResultAsync.bind (fun credentials ->
@@ -551,13 +554,13 @@ let getAppointments deps request =
             let _, id, cd, ems = credentials.Value
             let queryParams = Http.createQueryParams id cd ems
 
-            InitialPage.handle deps queryParams
+            InitialPage.handle (deps, queryParams)
             |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
 
     let setRequestAttempt =
         ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
             request
-            |> Common.setRequestAttempt
+            |> Request.setAttempt
             |> ResultAsync.wrap deps.updateRequest
             |> ResultAsync.map (fun _ -> httpClient, queryParams, formData))
 
@@ -565,14 +568,14 @@ let getAppointments deps request =
         ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
             let deps = ValidationPage.createDeps deps httpClient
 
-            ValidationPage.handle deps queryParams formData
+            ValidationPage.handle (deps, queryParams, formData)
             |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
 
     let processAppointmentsPage =
         ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
             let deps = AppointmentsPage.createDeps deps httpClient
 
-            AppointmentsPage.handle deps queryParams formData
+            AppointmentsPage.handle (deps, queryParams, formData)
             |> ResultAsync.map (fun (appointments, _) -> appointments))
 
     let completeRequest appointmentsRes =
@@ -581,13 +584,13 @@ let getAppointments deps request =
             | Error error ->
                 return!
                     request
-                    |> Common.failedRequest error
+                    |> Request.fail error
                     |> deps.updateRequest
                     |> ResultAsync.map (fun _ -> request)
             | Ok appointments ->
                 return!
                     request
-                    |> Common.completeRequest appointments
+                    |> Request.complete appointments
                     |> deps.updateRequest
                     |> ResultAsync.map (fun _ -> request)
         }
@@ -605,39 +608,92 @@ let getAppointments deps request =
 
     getAppointments ()
 
-let bookAppointment (deps: BookAppointmentDeps) =
-    fun (option: ConfirmationOption, credentials: Credentials) ->
+let bookAppointment deps option request =
 
-        let city, id, cd, ems = credentials.Value
-        let queryParams = Http.createQueryParams id cd ems
+    // define
+    let startRequest () =
+        request
+        |> Request.define
+        |> deps.GetAppointmentsDeps.updateRequest
+        |> ResultAsync.map (fun _ -> request)
 
-        city
-        |> Http.createHttpClient
-        |> ResultAsync.wrap (fun httpClient ->
+    let createCredentials =
+        ResultAsync.bind (fun request ->
+            createCredentials request.Value
+            |> Result.bind (Request.validateCredentials request))
 
-            // define
-            let processInitialPage () =
-                let deps = InitialPage.createDeps deps.GetAppointmentsDeps httpClient
-                InitialPage.handle deps queryParams
+    let createHttpClient =
+        ResultAsync.bind (fun credentials ->
+            credentials.City.Name
+            |> Http.createHttpClient
+            |> Result.map (fun httpClient -> httpClient, credentials))
 
-            let processValidationPage =
-                let deps = ValidationPage.createDeps deps.GetAppointmentsDeps httpClient
-                ResultAsync.bind' (ValidationPage.handle deps queryParams)
+    let processInitialPage =
+        ResultAsync.bind' (fun (httpClient, credentials: Credentials) ->
+            let deps = InitialPage.createDeps deps.GetAppointmentsDeps httpClient
+            let _, id, cd, ems = credentials.Value
+            let queryParams = Http.createQueryParams id cd ems
 
-            let processAppointmentsPage =
-                let deps = AppointmentsPage.createDeps deps.GetAppointmentsDeps httpClient
-                ResultAsync.bind' (AppointmentsPage.handle deps queryParams)
+            InitialPage.handle (deps, queryParams)
+            |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
 
-            let processConfirmationPage =
-                let deps = ConfirmationPage.createDeps deps httpClient
-                ResultAsync.bind' (ConfirmationPage.handle deps id option)
+    let setRequestAttempt =
+        ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
+            request
+            |> Request.setAttempt
+            |> ResultAsync.wrap deps.GetAppointmentsDeps.updateRequest
+            |> ResultAsync.map (fun _ -> httpClient, queryParams, formData))
 
-            // pipe
-            let bookAppointment =
-                processInitialPage
-                >> processValidationPage
-                >> processAppointmentsPage
-                >> processConfirmationPage
+    let processValidationPage =
+        ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
+            let deps = ValidationPage.createDeps deps.GetAppointmentsDeps httpClient
 
-            // run
-            bookAppointment ())
+            ValidationPage.handle (deps, queryParams, formData)
+            |> ResultAsync.map (fun formData -> httpClient, queryParams, formData))
+
+    let processAppointmentsPage =
+        ResultAsync.bind' (fun (httpClient, queryParams, formData) ->
+            let deps = AppointmentsPage.createDeps deps.GetAppointmentsDeps httpClient
+
+            queryParams
+            |> Http.getQueryParamsId
+            |> ResultAsync.wrap (fun id ->
+                AppointmentsPage.handle (deps, queryParams, formData)
+                |> ResultAsync.map (fun (appointments, formData) -> httpClient, appointments, id, formData)))
+
+    let processConfirmationPage =
+        ResultAsync.bind' (fun (httpClient, appointments, id, formData) ->
+            let deps = ConfirmationPage.createDeps deps httpClient
+            ConfirmationPage.handle (deps, id, option, appointments, formData))
+
+    let completeRequest appointmentRes =
+        async {
+            match! appointmentRes with
+            | Error error ->
+                return!
+                    request
+                    |> Request.fail error
+                    |> deps.GetAppointmentsDeps.updateRequest
+                    |> ResultAsync.map (fun _ -> request)
+            | Ok appointment ->
+                return!
+                    request
+                    |> Request.filterAppointments appointment
+                    |> fun appointments -> Request.complete appointments request
+                    |> deps.GetAppointmentsDeps.updateRequest
+                    |> ResultAsync.map (fun _ -> request)
+        }
+
+    // pipe
+    let bookAppointment =
+        startRequest
+        >> createCredentials
+        >> createHttpClient
+        >> processInitialPage
+        >> setRequestAttempt
+        >> processValidationPage
+        >> processAppointmentsPage
+        >> processConfirmationPage
+        >> completeRequest
+
+    bookAppointment ()

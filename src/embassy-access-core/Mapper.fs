@@ -55,6 +55,10 @@ let toRequest (request: External.Request) : Result<Request, Error'> =
                   State = state
                   Embassy = embassy
                   Appointments = request.Appointments |> Seq.map toAppointment |> Set.ofSeq
+                  Description = 
+                    match request.Description with
+                    | AP.IsString x -> Some x
+                    | _ -> None
                   Modified = request.Modified }
                 |> Ok
             | None -> Error <| NotSupported $"Request state {request.State}."))
@@ -112,6 +116,7 @@ module External =
         result.State <- request.State.Name
         result.Embassy <- toEmbassy request.Embassy
         result.Appointments <- request.Appointments |> Seq.map toAppointment |> Seq.toArray
+        result.Description <- request.Description |> Option.defaultValue ""
         result.Modified <- request.Modified
 
         result
